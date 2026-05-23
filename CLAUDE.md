@@ -15,6 +15,8 @@ no SSR, no routing library.
 - **lucide-svelte** — icons, imported individually
 - **@ffmpeg/ffmpeg**, **@ffmpeg/util**, **@ffmpeg/core** — in-browser WebM → MP4
   conversion
+- **fix-webm-duration** — patches WebM blob duration header after MediaRecorder
+  recording
 - **Vitest** — unit testing
 - **ESLint + Prettier** — linting and formatting
 - **npm** as package manager
@@ -25,9 +27,9 @@ no SSR, no routing library.
 npx sv create screencast --template minimal --types ts --add tailwindcss prettier eslint sveltekit-adapter vitest mcp --install npm
 cd screencast
 # When prompted for adapter, choose: adapter-static
-# Then add remaining dependencies
 npm install lucide-svelte
 npm install @ffmpeg/ffmpeg @ffmpeg/util @ffmpeg/core
+npm install fix-webm-duration
 npx shadcn-svelte@latest init
 ```
 
@@ -41,109 +43,68 @@ Configure `svelte.config.js`:
 The `mcp` add-on provides access to comprehensive Svelte 5 and SvelteKit
 documentation. Use these tools on every component and route:
 
-### Usage Rules
-
-1. **`list-sections`** — call this FIRST at the start of any Svelte or SvelteKit
-   task to discover relevant documentation sections. Returns titles, use_cases,
-   and paths.
-
-2. **`get-documentation`** — after calling `list-sections`, analyse the returned
-   sections (especially `use_cases`) and fetch ALL sections relevant to the
-   current task. Accepts single or multiple sections.
-
-3. **`svelte-autofixer`** — MUST be called on every piece of Svelte code before
-   presenting it. Keep calling until no issues or suggestions are returned.
-
-4. **`playground-link`** — do NOT use. All code is written directly to project
-   files.
+1. **`list-sections`** — call FIRST to discover relevant documentation sections
+2. **`get-documentation`** — fetch ALL sections relevant to the current task
+3. **`svelte-autofixer`** — MUST be called on every Svelte file before
+   presenting. Keep calling until no issues returned
+4. **`playground-link`** — do NOT use. All code written directly to project
+   files
 
 ## shadcn-svelte Reference
 
-Full component index available at: https://www.shadcn-svelte.com/llms.txt
+Full component index: https://www.shadcn-svelte.com/llms.txt
 
-Consult this before implementing any UI component to confirm the correct
-shadcn-svelte API. Each entry links to a full markdown doc for that component.
-
-Components used in this project include: `Button`, `Button Group`, `Badge`,
-`Card`, `Dialog`, `Dropdown Menu`, `Progress`, `Separator`, `Spinner`, `Toggle`,
-`Tooltip`, `Kbd`.
+Consult before implementing any UI component. Components used: `Button`,
+`Button Group`, `Badge`, `Card`, `Dialog`, `Dropdown Menu`, `Progress`,
+`Separator`, `Spinner`, `Toggle`, `Tooltip`, `Kbd`.
 
 ## Visual Approach
 
 Vanilla shadcn-svelte throughout. No custom Tailwind theme extensions. No
-overriding shadcn CSS variables. Use shadcn components exactly as they come —
-`Button`, `Dialog`, `DropdownMenu`, `Select` etc with their default appearance.
+overriding shadcn CSS variables. Use shadcn components exactly as they come.
 
-The only colour accents used are:
+The only colour accents:
 
-- shadcn's built-in `destructive` variant (red) for mute buttons, cam-off
-  buttons, and the Discard card
-- A custom pulsing red dot for the recording indicator (hand-written CSS only
-  where needed)
+- shadcn `destructive` variant (red) for mute buttons, cam-off buttons, Discard
+  card
+- Custom pulsing red dot for the recording indicator (hand-written CSS only)
 
-shadcn-svelte ships with dark mode support via the `dark` class on `<html>` —
-the theme toggle uses this directly.
+shadcn-svelte dark mode via `dark` class on `<html>`.
 
 ## Theming
 
 - **Default**: dark mode
-- **Modes**: dark and light, user-switchable
-- **Toggle**: theme switcher button in the top bar (top right)
-- **Implementation**: toggle `class="dark"` on `<html>` element
-- **Persistence**: preference saved to `localStorage`
+- **Toggle**: theme switcher in top bar (top right)
+- **Implementation**: toggle `class="dark"` on `<html>`
+- **Persistence**: `localStorage`
 
 ## Working Method
 
-Build the application one step at a time. Each step is either a route/page or a
-component. After completing each step:
+Build one step at a time. After each step:
 
-1. Stop and describe what was just built
+1. Stop and describe what was built
 2. List every file created or modified
-3. Explain any decisions or assumptions made that were not explicit in the spec
+3. Explain any assumptions not explicit in the spec
 4. List what comes next
-5. Wait for explicit approval before continuing
+5. Wait for explicit approval
 
-Do not proceed to the next step without being told to. Do not modify files from
-previous steps unless fixing a reported bug. The goal is a reviewable,
-incremental build — not a one-shot complete application.
+Do not proceed without approval. Do not modify files from previous steps unless
+fixing a reported bug.
 
-For every Svelte component or route written:
+For every Svelte file:
 
-- Fetch https://www.shadcn-svelte.com/llms.txt and consult it before using any
-  shadcn-svelte component
-- Call `list-sections` and `get-documentation` to check relevant Svelte 5 /
-  SvelteKit docs first
-- Run `svelte-autofixer` on all Svelte code before presenting it
-- Keep running `svelte-autofixer` until it returns no issues
+- Fetch https://www.shadcn-svelte.com/llms.txt before using any shadcn component
+- Call `list-sections` and `get-documentation` for relevant Svelte 5 / SvelteKit
+  docs
+- Run `svelte-autofixer` until no issues returned
 
 ## Feedback & Change Requests
 
-When receiving a focused change prompt:
-
-- Re-read CLAUDE.md fully before making any changes — it is the source of truth
-- Only modify the files explicitly listed in the prompt
-- Do not refactor, reformat, or improve files not listed
+- Re-read CLAUDE.md fully before any changes — it is the source of truth
+- Only modify files explicitly listed in the prompt
+- Do not refactor files not listed
 - Run `svelte-autofixer` on any Svelte files changed
 - Stop when done and list every file modified and what changed
-
-**Build order (initial build):**
-
-1. Project setup + `+layout.svelte` (top bar, theme toggle, shell)
-2. `BrowserCheck.svelte`
-3. `Setup.svelte` (scaffold only — screen picker, placeholder preview, toolbar)
-4. `WebcamBubble.svelte`
-5. `Countdown.svelte`
-6. `Recording.svelte`
-7. `Review.svelte`
-8. `Editor.svelte` (player + timeline scaffold)
-9. `Processing.svelte`
-10. `Done.svelte`
-11. `ShortcutsPanel.svelte`
-12. `recorder.ts` (capture, compositing, audio mixing)
-13. `ffmpegConverter.ts` (FFmpeg wasm, trim + cuts)
-14. `deviceStore.ts`
-15. Wire up state machine in `+page.svelte`
-16. End-to-end testing + fixes
 
 ## App Structure
 
@@ -154,345 +115,418 @@ src/
     +layout.ts              # export const ssr = false
     +page.svelte            # Root — owns the state machine, renders active component
   lib/
-    recorder.ts             # getDisplayMedia, getUserMedia, canvas compositing, MediaRecorder
-    ffmpegConverter.ts      # ffmpeg.wasm load + WebM → MP4 conversion
-    ffmpegWorker.ts         # Web Worker wrapper for ffmpegConverter — keeps main thread free
-    thumbnailWorker.ts      # Web Worker for timeline thumbnail generation — keeps main thread free
+    recorder.ts             # Canvas compositor, MediaRecorder, audio mixer
+    ffmpegConverter.ts      # ffmpeg.wasm — trim + cuts + MP4 conversion
+    ffmpegWorker.ts         # Web Worker wrapping ffmpegConverter
     deviceStore.ts          # Svelte 5 rune-based store, persisted to localStorage
     components/
-      BrowserCheck.svelte   # API capability check on mount
-      Setup.svelte          # Pre-recording UI — screen picker, preview, device controls
-      Countdown.svelte      # 3s animated countdown with progress ring + audio beeps
-      Recording.svelte      # Active recording UI
-      Review.svelte         # Post-stop decision screen
-      Editor.svelte         # Video player + timeline editor
-      Processing.svelte     # FFmpeg conversion progress
-      Done.svelte           # Download complete
-      ShortcutsPanel.svelte # Keyboard shortcuts overlay
-      WebcamBubble.svelte   # Draggable PiP overlay, snaps to 8 positions
+      BrowserCheck.svelte
+      Setup.svelte
+      Countdown.svelte
+      Recording.svelte
+      Review.svelte
+      Editor.svelte
+      Processing.svelte
+      Done.svelte
+      ShortcutsPanel.svelte
+      WebcamBubble.svelte
 ```
 
 ## State Machine (+page.svelte)
-
-States:
 
 ```
 check → setup → countdown → recording → review → editor → processing → done
 ```
 
-Transitions:
-
 ```
-check:      pass → setup | fail → stays on check (shows error)
+check:      pass → setup | fail → stays (shows error)
 setup:      Start Recording → countdown
-countdown:  complete → recording  (also used when resuming from review)
-recording:  Stop → review | Stream ended by user → setup (show empty state)
-review:     Resume → countdown | Edit & Export → editor | Discard → setup (immediate, no confirm)
+countdown:  complete → recording
+recording:  Stop → review | Stream ended → setup (empty state)
+review:     Resume → countdown | Edit & Export → editor | Discard → setup (immediate)
 editor:     Export & Download → processing | Back to Review → review
 processing: complete → done
 done:       New Recording → setup | Back to Editor → editor
 ```
 
-State type:
-
 ```ts
 type AppState = 'check' | 'setup' | 'countdown' | 'recording' | 'review' | 'editor' | 'processing' | 'done'
 ```
 
-All state lives in a single `$state` object in `+page.svelte`. No routing
-library — pure state machine.
-
 ## Section 1 — BrowserCheck.svelte
 
-On mount, check:
-
-- `navigator.mediaDevices?.getDisplayMedia` — **critical**
-- `window.MediaRecorder` — **critical**
-- `navigator.mediaDevices?.getUserMedia` — optional
-- `window.AudioContext` — optional
+Critical APIs: `getDisplayMedia`, `MediaRecorder` Optional APIs: `getUserMedia`,
+`AudioContext`
 
 Three outcomes:
 
-1. All critical APIs pass → transition to `setup` silently
-2. Critical APIs pass, optional APIs fail → amber warning, checklist with
-   ok/warn icons per API, "Update browser for full features" CTA
-3. Critical APIs missing → red error, checklist with ok/warn icons per API,
-   "Browser not supported" message
-
-Checklist rows (with ok/warn icon per API):
-
-- Screen capture (`getDisplayMedia`) — critical
-- Media recording (`MediaRecorder`) — critical
-- Camera access (`getUserMedia`) — optional
-- Audio mixing (Web Audio API) — optional
+1. Critical pass → `setup` silently
+2. Critical pass, optional fail → amber warning + checklist
+3. Critical fail → red error + checklist
 
 ## Section 2 — Setup.svelte
 
-Layout:
-
-- **Top bar** (in `+layout.svelte`): "ScreenCast" text logo (left) | Shortcuts
-  button · Theme toggle (right)
-- **Preview area**: shows selected screen stream in a `<video>` element once
-  picked; shows empty state when no screen is selected or when sharing is
-  stopped
-- **Instruction text**: "Choose a screen to preview, then hit Record"
-- **WebcamBubble** shown in preview area (top-right by default), draggable —
-  visible only in Setup, hidden from countdown onwards
+- **Top bar**: "ScreenCast" text logo (left) | Shortcuts · Theme toggle (right)
+- **Preview area**: live screen stream once picked, empty state placeholder
+  before
+- **WebcamBubble**: visible and draggable in Setup only — hidden from countdown
+  onwards
 - **Bottom toolbar**: Mic combo button | Cam combo button | [spacer] | Start
-  Recording button
+  Recording
 
-### Screen picker flow (embedded in Setup)
+### Screen picker
 
-- "Choose Screen" button calls `getDisplayMedia` early
-- On success: stream shown live in the preview `<video>` element
-- "Re-pick" button available to swap the stream
-- The acquired stream is reused when recording starts — no second picker prompt
-- `screenStream` tracked in page state: `null` (unpicked) or `MediaStream`
-- Start Recording button disabled until a screen is picked
+- "Choose Screen" calls `getDisplayMedia` early
+- Stream reused when recording starts — never called twice
+- `screenStream`: `null` or `MediaStream` in page state
+- Start Recording disabled until screen picked
 
 ### Auto-start on tab share
 
-- When `getDisplayMedia` resolves and the selected source is a **browser tab**,
-  automatically trigger the countdown without requiring the user to click Start
-  Recording
-- This handles the focus-loss problem: selecting a tab in Chrome immediately
-  shifts focus away from ScreenCast, so the user would otherwise have to
-  navigate back to click Record
-- For window or screen sharing: do not auto-start — the user retains enough
-  context to click Record themselves
-- Detect tab share by checking `getDisplayMedia` track settings for
-  `displaySurface === 'browser'`
+- If `displaySurface === 'browser'` → auto-trigger countdown
+- Window/screen share: do not auto-start
 
-### Stream ended by user (stop sharing)
+### Stream ended
 
-- Listen for the `ended` event on the screen video track
-- When fired during Setup or Recording: stop all tracks, clear `screenStream`,
-  and return to the Setup empty state
-- Do not show a black preview — return cleanly to the "Choose Screen" empty
-  state
-- The user can then re-pick a screen or start fresh
+- Listen for `ended` on screen video track
+- Return to Setup empty state — never show black preview
 
 ## Section 3 — WebcamBubble.svelte
 
-- **120px diameter circle**
-- **Always fully circular** regardless of snap position — no corner clipping
-- **8 snap positions**: 4 corners (tl, tr, bl, br) + 4 edge midpoints (tc, rc,
-  bc, lc)
-- Snaps to nearest of 8 positions on drag release
-- **During drag**: highlighted hotspot zones shown at all inactive positions as
-  larger drop targets
-- **No drag hint** on the bubble — just draggable
-- **Visibility rules**:
-
-| State            | Bubble visible                     |
-| ---------------- | ---------------------------------- |
-| Setup (cam on)   | Yes — draggable, positioned        |
-| Countdown        | No — canvas compositing takes over |
-| Recording        | No — canvas compositing takes over |
-| Review           | No — greyscale last frame shown    |
-| All other states | No                                 |
-
-- **When cam is off**: bubble disappears entirely
-- The chosen position is passed to canvas compositing and persists across states
+- **120px diameter**, always fully circular
+- **8 snap positions**: tl, tr, bl, br, tc, rc, bc, lc
+- During drag: highlighted hotspot zones at inactive positions
+- No drag hint — just draggable
+- Visible in Setup (cam on) only — hidden countdown onwards
+- Disappears entirely when cam is off
+- Chosen position passed to canvas compositor
 
 ## Section 4 — Combo Buttons (Mic & Cam)
 
-Each control is a split button — used in both Setup and Recording toolbars:
-
 **Structure**: `[Icon] [Chevron ▾]`
 
-- Left side (icon): click to mute/unmute (mic) or enable/disable (cam)
-- Right side (chevron): opens a shadcn `DropdownMenu` listing available devices
-  from `enumerateDevices()`
-
-**Visual states**:
-
-- **Active**: default shadcn style, active icon (`Mic`, `Video`)
-- **Muted / Off**: shadcn `destructive` variant, off icon (`MicOff`, `VideoOff`)
-
-**Selected device indicator in dropdown**:
-
-- Use `DropdownMenuRadioGroup` with `DropdownMenuRadioItem` for the device list
-- The currently selected device shows a checkmark indicator via the RadioItem's
-  built-in checked state
-- Only one device can be selected at a time per button
-
-**Tooltip on hover**:
-
-- Wrap the entire combo button in a shadcn `Tooltip` component
-- Tooltip content shows the currently selected device name (e.g.
-  `"MacBook Pro Microphone"`, `"FaceTime HD Camera"`)
-- When no explicit device has been selected and the default is in use, show
-  `"Default microphone"` or `"Default camera"` as the fallback label
-- Tooltip appears on hover of the full button (both icon side and chevron side)
-
-Device selection saved to `localStorage` via `deviceStore.ts`.
+- Icon side: mute/unmute or enable/disable
+- Chevron: shadcn `DropdownMenu` with `DropdownMenuRadioGroup` /
+  `DropdownMenuRadioItem` — checkmark on selected device
+- Wrap entire button in shadcn `Tooltip` showing selected device name
+- Fallback tooltip: `"Default microphone"` / `"Default camera"`
+- Muted/Off state: shadcn `destructive` variant + `MicOff` / `VideoOff` icon
 
 ## Section 5 — Countdown.svelte
 
-- Overlaid on the preview area only (not full screen)
-- Large number (3 → 2 → 1) centred
-- Circular progress ring around the number, depleting each second
-- Number animates with a card flip transition between each count
-- **Audio beep on each count** — short beep played via Web Audio API on 3, 2,
-  and 1 — generate a simple sine wave tone, no external audio files
-- **Browser tab title** shows the countdown: `3… | ScreenCast` →
-  `2… | ScreenCast` → `1… | ScreenCast`
-- WebcamBubble hidden — canvas compositing active from this point
-- Triggers after Start Recording, auto-start on tab share, or Resume
-- On complete → transition to `recording`, reset `document.title` to recording
-  state
+- Overlaid on preview area only
+- Large number (3→2→1) + circular progress ring depleting each second
+- Card flip animation between counts
+- Audio beep via Web Audio API on each count (sine wave, no files)
+- `document.title`: `3… | ScreenCast` → `2… | ScreenCast` → `1… | ScreenCast`
+- On complete: transition to `recording`
 
-## Section 6 — Recording.svelte
+## Section 6 — Recording.svelte + recorder.ts
 
-### Capture (recorder.ts)
+### Canvas compositing pipeline (recorder.ts)
 
-- Reuse `screenStream` acquired in Setup
-- `getUserMedia({ video: { deviceId }, audio: { deviceId } })` for webcam + mic
-- Composite screen + webcam onto a hidden `<canvas>` via `requestAnimationFrame`
-- Canvas stream + mixed audio → `MediaRecorder` (WebM)
-- Each recording session produces one WebM blob (segments stitched in FFmpeg at
-  export)
-- Expose `start()`, `stop()` from `recorder.ts`
-- Listen for `ended` event on screen track — if fired during recording, stop
-  recording and return to Setup empty state
+```
+screenStream ──┐
+               ├──► <canvas> (rAF loop) ──► captureStream(0) + requestFrame() ──► MediaRecorder
+webcamStream ──┘
 
-### Audio mixing (recorder.ts)
+screenStream audio ──┐
+                     ├──► AudioContext mixer ──► MediaStreamDestination ──► MediaRecorder
+micStream audio ─────┘
+```
 
-- `AudioContext` with `MediaStreamDestination`
-- Connect screen audio source + mic source → destination
-- Mic node stored separately for mute toggle (disconnect/reconnect)
+### Critical implementation details
 
-### Canvas compositing (recorder.ts)
+**Canvas setup:**
 
-- Draw screen capture full canvas each frame
-- Draw webcam as fully circular clip at chosen snap position (120px diameter)
-- No corner clipping — always a full circle
-- Position passed in from `WebcamBubble` state
-- When cam is off: draw nothing at bubble position
+```ts
+const canvas = document.createElement('canvas')
+const videoTrack = screenStream.getVideoTracks()[0]
+const settings = videoTrack.getSettings()
+canvas.width = settings.width ?? 1920
+canvas.height = settings.height ?? 1080
+```
 
-### 8-position compositing map
+**Wait for video elements before starting:**
+
+```ts
+await Promise.all([
+  new Promise<void>(resolve => {
+    if (screenVideo.readyState >= 2) resolve()
+    else screenVideo.addEventListener('canplay', () => resolve(), { once: true })
+  }),
+  new Promise<void>(resolve => {
+    if (webcamVideo.readyState >= 2) resolve()
+    else webcamVideo.addEventListener('canplay', () => resolve(), { once: true })
+  })
+])
+// Only then start rAF loop and MediaRecorder
+```
+
+**Manual frame capture — CRITICAL:**
+
+```ts
+// Use captureStream(0) — NOT captureStream(30)
+const canvasStream = canvas.captureStream(0)
+let canvasCaptureTrack = canvasStream.getVideoTracks()[0] as CanvasCaptureMediaStreamTrack
+
+function drawFrame() {
+  ctx.drawImage(screenVideo, 0, 0, canvas.width, canvas.height)
+
+  if (camEnabled && webcamStream && webcamVideo.readyState >= 2) {
+    const { x, y } = getBubbleCoords(bubblePosition, canvas.width, canvas.height, 120)
+    ctx.save()
+    ctx.beginPath()
+    ctx.arc(x + 60, y + 60, 60, 0, Math.PI * 2)
+    ctx.clip()
+    ctx.drawImage(webcamVideo, x, y, 120, 120)
+    ctx.restore()
+  }
+
+  // MUST call requestFrame() explicitly every tick
+  canvasCaptureTrack?.requestFrame()
+
+  rafId = requestAnimationFrame(drawFrame)
+}
+```
+
+**Codec probe:**
+
+```ts
+const mimeType = [
+  'video/webm;codecs=vp9,opus',
+  'video/webm;codecs=vp8,opus',
+  'video/webm;codecs=h264,opus',
+  'video/webm',
+].find(type => MediaRecorder.isTypeSupported(type)) ?? 'video/webm'
+```
+
+**MediaRecorder:**
+
+```ts
+const compositeStream = new MediaStream([
+  ...canvasStream.getVideoTracks(),
+  ...destination.stream.getAudioTracks()
+])
+
+mediaRecorder = new MediaRecorder(compositeStream, {
+  mimeType,
+  videoBitsPerSecond: 8_000_000,
+  audioBitsPerSecond: 128_000
+})
+
+mediaRecorder.start(500) // 500ms timeslice
+```
+
+**WebM duration fix:**
+
+```ts
+// Record start time
+const recordingStartTime = Date.now()
+
+// In onstop handler:
+const durationMs = Date.now() - recordingStartTime
+const rawBlob = new Blob(chunks, { type: mimeType })
+const fixedBlob = await fixWebmDuration(rawBlob, durationMs)
+// Return fixedBlob — never the raw blob
+```
+
+**Cleanup — MUST call track.stop() not pause():**
+
+```ts
+screenStream.getTracks().forEach(t => t.stop())
+webcamStream?.getTracks().forEach(t => t.stop())
+screenVideo.srcObject = null
+webcamVideo.srcObject = null
+cancelAnimationFrame(rafId)
+audioCtx.close()
+```
+
+### Bubble position coordinates (20px margin)
 
 ```ts
 type BubblePosition = 'tl' | 'tr' | 'bl' | 'br' | 'tc' | 'rc' | 'bc' | 'lc'
+
+function getBubbleCoords(pos: BubblePosition, w: number, h: number, size: number) {
+  const m = 20
+  const coords = {
+    tl: { x: m, y: m },
+    tr: { x: w - size - m, y: m },
+    bl: { x: m, y: h - size - m },
+    br: { x: w - size - m, y: h - size - m },
+    tc: { x: (w - size) / 2, y: m },
+    bc: { x: (w - size) / 2, y: h - size - m },
+    lc: { x: m, y: (h - size) / 2 },
+    rc: { x: w - size - m, y: (h - size) / 2 },
+  }
+  return coords[pos]
+}
 ```
 
-Canvas draw coordinates calculated per position at runtime.
+### RecorderOptions
 
-### Browser tab title during recording
+```ts
+export interface RecorderOptions {
+  screenStream: MediaStream
+  webcamDeviceId: string | null
+  micDeviceId: string | null
+  bubblePosition: BubblePosition
+  micMuted: boolean
+  camEnabled: boolean
+}
+```
 
-- Update `document.title` on each timer tick: `● REC 00:42 | ScreenCast`
-- Reset to `ScreenCast` when recording stops
+`getUserMedia` for webcam + mic called inside `recorder.ts` `start()` — not
+outside.
 
-### UI
+### Recording UI
 
-- **Top bar**: inherited from `+layout.svelte` — "ScreenCast" text logo |
-  Shortcuts · Theme toggle | `● REC · mm:ss` badge
-- **Bottom toolbar**: Mic combo button | Cam combo button | [spacer] | Stop
-  button
-- Recording dot: red, pulsing (hand-written CSS animation)
-- Timer: `mm:ss` counting up from `00:00`
+- **Top bar**: "ScreenCast" | Shortcuts · Theme toggle | `● REC · mm:ss` badge
+- **Bottom toolbar**: Mic combo | Cam combo | [spacer] | Stop
+- `document.title` updated each tick: `● REC 00:42 | ScreenCast`
+- `document.title` reset to `ScreenCast` on stop — cleared in both Stop handler
+  AND `onDestroy`
+- Timer `setInterval` stored and cleared on stop
 
 ## Section 7 — Review.svelte
 
-Appears as an overlay on the Setup preview area — not a full screen transition.
+Overlay on Setup preview area — not full screen.
 
-- Video paused on the last frame, shown in greyscale
-- Three fully opaque action cards tiled horizontally over the video
-- Meta pills above the cards: duration · mic status · cam status
+- Last frame paused, shown in greyscale
+- Three fully opaque cards tiled horizontally over video
+- Meta pills: duration · mic status · cam status
 
-**Cards**: | Card | Style | Action | |---|---|---| | Resume | Default shadcn | →
-countdown → recording (new segment) | | Edit & Export | Default shadcn | →
-editor | | Discard | shadcn `destructive` | → setup immediately, no confirmation
-|
+| Card          | Style                | Action                                |
+| ------------- | -------------------- | ------------------------------------- |
+| Resume        | Default shadcn       | → countdown → recording (new segment) |
+| Edit & Export | Default shadcn       | → editor                              |
+| Discard       | shadcn `destructive` | → setup, no confirmation              |
 
 ## Section 8 — Editor.svelte
 
 ### Video player
 
-- `<video>` element fed from stitched WebM blob
-- Play/pause button, current time / total time labels
+- `<video>` from fixed WebM blob
+- Play/pause, current time / total time
 - Scrubable progress bar with draggable thumb
+
+### Timeline thumbnail generation
+
+Runs on main thread (not a worker — `HTMLVideoElement` not available in
+Workers). Uses a hidden `<video>` element separate from the main player:
+
+```ts
+async function generateThumbnails(
+  videoEl: HTMLVideoElement,
+  count: number,
+  duration: number,
+  onThumbnail: (index: number, dataUrl: string) => void
+) {
+  for (let i = 0; i < count; i++) {
+    videoEl.currentTime = (i / (count - 1)) * duration
+    await new Promise<void>(resolve => { videoEl.onseeked = () => resolve() })
+    const canvas = document.createElement('canvas')
+    canvas.width = 160
+    canvas.height = 90
+    canvas.getContext('2d')!.drawImage(videoEl, 0, 0, 160, 90)
+    onThumbnail(i, canvas.toDataURL('image/jpeg', 0.7))
+    await new Promise(resolve => setTimeout(resolve, 0)) // yield to browser
+  }
+}
+```
 
 ### Timeline
 
-- Video thumbnail tiles along the full timeline width (frames extracted via
-  canvas seek)
-- **Thumbnail generation runs in a Web Worker** (`thumbnailWorker.ts`) — never
-  on the main thread
-- Thumbnails are generated progressively and rendered into the timeline as they
-  arrive from the worker
-- Show a loading skeleton in thumbnail slots while generation is in progress
-- Two trim handles (left = start, right = end), draggable on the timeline bar
-- Playhead: thin vertical line + draggable handle at top
-    - Click anywhere on timeline to jump playhead
-    - Drag playhead handle to scrub
-    - Synced to `video.currentTime`
-- **Add Cut** button places a cut region at current playhead position
-    - Click a cut region to select it (highlighted)
-    - Drag edges of cut region to resize
-    - Delete key or **Remove Cut** button removes selected cut region
-- Cut regions shown as red overlay with "cut" label
-- Excluded regions (outside trim, cut regions) shown with dark overlay
-- Timestamp labels at even intervals below timeline
+- Thumbnail tiles along full width
+- Two trim handles (left = start, right = end), draggable
+- Playhead: vertical line + draggable handle at top
+    - Click to jump, drag to scrub, synced to `video.currentTime`
+- Add Cut: places cut region at playhead
+    - Click to select, drag edges to resize
+    - Delete key or Remove Cut button removes selected cut
+- Cut regions: red overlay with "cut" label
+- Excluded regions: dark overlay
+- Timestamp labels at even intervals
 
-### Keyboard shortcuts
-
-These work reliably because the user is focused on the ScreenCast tab while
-editing:
+### Keyboard shortcuts (Editor only — app has focus)
 
 - `Space`: play/pause
-- `←` / `→`: step ±5s
+- `←` / `→`: ±5s
 - `C`: add cut at playhead
 - `⌘E`: export
 
 ### Footer
 
-Left: Back to Review | Centre: final length label | Right: Export & Download
-button
+Left: Back to Review | Centre: final length | Right: Export & Download
 
 ## Section 9 — Processing.svelte
 
-- Progress percentage + status label (e.g. "Exporting to MP4… 42%")
-- Calls `ffmpegWorker.ts` (Web Worker) which wraps `ffmpegConverter.ts`
-- **FFmpeg runs entirely off the main thread** to prevent tab lockup and crash
-- Worker instantiated using Vite's Web Worker syntax:
+### Known issue
+
+Export currently fails with `DataCloneError` when posting segments to the FFmpeg
+worker. The `segments` array is a Svelte 5 reactive proxy — must be fully
+dereferenced before `postMessage`.
+
+### Required fix (not yet resolved)
+
+```ts
+// In Processing.svelte — break out of Svelte reactivity before postMessage
+const plainSegments: Blob[] = []
+for (const s of segments) {
+  const buffer = await s.arrayBuffer()
+  plainSegments.push(new Blob([buffer], { type: 'video/webm' }))
+}
+worker.postMessage({ segments: plainSegments, trimStart, trimEnd, cuts: cuts ?? [] })
+```
+
+Must be inside an async IIFE within `$effect`:
+
+```ts
+$effect(() => {
+  (async () => {
+    // ... conversion and postMessage ...
+  })()
+})
+```
+
+### FFmpeg worker (ffmpegWorker.ts)
+
+- Instantiated with Vite syntax:
   `new Worker(new URL('../ffmpegWorker.ts', import.meta.url), { type: 'module' })`
-- Worker receives: array of WebM segment blobs + trim start/end + cut regions
-- Worker posts progress messages back to the main thread for the progress
-  indicator
-- `ffmpegConverter.ts`:
-    - Load `@ffmpeg/core` (single-threaded, no SharedArrayBuffer required)
-    - Write each segment blob to FFmpeg virtual FS
-    - Stitch segments, apply trim + cuts via `filter_complex`
-    - Run conversion → `output.mp4`
-    - Read output, return as `Blob`
+- Receives:
+  `{ segments: Blob[], trimStart: number, trimEnd: number, cuts: CutRegion[] }`
+- Posts progress: `{ type: 'progress', percent: number }`
+- Posts completion: `{ type: 'done', blob: Blob }`
+- Posts errors: `{ type: 'error', message: string }`
+
+### ffmpegConverter.ts
+
+- Load `@ffmpeg/core` (single-threaded — no SharedArrayBuffer required)
+- Write segment blobs to FFmpeg virtual FS
+- Stitch segments, apply trim + cuts via `filter_complex`
+- VP9 WebM → MP4 via libx264:
+    ```
+    ffmpeg -i input.webm -c:v libx264 -preset fast -crf 23 -c:a aac -b:a 128k output.mp4
+    ```
 - On complete → auto-trigger `<a download>` → transition to `done`
 
 ## Section 10 — Done.svelte
 
-- Download auto-triggers immediately on arrival
-- "Download started" message
+- Download auto-triggers on arrival
 - Filename: `screen-recording-YYYY-MM-DD.mp4`
 - Buttons: Back to Editor | New Recording
 
 ## Section 11 — ShortcutsPanel.svelte
 
-Toggled by Shortcuts button in top bar or pressing `?`. Rendered as a shadcn
-`Dialog` overlay.
-
-Note: keyboard shortcuts are only implemented for the Editor and general
-navigation. Recording controls (stop, mute, webcam toggle) are not assigned
-shortcuts — when recording is active the ScreenCast tab is in the background and
-cannot intercept keyboard events.
+shadcn `Dialog`. Keyboard shortcuts only for Editor and general nav — recording
+shortcuts not viable when tab loses focus.
 
 **Editor** | Key | Action | |---|---| | `Space` | Play / pause | | `←` / `→` |
-Step back / forward 5s | | `C` | Add cut at playhead | | `⌘E` | Export &
-download |
+Step ±5s | | `C` | Add cut at playhead | | `⌘E` | Export & download |
 
 **General** | Key | Action | |---|---| | `?` | Open shortcuts panel |
 
-## Key Types (recorder.ts)
+## Key Types
 
 ```ts
 export type BubblePosition = 'tl' | 'tr' | 'bl' | 'br' | 'tc' | 'rc' | 'bc' | 'lc'
@@ -513,7 +547,7 @@ export interface CutRegion {
 }
 
 export interface ExportOptions {
-  segments: Blob[]  // one WebM blob per recording session
+  segments: Blob[]
   trimStart: number
   trimEnd: number
   cuts: CutRegion[]
@@ -523,7 +557,6 @@ export interface ExportOptions {
 ## deviceStore.ts
 
 ```ts
-// Svelte 5 rune-based, persisted to localStorage
 export const deviceStore = {
   webcamDeviceId: $state<string | null>(null),
   micDeviceId: $state<string | null>(null),
@@ -532,41 +565,36 @@ export const deviceStore = {
 
 ## GitHub Pages
 
-- `adapter-static` configured in `svelte.config.js`
+- `adapter-static` in `svelte.config.js`
 - `export const ssr = false` in `src/routes/+layout.ts`
 - Build: `npm run build` → `/build`
-- Deploy: push `/build` to `gh-pages` branch, or configure Pages to serve
-  `/build` from `main`
+- Deploy: `/build` to `gh-pages` branch
 
-## Notes
+## Critical Implementation Notes
 
-- Use `@ffmpeg/core` (not `@ffmpeg/core-mt`) — avoids
-  `SharedArrayBuffer`/COOP/COEP header requirements on GitHub Pages
-- **All heavy processing runs in Web Workers** — FFmpeg in `ffmpegWorker.ts`,
-  thumbnail generation in `thumbnailWorker.ts` — never on the main thread
-- Both workers must be instantiated using Vite's Web Worker syntax:
-  `new Worker(new URL('../workerFile.ts', import.meta.url), { type: 'module' })`
-- All app state in a single `$state` object in `+page.svelte`
-- shadcn-svelte Svelte 5 track — confirm correct init command at time of setup
-- `getDisplayMedia` stream acquired in Setup and reused in Recording — do not
-  call twice
-- Resume flow: each session produces a separate WebM blob; all segments stitched
-  together in FFmpeg at export time
-- Discard is immediate — no confirmation dialog
-- WebcamBubble disappears entirely when cam is off
-- WebcamBubble hidden from countdown onwards — canvas compositing handles the
-  webcam overlay
-- Theme preference (dark/light) persisted to `localStorage`
-- No custom Tailwind theme extensions — vanilla shadcn styling only
-- Keyboard shortcuts limited to Editor and general navigation only — recording
-  shortcuts are not viable in a browser tab that loses focus during capture
-- Auto-start countdown applies to tab sharing only
-  (`displaySurface === 'browser'`) — not window or screen sharing
-- `document.title` updated during countdown and recording, reset to `ScreenCast`
-  at all other times
-- Stream `ended` event handled in both Setup and Recording — always returns to
-  Setup empty state cleanly
-- Combo buttons use `DropdownMenuRadioGroup` / `DropdownMenuRadioItem` for
-  device selection with built-in checkmark on selected item
-- Combo buttons wrapped in shadcn `Tooltip` showing selected device name on
-  hover; fallback label used when default device is active
+- **`captureStream(0)` + `requestFrame()`** — NEVER use `captureStream(30)`.
+  Chrome does not reliably auto-capture canvas frames. Must call
+  `canvasCaptureTrack.requestFrame()` at the end of every rAF tick
+- **Wait for `readyState >= 2`** on both video elements before starting rAF loop
+  and MediaRecorder — starting too early produces blank webcam frames
+- **`fix-webm-duration`** — always apply with measured `durationMs`
+  (`Date.now()` delta between start and stop). The duration header is always
+  missing from MediaRecorder output
+- **Track teardown** — always call `track.stop()` on every `MediaStreamTrack`.
+  Never just `videoElement.pause()`. Pausing does not release the track and
+  Chrome keeps showing the sharing indicator
+- **Segments postMessage** — `segments` is a Svelte 5 reactive proxy. Must
+  convert via `arrayBuffer()` to plain `Blob` before `postMessage` or
+  DataCloneError will be thrown
+- **Thumbnail generation** — runs on main thread with async yields between
+  frames. `HTMLVideoElement` is not available in Web Workers
+- **FFmpeg worker** — must use Vite Web Worker syntax:
+  `new Worker(new URL('../ffmpegWorker.ts', import.meta.url), { type: 'module' })`
+- **`@ffmpeg/core`** not `@ffmpeg/core-mt` — avoids SharedArrayBuffer/COOP/COEP
+  requirements on GitHub Pages
+- **Auto-start** applies to tab sharing only (`displaySurface === 'browser'`)
+- **`document.title`** must be reset in both the Stop handler and `onDestroy` as
+  a safety net
+- **No custom Tailwind theme** — vanilla shadcn only
+- **Keyboard shortcuts** — Editor and general nav only. Recording shortcuts not
+  viable when tab loses focus during capture
