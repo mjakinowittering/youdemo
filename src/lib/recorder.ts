@@ -35,7 +35,7 @@ let _canvas: HTMLCanvasElement | null = null;
 let _ctx: CanvasRenderingContext2D | null = null;
 let _screenVideo: HTMLVideoElement | null = null;
 let _webcamVideo: HTMLVideoElement | null = null;
-let _rafId: number | null = null;
+let _intervalId: ReturnType<typeof setInterval> | null = null;
 let _recorder: MediaRecorder | null = null;
 let _chunks: BlobPart[] = [];
 let _audioCtx: AudioContext | null = null;
@@ -95,7 +95,7 @@ function drawFrame(): void {
     _frameCount++;
     const now = Date.now();
     if (now - _lastFpsLog >= 1000) {
-        console.log('[Recorder] Compositing fps:', _frameCount);
+        console.log('[Recorder] Compositing fps (setInterval):', _frameCount);
         _frameCount = 0;
         _lastFpsLog = now;
     }
@@ -128,8 +128,6 @@ function drawFrame(): void {
         _framePushCount = 0;
         _lastFrameLog = nowPush;
     }
-
-    _rafId = requestAnimationFrame(drawFrame);
 }
 
 function cleanup(): void {
@@ -266,7 +264,7 @@ export async function start(options: RecorderOptions): Promise<void> {
         );
     }
     await Promise.all(readyPromises);
-    console.log('[Recorder] Both video elements ready — starting rAF loop and MediaRecorder');
+    console.log('[Recorder] Both video elements ready — starting compositing loop');
 
     // Canvas stream + mixed audio → MediaRecorder
     const canvasStream = _canvas.captureStream(0); // 0 = manual frame control
@@ -294,13 +292,15 @@ export async function start(options: RecorderOptions): Promise<void> {
     _recorder.ondataavailable = (e) => {
         if (e.data.size > 0) _chunks.push(e.data);
     };
-    _recorder.start(500);
-    console.log('[Recorder] MediaRecorder started with 500ms timeslice');
-    _recordingStartTime = Date.now();
 
     _frameCount = 0;
     _lastFpsLog = Date.now();
-    drawFrame();
+    _intervalId = setInterval(drawFrame, 1000 / 30);
+    console.log('[Recorder] Compositing loop started at 30fps via setInterval');
+
+    _recorder.start(500);
+    console.log('[Recorder] MediaRecorder started with 500ms timeslice');
+    _recordingStartTime = Date.now();
 }
 
 export function stop(): Promise<Blob> {
@@ -313,12 +313,11 @@ export function stop(): Promise<Blob> {
             return;
         }
         console.log('[Recorder] Stopping MediaRecorder — state was:', _recorder.state);
-        console.log('[Recorder] Cancelling requestAnimationFrame loop — rafId:', _rafId);
-        if (_rafId !== null) {
-            cancelAnimationFrame(_rafId);
-            _rafId = null;
+        if (_intervalId !== null) {
+            clearInterval(_intervalId);
+            _intervalId = null;
         }
-        console.log('[Recorder] rAF loop cancelled');
+        console.log('[Recorder] Compositing interval cleared');
         _recorder.onstop = async () => {
             console.log(
                 '[Recorder] MediaRecorder stopped — building blob from',
