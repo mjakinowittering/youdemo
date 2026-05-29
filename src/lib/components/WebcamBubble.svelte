@@ -2,7 +2,7 @@
     export type BubblePosition = 'tl' | 'tr' | 'bl' | 'br' | 'tc' | 'rc' | 'bc' | 'lc';
 
     const ALL_POSITIONS: BubblePosition[] = ['tl', 'tr', 'bl', 'br', 'tc', 'rc', 'bc', 'lc'];
-    const BUBBLE = 200;
+    const BUBBLE = 275;
     const PAD = 20;
 
     interface Props {
@@ -118,7 +118,7 @@
 
     {#if cw > 0}
         <div
-            class="pointer-events-auto absolute cursor-grab overflow-hidden rounded-full bg-black shadow-lg ring-2 ring-white/30 active:cursor-grabbing"
+            class="pointer-events-auto absolute cursor-grab overflow-hidden rounded-full bg-black shadow-lg ring-2 ring-indigo-500 active:cursor-grabbing"
             style="left:{bx}px;top:{by}px;width:{BUBBLE}px;height:{BUBBLE}px"
             role="none"
             {onpointerdown}

@@ -1,21 +1,37 @@
 <script lang="ts">
     import BrowserCheck from '$lib/components/BrowserCheck.svelte';
-    import Setup from '$lib/components/Setup.svelte';
     import Countdown from '$lib/components/Countdown.svelte';
+    import Done from '$lib/components/Done.svelte';
+    import Editor from '$lib/components/Editor.svelte';
+    import type { DeletedRange } from '$lib/components/Editor.svelte';
+    import ErrorScreen from '$lib/components/ErrorScreen.svelte';
+    import Processing from '$lib/components/Processing.svelte';
     import Recording from '$lib/components/Recording.svelte';
     import Review from '$lib/components/Review.svelte';
-    import Editor from '$lib/components/Editor.svelte';
-    import Processing from '$lib/components/Processing.svelte';
-    import Done from '$lib/components/Done.svelte';
-    import type { CutRegion } from '$lib/components/Editor.svelte';
+    import Setup from '$lib/components/Setup.svelte';
     import type { BubblePosition } from '$lib/components/WebcamBubble.svelte';
+
+    import { deviceStore } from '$lib/deviceStore.svelte.js';
     import {
         start as recorderStart,
         stop as recorderStop,
-        setMicMuted,
-        setCamEnabled
+        setCamEnabled,
+        setMicMuted
     } from '$lib/recorder.js';
-    import { deviceStore } from '$lib/deviceStore.svelte.js';
+
+    let errorMessage = $state('');
+    let hasError = $state(false);
+
+    if (typeof window !== 'undefined') {
+        window.onerror = (_message, _source, _lineno, _colno, error) => {
+            errorMessage = `${_message}\n${error?.stack ?? ''}`;
+            hasError = true;
+        };
+        window.onunhandledrejection = (event) => {
+            errorMessage = `Unhandled Promise: ${event.reason?.message ?? event.reason}\n${event.reason?.stack ?? ''}`;
+            hasError = true;
+        };
+    }
 
     type AppState =
         | 'check'
@@ -37,9 +53,8 @@
     let outputBlob = $state<Blob | null>(null);
 
     // Export params (set when leaving editor → processing)
-    let exportTrimStart = $state(0);
-    let exportTrimEnd = $state(0);
-    let exportCuts = $state<CutRegion[]>([]);
+    let exportDeletedRanges = $state<DeletedRange[]>([]);
+    let exportTotalDuration = $state(0);
 
     // Device / recording controls
     let micMuted = $state(false);
@@ -98,12 +113,9 @@
         editorVideoUrl = null;
         outputBlob = null;
         totalElapsedSec = 0;
-        exportTrimStart = 0;
-        exportTrimEnd = 0;
-        exportCuts = [];
+        exportDeletedRanges = [];
         appState = 'setup';
-        document.title = 'ScreenCast';
-        console.log('[App] Full reset to setup — state cleared, devices preserved');
+        document.title = 'YourDemo';
     }
 
     async function handleResume() {
@@ -113,7 +125,9 @@
                 video: true,
                 audio: true
             });
-            console.log('[Review] Screen picker confirmed — updating stream and starting countdown');
+            console.log(
+                '[Review] Screen picker confirmed — updating stream and starting countdown'
+            );
             if (screenStream) {
                 screenStream.getTracks().forEach((t) => t.stop());
             }
@@ -131,7 +145,13 @@
         console.log('[App] Edit & Export clicked — transitioning to editor');
         if (editorVideoUrl) URL.revokeObjectURL(editorVideoUrl);
         const stitched = new Blob(segments, { type: 'video/webm' });
-        console.log('[Editor] 3. Creating object URL from', segments.length, 'segment(s) — total blob size:', stitched.size, 'bytes');
+        console.log(
+            '[Editor] 3. Creating object URL from',
+            segments.length,
+            'segment(s) — total blob size:',
+            stitched.size,
+            'bytes'
+        );
         editorVideoUrl = URL.createObjectURL(stitched);
         console.log('[Editor] 4. Object URL created:', editorVideoUrl);
         appState = 'editor';
@@ -142,10 +162,9 @@
         appState = 'review';
     }
 
-    function handleExport(trimStart: number, trimEnd: number, cuts: CutRegion[]) {
-        exportTrimStart = trimStart;
-        exportTrimEnd = trimEnd;
-        exportCuts = cuts;
+    function handleExport(deletedRanges: DeletedRange[], totalDuration: number) {
+        exportDeletedRanges = deletedRanges;
+        exportTotalDuration = totalDuration;
         appState = 'processing';
     }
 
@@ -192,6 +211,11 @@
     }
 </script>
 
+{#if hasError}
+    <div class="h-full">
+        <ErrorScreen error={errorMessage} />
+    </div>
+{:else}
 <div class="h-full">
     {#if appState === 'check'}
         <BrowserCheck onpass={goToSetup} />
@@ -232,12 +256,12 @@
     {:else if appState === 'processing'}
         <Processing
             {segments}
-            trimStart={exportTrimStart}
-            trimEnd={exportTrimEnd}
-            cuts={exportCuts}
+            deletedRanges={exportDeletedRanges}
+            totalDuration={exportTotalDuration}
             oncomplete={handleProcessingDone}
         />
     {:else if appState === 'done'}
         <Done videoBlob={outputBlob} onbacktoeditor={backToEditor} onnewrecording={newRecording} />
     {/if}
 </div>
+{/if}

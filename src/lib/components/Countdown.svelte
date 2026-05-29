@@ -31,16 +31,16 @@
     }
 
     onMount(() => {
-        document.title = '3… | ScreenCast';
+        document.title = '3… | YourDemo';
         playBeep();
         const t1 = setTimeout(() => {
             count = 2;
-            document.title = '2… | ScreenCast';
+            document.title = '2… | YourDemo';
             playBeep();
         }, 1000);
         const t2 = setTimeout(() => {
             count = 1;
-            document.title = '1… | ScreenCast';
+            document.title = '1… | YourDemo';
             playBeep();
         }, 2000);
         const t3 = setTimeout(oncomplete, 3000);
@@ -48,7 +48,7 @@
             clearTimeout(t1);
             clearTimeout(t2);
             clearTimeout(t3);
-            document.title = 'ScreenCast';
+            document.title = 'YourDemo';
         };
     });
 
@@ -91,11 +91,10 @@
                     cy="90"
                     r={R}
                     fill="none"
-                    stroke="white"
                     stroke-width="5"
                     stroke-linecap="round"
                     stroke-dasharray={CIRC}
-                    class="ring-arc"
+                    class="ring-arc stroke-indigo-500"
                 />
             {/key}
         </svg>
@@ -103,7 +102,7 @@
         <div class="absolute inset-0" style="display:grid;place-items:center;perspective:400px">
             {#key count}
                 <span
-                    class="text-7xl font-bold text-white tabular-nums select-none [backface-visibility:hidden] [grid-area:1/1]"
+                    class="text-7xl font-bold text-indigo-500 tabular-nums select-none [grid-area:1/1] backface-hidden"
                     in:flipIn
                     out:flipOut>{count}</span
                 >

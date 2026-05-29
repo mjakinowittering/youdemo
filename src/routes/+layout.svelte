@@ -1,15 +1,16 @@
 <script lang="ts">
     import './layout.css';
-    import favicon from '$lib/assets/favicon.svg';
-    import { Sun, Moon, Keyboard } from 'lucide-svelte';
+
+    import { MonitorPlay, Moon, Sun } from 'lucide-svelte';
+
     import { Button } from '$lib/components/ui/button';
     import * as Tooltip from '$lib/components/ui/tooltip/index.js';
-    import ShortcutsPanel from '$lib/components/ShortcutsPanel.svelte';
+
+    import favicon from '$lib/assets/favicon.svg';
 
     let { children } = $props();
 
     let dark = $state((localStorage.getItem('theme') ?? 'dark') === 'dark');
-    let shortcutsOpen = $state(false);
 
     $effect(() => {
         document.documentElement.classList.toggle('dark', dark);
@@ -19,15 +20,7 @@
     function toggleTheme() {
         dark = !dark;
     }
-
-    function handleKeydown(e: KeyboardEvent) {
-        if (e.key === '?' && !e.metaKey && !e.ctrlKey && !e.altKey) {
-            shortcutsOpen = !shortcutsOpen;
-        }
-    }
 </script>
-
-<svelte:window onkeydown={handleKeydown} />
 
 <svelte:head>
     <link rel="icon" href={favicon} />
@@ -36,17 +29,18 @@
 <Tooltip.Provider>
     <div class="flex h-screen flex-col">
         <header class="flex h-14 items-center justify-between border-b px-4">
-            <span class="text-sm font-semibold tracking-wide">ScreenCast</span>
+            <span class="flex items-center text-sm font-semibold tracking-wide">
+                <MonitorPlay class="mr-2 text-indigo-500" size={20} />
+                YourDemo
+            </span>
             <div class="flex items-center gap-1">
                 <Button
                     variant="ghost"
                     size="icon"
-                    aria-label="Keyboard shortcuts"
-                    onclick={() => (shortcutsOpen = true)}
+                    class="hover:text-indigo-500"
+                    onclick={toggleTheme}
+                    aria-label="Toggle theme"
                 >
-                    <Keyboard class="h-4 w-4" />
-                </Button>
-                <Button variant="ghost" size="icon" onclick={toggleTheme} aria-label="Toggle theme">
                     {#if dark}
                         <Sun class="h-4 w-4" />
                     {:else}
@@ -61,5 +55,3 @@
         </main>
     </div>
 </Tooltip.Provider>
-
-<ShortcutsPanel open={shortcutsOpen} onclose={() => (shortcutsOpen = false)} />

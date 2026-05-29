@@ -1,97 +1,237 @@
 <script lang="ts">
+    import { ChevronLeft, Pause, Play, Scissors, Trash2 } from 'lucide-svelte';
     import { onMount } from 'svelte';
+    import { SvelteMap } from 'svelte/reactivity';
+
     import { Button } from '$lib/components/ui/button/index.js';
-    import { Play, Pause, ChevronLeft } from 'lucide-svelte';
 
-    export interface CutRegion {
-        id: string;
-        start: number;
-        end: number;
+    export interface DeletedRange {
+        startTime: number;
+        endTime: number;
     }
-
-    type DragTarget =
-        | { type: 'playhead' }
-        | { type: 'trimStart' }
-        | { type: 'trimEnd' }
-        | { type: 'cutLeft'; id: string }
-        | { type: 'cutRight'; id: string };
 
     interface Props {
         onback: () => void;
-        onexport: (trimStart: number, trimEnd: number, cuts: CutRegion[]) => void;
+        onexport: (deletedRanges: DeletedRange[], totalDuration: number) => void;
         videoUrl?: string | null;
     }
 
     let { onback, onexport, videoUrl = null }: Props = $props();
 
+    const FRAME_RATE = 30;
+    const SAMPLE_INTERVAL = 0.2;
+    const CELL_WIDTH = 80;
+    const CELL_HEIGHT = 64;
+    const CELL_GAP = 3;
+    const CELL_STRIDE = CELL_WIDTH + CELL_GAP;
+
+    let videoEl = $state<HTMLVideoElement | undefined>(undefined);
+    let scrollContainer = $state<HTMLDivElement | undefined>(undefined);
+
     let paused = $state(true);
     let currentTime = $state(0);
     let videoDuration = $state(0);
-    let trimStart = $state(0);
-    let trimEnd = $state(0);
-    let cuts = $state<CutRegion[]>([]);
-    let selectedCutId = $state<string | null>(null);
-    let thumbnails = $state<string[]>([]);
-    let thumbnailCount = $state(0);
-    let thumbnailsLoading = $state(false);
-    let thumbVideoEl: HTMLVideoElement | undefined;
-    let _thumbGen = 0;
-    let dragging = $state<DragTarget | null>(null);
 
-    let timelineEl: HTMLDivElement | undefined;
+    let thumbnails = new SvelteMap<number, string>();
+    let deletedRanges = $state<DeletedRange[]>([]);
+    let editMode = $state(false);
+    let anchorCell = $state<number | null>(null);
+    let selectedCells = $state(new Set<number>());
+    let collapsingCells = $state(new Set<number>());
+    let scrollLeft = $state(0);
+    let containerWidth = $state(0);
+    let showPlayIcon = $state(false);
+    let showPauseIcon = $state(false);
 
-    function attachTimeline(node: HTMLDivElement) {
-        timelineEl = node;
-        return () => {
-            timelineEl = undefined;
-        };
-    }
+    let cellCount = $derived(Math.round(videoDuration / SAMPLE_INTERVAL));
+    let currentCell = $derived(Math.round(currentTime / SAMPLE_INTERVAL));
 
-    function attachThumbVideo(node: HTMLVideoElement) {
-        thumbVideoEl = node;
-        return () => {
-            thumbVideoEl = undefined;
-        };
-    }
+    let deletedCells: Set<number> = $derived(
+        new Set(
+            Array.from({ length: cellCount }, (_, i) => i).filter((i) => {
+                const t = i * SAMPLE_INTERVAL;
+                return deletedRanges.some((r) => t >= r.startTime && t < r.endTime);
+            })
+        )
+    );
 
-    async function startThumbnails(duration: number) {
-        console.log('[Editor] 6. Starting thumbnail generation — duration:', duration, 'videoUrl present:', !!videoUrl);
-        if (!videoUrl || !isFinite(duration) || !thumbVideoEl) return;
-        const gen = ++_thumbGen;
-        const count = Math.max(4, Math.min(24, Math.ceil(duration / 3)));
-        thumbnailCount = count;
-        thumbnailsLoading = true;
-        thumbnails = [];
-        const vid = thumbVideoEl;
+    // Sequential list of non-deleted cell indices in original order
+    let visibleCells: number[] = $derived(
+        Array.from({ length: cellCount }, (_, i) => i).filter((i) => !deletedCells.has(i))
+    );
 
-        for (let i = 0; i < count; i++) {
-            if (_thumbGen !== gen) return;
-            const seekTime = count > 1 ? (i / (count - 1)) * duration : 0;
-            console.log('[Editor] 7. Seeking to frame', i + 1, '/', count, 'at', seekTime.toFixed(2), 's');
-            vid.currentTime = seekTime;
-            await new Promise<void>(resolve => { vid.onseeked = () => resolve(); });
-            if (_thumbGen !== gen) return;
-            const canvas = document.createElement('canvas');
-            canvas.width = 160;
-            canvas.height = 90;
-            canvas.getContext('2d')?.drawImage(vid, 0, 0, 160, 90);
-            thumbnails = [...thumbnails, canvas.toDataURL('image/jpeg', 0.7)];
-            console.log('[Editor] 8. Thumbnail captured:', thumbnails.length, '/', count);
-            await new Promise(resolve => setTimeout(resolve, 0));
+    // Map from original cell index → rendered (sequential) position in the strip
+    let cellRenderPos: Map<number, number> = $derived(
+        new Map(visibleCells.map((idx, pos) => [idx, pos]))
+    );
+
+    // Virtualization over rendered positions
+    let posStart = $derived(Math.max(0, Math.floor(scrollLeft / CELL_STRIDE) - 5));
+    let posEnd = $derived(
+        Math.min(
+            visibleCells.length - 1,
+            Math.ceil((scrollLeft + containerWidth) / CELL_STRIDE) + 5
+        )
+    );
+    let totalStripWidth = $derived(visibleCells.length * CELL_STRIDE);
+    let leftSpacerWidth = $derived(posStart * CELL_STRIDE);
+    let currentCellPos = $derived(cellRenderPos.get(currentCell) ?? -1);
+
+    let timestampLabels: { visibleIndex: number; label: string }[] = $derived(
+        (() => {
+            const interval = Math.max(1, Math.round(visibleCells.length / 8));
+            return visibleCells
+                .map((_, visibleIndex) => ({ visibleIndex }))
+                .filter(({ visibleIndex }) => visibleIndex % interval === 0)
+                .map(({ visibleIndex }) => ({
+                    visibleIndex,
+                    label: formatTime(visibleIndex * SAMPLE_INTERVAL)
+                }));
+        })()
+    );
+
+    let effectiveDuration = $derived(
+        Math.max(
+            0,
+            videoDuration -
+                deletedRanges.reduce((sum, r) => sum + Math.max(0, r.endTime - r.startTime), 0)
+        )
+    );
+
+    let effectiveCurrentTime = $derived.by(() => {
+        const t = currentTime;
+        const deletedBefore = deletedRanges
+            .filter((r) => r.endTime <= t)
+            .reduce((sum, r) => sum + (r.endTime - r.startTime), 0);
+        return Math.max(0, t - deletedBefore);
+    });
+
+    $effect(() => {
+        if (!scrollContainer || paused || currentCellPos < 0) return;
+        const targetScrollLeft = currentCellPos * CELL_STRIDE - containerWidth / 2;
+        scrollContainer.scrollLeft = Math.max(0, targetScrollLeft);
+    });
+
+    function handleCellClick(cellIndex: number) {
+        if (!editMode) {
+            safeSeek(cellIndex * SAMPLE_INTERVAL);
+            return;
         }
 
-        if (_thumbGen === gen) {
-            thumbnailsLoading = false;
-            thumbnailCount = thumbnails.length;
-            console.log('[Editor] All thumbnails complete:', thumbnails.length);
+        if (anchorCell === null) {
+            anchorCell = cellIndex;
+            selectedCells = new Set([cellIndex]);
+        } else {
+            const start = Math.min(anchorCell, cellIndex);
+            const end = Math.max(anchorCell, cellIndex);
+            selectedCells = new Set(Array.from({ length: end - start + 1 }, (_, i) => start + i));
+            anchorCell = null;
         }
     }
 
-    onMount(() => {
-        console.log('[Editor] 1. Component mounting');
-        console.log('[Editor] 2. videoUrl received:', videoUrl ? 'present (' + videoUrl.slice(0, 60) + '...)' : 'null');
+    async function deleteSelectedCells() {
+        if (selectedCells.size === 0) return;
+
+        collapsingCells = new Set(selectedCells);
+
+        await new Promise<void>((resolve) => setTimeout(resolve, 250));
+
+        const indices = Array.from(selectedCells).sort((a, b) => a - b);
+        const startTime = indices[0] * SAMPLE_INTERVAL;
+        const endTime = (indices[indices.length - 1] + 1) * SAMPLE_INTERVAL;
+        deletedRanges = [...deletedRanges, { startTime, endTime }];
+
+        selectedCells = new Set();
+        anchorCell = null;
+        collapsingCells = new Set();
+        editMode = false;
+
+        if (scrollContainer) scrollContainer.scrollLeft = 0;
+    }
+
+    function toggleEditMode() {
+        editMode = !editMode;
+        if (!editMode) {
+            selectedCells = new Set();
+            anchorCell = null;
+        }
+    }
+
+    function handleVideoClick() {
+        if (!videoEl) return;
+        if (paused) {
+            showPlayIcon = true;
+            paused = false;
+        } else {
+            showPauseIcon = true;
+            paused = true;
+        }
+        setTimeout(() => {
+            showPlayIcon = false;
+            showPauseIcon = false;
+        }, 600);
+    }
+
+    function safeSeek(targetTime: number) {
+        for (const range of deletedRanges) {
+            if (targetTime >= range.startTime && targetTime < range.endTime) {
+                targetTime = range.endTime;
+                break;
+            }
+        }
+        if (videoEl) {
+            videoEl.currentTime = Math.min(targetTime, videoEl.duration - 0.001);
+        }
+    }
+
+    function effectiveToRawTime(effectiveTime: number): number {
+        let remaining = effectiveTime;
+        const sorted = [...deletedRanges].sort((a, b) => a.startTime - b.startTime);
+        let cursor = 0;
+        for (const del of sorted) {
+            const keptDuration = del.startTime - cursor;
+            if (remaining <= keptDuration) {
+                return cursor + remaining;
+            }
+            remaining -= keptDuration;
+            cursor = del.endTime;
+        }
+        return Math.min(cursor + remaining, videoEl?.duration ?? 0);
+    }
+
+    function handleTimeUpdate() {
+        if (!videoEl || deletedRanges.length === 0) return;
+
+        const pos = videoEl.currentTime;
+        const duration = videoEl.duration;
+
+        if (!isFinite(duration) || duration === 0) return;
+
+        for (const range of deletedRanges) {
+            if (pos >= range.startTime && pos < range.endTime) {
+                const jumpTo = range.endTime;
+
+                if (jumpTo >= duration) {
+                    videoEl.pause();
+                    videoEl.currentTime = Math.max(0, range.startTime - 0.001);
+                    return;
+                }
+
+                requestAnimationFrame(() => {
+                    if (videoEl && Math.abs(videoEl.currentTime - pos) < 0.1) {
+                        videoEl.currentTime = jumpTo;
+                    }
+                });
+                return;
+            }
+        }
+    }
+
+    $effect(() => {
+        if (!videoEl) return;
+        videoEl.addEventListener('timeupdate', handleTimeUpdate);
         return () => {
-            _thumbGen++; // cancel any in-progress thumbnail generation
+            videoEl?.removeEventListener('timeupdate', handleTimeUpdate);
         };
     });
 
@@ -105,135 +245,75 @@
         return `${m}:${sec}`;
     }
 
-    function timeToPercent(t: number): number {
-        return videoDuration > 0 ? (t / videoDuration) * 100 : 0;
-    }
+    onMount(() => {
+        if (!videoUrl) return;
+        const thumbVideo = document.createElement('video');
+        thumbVideo.src = videoUrl;
+        thumbVideo.muted = true;
+        let cancelled = false;
 
-    let finalLength = $derived.by(() => {
-        const cutDur = cuts.reduce((sum, c) => {
-            const s = Math.max(c.start, trimStart);
-            const e = Math.min(c.end, trimEnd);
-            return sum + Math.max(0, e - s);
-        }, 0);
-        return Math.max(0, trimEnd - trimStart - cutDur);
+        (async () => {
+            await new Promise<void>((resolve) => {
+                thumbVideo.onloadedmetadata = () => resolve();
+                thumbVideo.load();
+            });
+            const count = Math.round(thumbVideo.duration / SAMPLE_INTERVAL);
+            for (let i = 0; i < count; i++) {
+                if (cancelled) return;
+                thumbVideo.currentTime = i * SAMPLE_INTERVAL;
+                await new Promise<void>((resolve) => {
+                    thumbVideo.onseeked = () => resolve();
+                });
+                if (cancelled) return;
+                const canvas = document.createElement('canvas');
+                canvas.width = CELL_WIDTH;
+                canvas.height = CELL_HEIGHT;
+                canvas.getContext('2d')?.drawImage(thumbVideo, 0, 0, CELL_WIDTH, CELL_HEIGHT);
+                thumbnails.set(i, canvas.toDataURL('image/jpeg', 0.6));
+                await new Promise((resolve) => setTimeout(resolve, 0));
+            }
+        })();
+
+        return () => {
+            cancelled = true;
+            thumbVideo.src = '';
+        };
     });
-
-    let timestamps = $derived.by(() => {
-        if (!videoDuration || !isFinite(videoDuration)) return [];
-        const step =
-            videoDuration > 120 ? 60 : videoDuration > 60 ? 30 : videoDuration > 30 ? 15 : 10;
-        const labels: { t: number; pct: number }[] = [];
-        for (let t = 0; t <= videoDuration; t += step) {
-            labels.push({ t, pct: (t / videoDuration) * 100 });
-        }
-        return labels;
-    });
-
-    function addCut() {
-        if (!videoDuration) return;
-        const half = Math.min(2, (trimEnd - trimStart) * 0.1);
-        const start = Math.max(trimStart, currentTime - half);
-        const end = Math.min(trimEnd, currentTime + half);
-        if (end - start < 0.1) return;
-        const id = crypto.randomUUID();
-        cuts = [...cuts, { id, start, end }];
-        selectedCutId = id;
-    }
-
-    function removeCut() {
-        if (!selectedCutId) return;
-        cuts = cuts.filter((c) => c.id !== selectedCutId);
-        selectedCutId = null;
-    }
-
-    function seekToTime(e: MouseEvent | KeyboardEvent) {
-        if (!timelineEl || !videoDuration) return;
-        if (e instanceof KeyboardEvent) return;
-        const rect = timelineEl.getBoundingClientRect();
-        currentTime = Math.max(
-            0,
-            Math.min(videoDuration, ((e.clientX - rect.left) / rect.width) * videoDuration)
-        );
-    }
-
-    function startDrag(target: DragTarget) {
-        dragging = target;
-    }
-
-    function handleDragMove(e: PointerEvent) {
-        const d = dragging;
-        if (!d || !timelineEl || !videoDuration) return;
-        const rect = timelineEl.getBoundingClientRect();
-        const t = Math.max(
-            0,
-            Math.min(videoDuration, ((e.clientX - rect.left) / rect.width) * videoDuration)
-        );
-        if (d.type === 'playhead') {
-            currentTime = t;
-        } else if (d.type === 'trimStart') {
-            trimStart = Math.min(t, trimEnd - 0.5);
-        } else if (d.type === 'trimEnd') {
-            trimEnd = Math.max(t, trimStart + 0.5);
-        } else if (d.type === 'cutLeft') {
-            cuts = cuts.map((c) => (c.id === d.id ? { ...c, start: Math.min(t, c.end - 0.5) } : c));
-        } else if (d.type === 'cutRight') {
-            cuts = cuts.map((c) => (c.id === d.id ? { ...c, end: Math.max(t, c.start + 0.5) } : c));
-        }
-    }
-
-    function handleDragEnd() {
-        dragging = null;
-    }
-
-    function handleKey(e: KeyboardEvent) {
-        const tag = (e.target as HTMLElement)?.tagName;
-        if (tag === 'INPUT' || tag === 'TEXTAREA') return;
-        if (e.code === 'Space') {
-            e.preventDefault();
-            paused = !paused;
-        } else if (e.code === 'ArrowLeft') {
-            currentTime = Math.max(0, currentTime - 5);
-        } else if (e.code === 'ArrowRight') {
-            currentTime = Math.min(videoDuration, currentTime + 5);
-        } else if (e.code === 'KeyC') {
-            addCut();
-        } else if (e.code === 'Delete' || e.code === 'Backspace') {
-            removeCut();
-        } else if ((e.metaKey || e.ctrlKey) && e.code === 'KeyE') {
-            e.preventDefault();
-            onexport(trimStart, trimEnd, cuts);
-        }
-    }
 </script>
 
-<svelte:window onkeydown={handleKey} onpointermove={handleDragMove} onpointerup={handleDragEnd} />
-
 <div class="flex h-full flex-col">
-    <!-- Video -->
+    <!-- Video player -->
     <div class="relative min-h-0 flex-1 bg-black/20">
         {#if videoUrl}
-            <video
-                {@attach attachThumbVideo}
-                src={videoUrl}
-                muted
-                preload="auto"
-                class="hidden"
-                aria-hidden="true"
-            ></video>
-            <!-- svelte-ignore a11y_media_has_caption -->
-            <video
-                src={videoUrl}
-                bind:paused
-                bind:currentTime
-                bind:duration={videoDuration}
-                onloadedmetadata={() => {
-                    console.log('[Editor] 5. Video metadata loaded — duration:', videoDuration, 'finite:', isFinite(videoDuration));
-                    if (!isFinite(videoDuration)) return;
-                    trimEnd = videoDuration;
-                    startThumbnails(videoDuration);
-                }}
-                class="h-full w-full object-contain"
-            ></video>
+            <div
+                class="relative h-full cursor-pointer"
+                onclick={handleVideoClick}
+                role="button"
+                tabindex="0"
+                onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleVideoClick(); } }}
+                aria-label="Toggle play/pause"
+            >
+                <!-- svelte-ignore a11y_media_has_caption -->
+                <video
+                    bind:this={videoEl}
+                    src={videoUrl}
+                    bind:paused
+                    bind:currentTime
+                    bind:duration={videoDuration}
+                    class="h-full w-full object-contain"
+                ></video>
+                {#if showPlayIcon || showPauseIcon}
+                    <div class="pointer-events-none absolute inset-0 flex items-center justify-center">
+                        <div class="animate-ping-once text-indigo-500">
+                            {#if showPlayIcon}
+                                <Play size={96} fill="currentColor" />
+                            {:else}
+                                <Pause size={96} fill="currentColor" />
+                            {/if}
+                        </div>
+                    </div>
+                {/if}
+            </div>
         {:else}
             <div class="flex h-full items-center justify-center text-sm text-muted-foreground">
                 No video loaded
@@ -256,161 +336,115 @@
                 <Pause class="size-4" />
             {/if}
         </Button>
-        <span class="min-w-[90px] font-mono text-sm text-muted-foreground tabular-nums">
-            {formatTime(currentTime)} / {formatTime(videoDuration)}
+        <span class="min-w-22.5 font-mono text-sm text-muted-foreground tabular-nums">
+            {formatTime(effectiveCurrentTime)} / {formatTime(effectiveDuration)}
         </span>
         <input
             type="range"
-            class="flex-1 accent-foreground"
+            class="flex-1 accent-indigo-500"
             min="0"
-            max={videoDuration || 1}
-            step="0.01"
-            bind:value={currentTime}
+            max={effectiveDuration || 1}
+            step={1 / FRAME_RATE}
+            value={effectiveCurrentTime}
+            oninput={(e) => {
+                const effectiveTarget = parseFloat(e.currentTarget.value);
+                safeSeek(effectiveToRawTime(effectiveTarget));
+            }}
         />
     </div>
 
-    <!-- Timeline -->
+    <!-- Toolbar -->
+    <div class="flex items-center gap-2 border-t px-4 py-2">
+        <Button
+            variant={editMode ? 'default' : 'outline'}
+            size="sm"
+            onclick={toggleEditMode}
+            class={editMode ? 'border-indigo-500 bg-indigo-500 text-white hover:bg-indigo-600' : ''}
+        >
+            <Scissors class="mr-1 size-4" />
+            {editMode ? 'Selecting…' : 'Cut'}
+        </Button>
+        {#if editMode && selectedCells.size > 0}
+            <Button variant="destructive" size="sm" onclick={deleteSelectedCells}>
+                <Trash2 class="mr-1 size-4" />
+                Delete
+            </Button>
+        {/if}
+        <div class="flex-1"></div>
+        <span class="text-sm text-muted-foreground">Final: {formatTime(effectiveDuration)}</span>
+    </div>
+
+    <!-- Frame strip -->
     {#if videoDuration > 0}
-        <div class="px-4 pt-2 pb-1">
-            <div {@attach attachTimeline} class="relative h-16 overflow-hidden rounded-md bg-muted">
-                <!-- Thumbnails and loading skeletons (visual only) -->
-                {#if thumbnailCount > 0}
-                    <div class="pointer-events-none absolute inset-0 flex">
-                        {#each Array(thumbnailCount) as _, i (i)}
-                            {@const dataUrl = thumbnails[i]}
-                            {#if dataUrl}
-                                <img
-                                    src={dataUrl}
-                                    alt=""
-                                    class="h-full shrink-0 object-cover"
-                                    style="width:{100 / thumbnailCount}%"
-                                />
-                            {:else}
-                                <div
-                                    class="h-full shrink-0 animate-pulse bg-muted-foreground/20"
-                                    style="width:{100 / thumbnailCount}%"
-                                ></div>
-                            {/if}
-                        {/each}
-                    </div>
-                {/if}
-
-                <!-- Seek layer (below handles) -->
-                <button
-                    type="button"
-                    aria-label="Seek to position"
-                    class="absolute inset-0 z-10 cursor-crosshair"
-                    onclick={seekToTime}
-                ></button>
-
-                <!-- Excluded overlays (outside trim) -->
-                {#if trimStart > 0}
+        <div
+            bind:this={scrollContainer}
+            class="overflow-x-auto border-t"
+            bind:clientWidth={containerWidth}
+            onscroll={(e) => (scrollLeft = (e.currentTarget as HTMLDivElement).scrollLeft)}
+        >
+            <div
+                style="width: {totalStripWidth}px; position: relative; display: flex; align-items: flex-start; height: {CELL_HEIGHT +
+                    12}px; transition: width 250ms ease;"
+            >
+                {#if currentCellPos >= 0}
                     <div
-                        class="pointer-events-none absolute inset-y-0 left-0 z-10 bg-black/60"
-                        style="width:{timeToPercent(trimStart)}%"
+                        class="pointer-events-none absolute top-0 z-10 w-0.5 bg-indigo-500"
+                        style="left: {currentCellPos * CELL_STRIDE}px; height: {CELL_HEIGHT}px;"
                     ></div>
                 {/if}
-                {#if trimEnd < videoDuration}
-                    <div
-                        class="pointer-events-none absolute inset-y-0 right-0 z-10 bg-black/60"
-                        style="width:{100 - timeToPercent(trimEnd)}%"
-                    ></div>
-                {/if}
+                <div style="width: {leftSpacerWidth}px; flex-shrink: 0;"></div>
 
-                <!-- Cut regions (z-20) -->
-                {#each cuts as cut (cut.id)}
-                    {@const left = timeToPercent(cut.start)}
-                    {@const w = timeToPercent(cut.end) - left}
+                {#each visibleCells.slice(posStart, posEnd + 1) as cellIndex (cellIndex)}
                     <div
-                        class="absolute inset-y-0 z-20 flex items-center justify-center bg-red-500/50 text-xs font-medium text-white{selectedCutId ===
-                        cut.id
-                            ? ' ring-2 ring-red-400 ring-inset'
-                            : ''}"
-                        style="left:{left}%;width:{w}%"
+                        class="frame-cell shrink-0"
+                        class:active={cellIndex === currentCell}
+                        class:selected={selectedCells.has(cellIndex)}
+                        class:collapsing={collapsingCells.has(cellIndex)}
+                        style="width: {CELL_WIDTH}px; height: {CELL_HEIGHT}px; margin-right: {CELL_GAP}px; position: relative;"
                         role="button"
                         tabindex="0"
-                        onclick={(e) => {
-                            e.stopPropagation();
-                            selectedCutId = cut.id;
-                        }}
+                        onclick={() => handleCellClick(cellIndex)}
                         onkeydown={(e) => {
-                            if (e.key === 'Enter' || e.key === ' ') selectedCutId = cut.id;
+                            if (e.key === 'Enter' || e.key === ' ') handleCellClick(cellIndex);
                         }}
                     >
-                        <span class="pointer-events-none select-none">cut</span>
-                        <div
-                            class="absolute inset-y-0 left-0 z-30 w-2 cursor-ew-resize bg-red-400 hover:bg-red-300"
-                            role="none"
-                            onpointerdown={(e) => {
-                                e.stopPropagation();
-                                startDrag({ type: 'cutLeft', id: cut.id });
-                            }}
-                        ></div>
-                        <div
-                            class="absolute inset-y-0 right-0 z-30 w-2 cursor-ew-resize bg-red-400 hover:bg-red-300"
-                            role="none"
-                            onpointerdown={(e) => {
-                                e.stopPropagation();
-                                startDrag({ type: 'cutRight', id: cut.id });
-                            }}
-                        ></div>
+                        {#if thumbnails.has(cellIndex)}
+                            <img
+                                src={thumbnails.get(cellIndex)}
+                                width={CELL_WIDTH}
+                                height={CELL_HEIGHT}
+                                alt=""
+                                class="block"
+                            />
+                        {:else}
+                            <div
+                                class="animate-pulse bg-muted-foreground/20"
+                                style="width: {CELL_WIDTH}px; height: {CELL_HEIGHT}px;"
+                            ></div>
+                        {/if}
+                        {#if cellIndex === currentCell}
+                            <div class="pointer-events-none absolute inset-0 z-10 bg-indigo-500/30"></div>
+                        {/if}
+                        {#if selectedCells.has(cellIndex)}
+                            <div class="pointer-events-none absolute inset-0 z-10 bg-red-500/20"></div>
+                        {/if}
                     </div>
                 {/each}
-
-                <!-- Trim handles (z-30) -->
-                <div
-                    class="absolute inset-y-0 z-30 w-1 -translate-x-1/2 cursor-ew-resize bg-white shadow"
-                    style="left:{timeToPercent(trimStart)}%"
-                    role="none"
-                    onpointerdown={(e) => {
-                        e.stopPropagation();
-                        startDrag({ type: 'trimStart' });
-                    }}
-                ></div>
-                <div
-                    class="absolute inset-y-0 z-30 w-1 -translate-x-1/2 cursor-ew-resize bg-white shadow"
-                    style="left:{timeToPercent(trimEnd)}%"
-                    role="none"
-                    onpointerdown={(e) => {
-                        e.stopPropagation();
-                        startDrag({ type: 'trimEnd' });
-                    }}
-                ></div>
-
-                <!-- Playhead (z-40) -->
-                <div
-                    class="pointer-events-none absolute inset-y-0 z-40 w-0.5 bg-white/90"
-                    style="left:{timeToPercent(currentTime)}%"
-                >
-                    <div
-                        class="pointer-events-auto absolute top-0 -left-2 h-3 w-4 cursor-grab rounded-b-sm bg-white active:cursor-grabbing"
-                        role="none"
-                        onpointerdown={(e) => {
-                            e.stopPropagation();
-                            startDrag({ type: 'playhead' });
-                        }}
-                    ></div>
-                </div>
             </div>
 
-            <!-- Timestamps -->
-            <div class="relative h-5 overflow-hidden text-xs text-muted-foreground">
-                {#each timestamps as ts (ts.t)}
-                    <span class="absolute -translate-x-1/2" style="left:{ts.pct}%"
-                        >{formatTime(ts.t)}</span
+            <!-- Timestamp labels — reactive to effectiveDuration and visible cell count -->
+            <div class="relative h-5 overflow-hidden" style="width: {totalStripWidth}px;">
+                {#each timestampLabels as { visibleIndex, label } (visibleIndex)}
+                    <span
+                        class="absolute -translate-x-1/2 text-xs text-muted-foreground"
+                        style="left: {visibleIndex * CELL_STRIDE}px;"
                     >
+                        {label}
+                    </span>
                 {/each}
             </div>
         </div>
     {/if}
-
-    <!-- Cut controls -->
-    <div class="flex items-center gap-2 border-t px-4 py-2">
-        <Button variant="outline" size="sm" onclick={addCut}>Add Cut</Button>
-        {#if selectedCutId}
-            <Button variant="outline" size="sm" onclick={removeCut}>Remove Cut</Button>
-        {/if}
-    </div>
 
     <!-- Footer -->
     <div class="flex items-center border-t px-4 py-3">
@@ -418,9 +452,34 @@
             <ChevronLeft class="mr-1 size-4" />
             Back to Review
         </Button>
-        <div class="flex-1 text-center text-sm text-muted-foreground">
-            Final: {formatTime(finalLength)}
-        </div>
-        <Button onclick={() => onexport(trimStart, trimEnd, cuts)}>Export & Download</Button>
+        <div class="flex-1"></div>
+        <Button
+            class="bg-indigo-500 text-white hover:bg-indigo-600"
+            onclick={() => onexport(deletedRanges, videoDuration)}>Export & Download</Button
+        >
     </div>
 </div>
+
+<style>
+    .frame-cell {
+        cursor: pointer;
+        border: 2px solid transparent;
+        border-radius: 2px;
+        overflow: hidden;
+        transition:
+            width 250ms ease,
+            margin 250ms ease,
+            opacity 250ms ease;
+    }
+    .frame-cell.active {
+        border-color: #6366f1;
+    }
+    .frame-cell.selected {
+        border-color: #ef4444;
+    }
+    .frame-cell.collapsing {
+        width: 0 !important;
+        margin-right: 0 !important;
+        opacity: 0;
+    }
+</style>

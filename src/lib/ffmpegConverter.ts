@@ -1,153 +1,208 @@
-import { FFmpeg } from '@ffmpeg/ffmpeg';
-import { fetchFile } from '@ffmpeg/util';
-import type { ExportOptions, CutRegion } from './recorder.js';
+import type { DeletedRange, ExportOptions } from './recorder.js';
 
 const CORE_BASE = 'https://unpkg.com/@ffmpeg/core@0.12.10/dist/esm/';
 
-let _ffmpeg: FFmpeg | null = null;
+let _ffmpeg: import('@ffmpeg/ffmpeg').FFmpeg | null = null;
 
-async function getFFmpeg(): Promise<FFmpeg> {
+async function getFFmpeg(): Promise<import('@ffmpeg/ffmpeg').FFmpeg> {
     if (_ffmpeg?.loaded) return _ffmpeg;
-    console.log('[FFmpegConverter] 5. Loading FFmpeg core from', CORE_BASE);
+    console.log('[FFmpegConverter] Loading FFmpeg core from', CORE_BASE);
+    const { FFmpeg } = await import('@ffmpeg/ffmpeg');
     _ffmpeg = new FFmpeg();
     await _ffmpeg.load({
         coreURL: `${CORE_BASE}ffmpeg-core.js`,
         wasmURL: `${CORE_BASE}ffmpeg-core.wasm`
     });
-    console.log('[FFmpegConverter] 6. FFmpeg core loaded');
+    console.log('[FFmpegConverter] FFmpeg core loaded');
     return _ffmpeg;
 }
 
-function buildFilterComplex(
-    n: number,
-    trimStart: number,
-    trimEnd: number,
+function getKeptRanges(
     duration: number,
-    cuts: CutRegion[]
-): { filterComplex: string; vout: string; aout: string } {
-    const parts: string[] = [];
-    let vLabel = '0:v';
-    let aLabel = '0:a';
+    deletedRanges: DeletedRange[]
+): { start: number; end: number }[] {
+    const sorted = [...deletedRanges].sort((a, b) => a.startTime - b.startTime);
+    const kept: { start: number; end: number }[] = [];
+    let cursor = 0;
 
-    // Concat multiple segments
-    if (n > 1) {
-        const vInputs = Array.from({ length: n }, (_, i) => `[${i}:v]`).join('');
-        const aInputs = Array.from({ length: n }, (_, i) => `[${i}:a]`).join('');
-        parts.push(`${vInputs}${aInputs}concat=n=${n}:v=1:a=1[cv][ca]`);
-        vLabel = 'cv';
-        aLabel = 'ca';
+    for (const del of sorted) {
+        if (cursor < del.startTime) {
+            kept.push({ start: cursor, end: del.startTime });
+        }
+        cursor = Math.max(cursor, del.endTime);
     }
 
-    // Trim
-    const needsTrim = trimStart > 0 || (trimEnd > 0 && trimEnd < duration);
-    if (needsTrim) {
-        const end = trimEnd > 0 && trimEnd < duration ? trimEnd : duration;
-        parts.push(`[${vLabel}]trim=start=${trimStart}:end=${end},setpts=PTS-STARTPTS[tv]`);
-        parts.push(`[${aLabel}]atrim=start=${trimStart}:end=${end},asetpts=PTS-STARTPTS[ta]`);
-        vLabel = 'tv';
-        aLabel = 'ta';
+    if (cursor < duration) {
+        kept.push({ start: cursor, end: duration });
     }
 
-    // Cut regions
-    if (cuts.length > 0) {
-        const between = cuts.map((c) => `between(t,${c.start},${c.end})`).join('+');
-        parts.push(`[${vLabel}]select=not(${between}),setpts=N/FRAME_RATE/TB[kv]`);
-        parts.push(`[${aLabel}]aselect=not(${between}),asetpts=N/SR/TB[ka]`);
-        vLabel = 'kv';
-        aLabel = 'ka';
-    }
-
-    // If nothing was added, create passthrough labels
-    if (parts.length === 0) {
-        parts.push(`[0:v]null[vout]`);
-        parts.push(`[0:a]anull[aout]`);
-        return { filterComplex: parts.join(';'), vout: 'vout', aout: 'aout' };
-    }
-
-    // Rename final labels to vout/aout
-    parts.push(`[${vLabel}]null[vout]`);
-    parts.push(`[${aLabel}]anull[aout]`);
-
-    return { filterComplex: parts.join(';'), vout: 'vout', aout: 'aout' };
+    return kept;
 }
 
 export async function convert(
     options: ExportOptions,
     onProgress?: (percent: number) => void
 ): Promise<Blob> {
-    const { segments, trimStart, trimEnd, cuts } = options;
+    const { segments, deletedRanges, totalDuration } = options;
+    const hasCuts = deletedRanges && deletedRanges.length > 0;
+    const multipleSegments = segments.length > 1;
+
+    // Tier 1: No cuts, single segment — return raw blob instantly
+    if (!hasCuts && !multipleSegments) {
+        console.log('[FFmpegConverter] Tier 1: No edits — returning raw blob');
+        onProgress?.(100);
+        return segments[0];
+    }
+
     const ffmpeg = await getFFmpeg();
+    onProgress?.(10);
 
     const progressHandler = ({ progress }: { progress: number }) => {
-        onProgress?.(Math.round(Math.min(progress, 1) * 100));
+        // Map FFmpeg progress (0–1) into 20–100 range
+        onProgress?.(Math.round(20 + Math.min(progress, 1) * 80));
     };
     ffmpeg.on('progress', progressHandler);
 
+    const { fetchFile } = await import('@ffmpeg/util');
     const inputFiles: string[] = [];
+
     try {
-        // Write all segment blobs to virtual FS
         for (let i = 0; i < segments.length; i++) {
             const name = `seg${i}.webm`;
-            console.log('[FFmpegConverter] 7. Writing segment', i, '— size:', segments[i].size, 'bytes');
+            console.log('[FFmpegConverter] Writing segment', i, '— size:', segments[i].size, 'bytes');
             await ffmpeg.writeFile(name, await fetchFile(segments[i]));
             inputFiles.push(name);
         }
-        console.log('[FFmpegConverter] 8. All segments written to virtual FS');
+        onProgress?.(20);
 
-        // Estimate total duration for trim calculations
-        // trimEnd = 0 means "no trim end" — treat as infinity placeholder
-        const estimatedDuration = trimEnd > 0 ? trimEnd + 60 : 86400;
+        // Tier 2: Multiple segments, no cuts — concat with scale to 1280x720
+        if (!hasCuts && multipleSegments) {
+            console.log('[FFmpegConverter] Tier 2: Multi-segment concat — scale to 1280x720 VP9');
+            const concatList = segments.map((_, i) => `file 'seg${i}.webm'`).join('\n');
+            await ffmpeg.writeFile('concat.txt', concatList);
+            console.log('[FFmpegConverter] Output: 1280x720 VP9 WebM');
 
-        const { filterComplex, vout, aout } = buildFilterComplex(
-            segments.length,
-            trimStart,
-            trimEnd,
-            estimatedDuration,
-            cuts
-        );
+            await ffmpeg.exec([
+                '-f', 'concat',
+                '-safe', '0',
+                '-i', 'concat.txt',
+                '-vf', 'scale=1280:720:force_original_aspect_ratio=decrease,pad=1280:720:(ow-iw)/2:(oh-ih)/2',
+                '-c:v', 'libvpx',
+                '-b:v', '2M',
+                '-deadline', 'realtime',
+                '-cpu-used', '8',
+                '-threads', '1',
+                '-c:a', 'libopus',
+                '-b:a', '128k',
+                'output.webm'
+            ]);
+        }
 
-        const inputArgs = inputFiles.flatMap((f) => ['-i', f]);
-        const ffmpegArgs = [
-            ...inputArgs,
-            '-filter_complex',
-            filterComplex,
-            '-map',
-            `[${vout}]`,
-            '-map',
-            `[${aout}]`,
-            '-c:v',
-            'libx264',
-            '-preset',
-            'ultrafast',
-            '-crf',
-            '23',
-            '-c:a',
-            'aac',
-            '-movflags',
-            '+faststart',
-            'output.mp4'
-        ];
-        console.log('[FFmpegConverter] 9. FFmpeg command:', ffmpegArgs.join(' '));
-        await ffmpeg.exec(ffmpegArgs);
-        console.log('[FFmpegConverter] 10. FFmpeg command complete');
+        // Tier 3: Cuts present
+        if (hasCuts) {
+            let inputFile = 'seg0.webm';
 
-        const data = (await ffmpeg.readFile('output.mp4')) as unknown as Uint8Array<ArrayBuffer>;
-        console.log('[FFmpegConverter] 11. Output read — size:', data?.length, 'bytes');
-        return new Blob([data], { type: 'video/mp4' });
-    } finally {
-        ffmpeg.off('progress', progressHandler);
-        // Clean up virtual FS
-        for (const f of inputFiles) {
-            try {
-                await ffmpeg.deleteFile(f);
-            } catch {
-                /* ignore */
+            // If multiple segments, concat them first with stream copy
+            if (multipleSegments) {
+                console.log('[FFmpegConverter] Tier 3: Multi-segment with cuts — concat then cut');
+                const concatList = segments.map((_, i) => `file 'seg${i}.webm'`).join('\n');
+                await ffmpeg.writeFile('concat.txt', concatList);
+
+                await ffmpeg.exec([
+                    '-f', 'concat',
+                    '-safe', '0',
+                    '-i', 'concat.txt',
+                    '-c', 'copy',
+                    'combined.webm'
+                ]);
+                inputFile = 'combined.webm';
+                inputFiles.push('combined.webm');
+            } else {
+                console.log('[FFmpegConverter] Tier 3: Single segment with cuts');
+            }
+
+            const keptRanges = getKeptRanges(totalDuration, deletedRanges);
+            console.log('[FFmpegConverter] Kept ranges:', keptRanges);
+
+            if (keptRanges.length === 0) {
+                throw new Error('All content deleted — nothing to export');
+            }
+
+            // Single kept range with no split needed
+            if (keptRanges.length === 1) {
+                const r = keptRanges[0];
+                const isFullRange = r.start === 0 && r.end >= totalDuration;
+
+                if (isFullRange) {
+                    // No actual cutting needed — stream copy
+                    await ffmpeg.exec(['-i', inputFile, '-c', 'copy', 'output.webm']);
+                } else {
+                    const filterComplex = [
+                        `[0:v]trim=start=${r.start}:end=${r.end},setpts=PTS-STARTPTS,scale=1280:720:force_original_aspect_ratio=decrease,pad=1280:720:(ow-iw)/2:(oh-ih)/2[vout]`,
+                        `[0:a]atrim=start=${r.start}:end=${r.end},asetpts=PTS-STARTPTS[aout]`
+                    ].join(';');
+                    console.log('[FFmpegConverter] filter_complex:', filterComplex);
+                    console.log('[FFmpegConverter] Output: 1280x720 VP9 WebM');
+
+                    await ffmpeg.exec([
+                        '-i', inputFile,
+                        '-filter_complex', filterComplex,
+                        '-map', '[vout]',
+                        '-map', '[aout]',
+                        '-c:v', 'libvpx-vp9',
+                        '-b:v', '2M',
+                        '-deadline', 'realtime',
+                        '-cpu-used', '8',
+                        '-c:a', 'libopus',
+                        '-b:a', '128k',
+                        'output.webm'
+                    ]);
+                }
+            } else {
+                // Multiple kept ranges — split, trim each, concat
+                const parts: string[] = [];
+                parts.push(`[0:v]split=${keptRanges.length}${keptRanges.map((_, i) => `[vs${i}]`).join('')}`);
+                parts.push(`[0:a]asplit=${keptRanges.length}${keptRanges.map((_, i) => `[as${i}]`).join('')}`);
+
+                for (let i = 0; i < keptRanges.length; i++) {
+                    const r = keptRanges[i];
+                    parts.push(`[vs${i}]trim=start=${r.start}:end=${r.end},setpts=PTS-STARTPTS[v${i}]`);
+                    parts.push(`[as${i}]atrim=start=${r.start}:end=${r.end},asetpts=PTS-STARTPTS[a${i}]`);
+                }
+
+                const concatInputs = keptRanges.map((_, i) => `[v${i}][a${i}]`).join('');
+                parts.push(`${concatInputs}concat=n=${keptRanges.length}:v=1:a=1[cv][ca]`);
+                parts.push(`[cv]scale=1280:720:force_original_aspect_ratio=decrease,pad=1280:720:(ow-iw)/2:(oh-ih)/2[vout]`);
+                parts.push(`[ca]anull[aout]`);
+
+                const filterComplex = parts.join(';');
+                console.log('[FFmpegConverter] filter_complex:', filterComplex);
+                console.log('[FFmpegConverter] Output: 1280x720 VP9 WebM');
+
+                await ffmpeg.exec([
+                    '-i', inputFile,
+                    '-filter_complex', filterComplex,
+                    '-map', '[vout]',
+                    '-map', '[aout]',
+                    '-c:v', 'libvpx-vp9',
+                    '-b:v', '2M',
+                    '-deadline', 'realtime',
+                    '-cpu-used', '8',
+                    '-c:a', 'libopus',
+                    '-b:a', '128k',
+                    'output.webm'
+                ]);
             }
         }
-        try {
-            await ffmpeg.deleteFile('output.mp4');
-        } catch {
-            /* ignore */
+
+        console.log('[FFmpegConverter] Reading output.webm from virtual FS');
+        const data = (await ffmpeg.readFile('output.webm')) as unknown as Uint8Array<ArrayBuffer>;
+        console.log('[FFmpegConverter] Output size:', data?.length, 'bytes');
+        return new Blob([data], { type: 'video/webm' });
+    } finally {
+        ffmpeg.off('progress', progressHandler);
+        for (const f of [...inputFiles, 'concat.txt', 'output.webm']) {
+            try { await ffmpeg.deleteFile(f); } catch { /* ignore */ }
         }
     }
 }

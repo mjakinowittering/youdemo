@@ -1,8 +1,9 @@
 <script lang="ts">
+    import { CircleCheck, CircleX, TriangleAlert } from 'lucide-svelte';
     import { onMount } from 'svelte';
-    import * as Alert from '$lib/components/ui/alert/index.js';
+
     import { Button } from '$lib/components/ui/button/index.js';
-    import { CircleCheck, TriangleAlert, CircleX } from 'lucide-svelte';
+    import * as Empty from '$lib/components/ui/empty/index.js';
 
     let { onpass }: { onpass: () => void } = $props();
 
@@ -30,35 +31,49 @@
     <div class="flex h-full items-center justify-center p-6">
         <div class="w-full max-w-md space-y-4">
             {#if !criticalPass}
-                <Alert.Root variant="destructive">
-                    <CircleX class="size-4" />
-                    <Alert.Title>Browser not supported</Alert.Title>
-                    <Alert.Description>
-                        Required screen capture APIs are missing. Please use Chrome, Edge, or Arc.
-                    </Alert.Description>
-                </Alert.Root>
+                <Empty.Root>
+                    <Empty.Media>
+                        <CircleX size={64} class="text-destructive" />
+                    </Empty.Media>
+                    <Empty.Header>
+                        <Empty.Title>Browser not supported</Empty.Title>
+                        <Empty.Description>
+                            Required screen capture APIs are missing. Please use Chrome, Edge, or Arc.
+                        </Empty.Description>
+                    </Empty.Header>
+                </Empty.Root>
             {:else}
-                <Alert.Root class="border-amber-500/40 bg-amber-50/5 [&>svg]:text-amber-500">
-                    <TriangleAlert class="size-4" />
-                    <Alert.Title class="text-amber-700 dark:text-amber-400"
-                        >Limited support</Alert.Title
-                    >
-                    <Alert.Description class="text-amber-600/80 dark:text-amber-500/80">
-                        Update your browser for full features — camera and audio mixing are
-                        unavailable.
-                    </Alert.Description>
-                </Alert.Root>
+                <Empty.Root>
+                    <Empty.Media>
+                        <TriangleAlert size={64} class="text-amber-500" />
+                    </Empty.Media>
+                    <Empty.Header>
+                        <Empty.Title>Limited support</Empty.Title>
+                        <Empty.Description>
+                            Update your browser for full features — camera and audio mixing are
+                            unavailable.
+                        </Empty.Description>
+                    </Empty.Header>
+                    <Empty.Content>
+                        <Button
+                            class="bg-indigo-500 text-white hover:bg-indigo-600"
+                            onclick={onpass}
+                        >
+                            Continue anyway
+                        </Button>
+                    </Empty.Content>
+                </Empty.Root>
             {/if}
 
             <ul class="divide-y rounded-lg border">
                 {#each checks as check (check.label)}
                     <li class="flex items-center gap-3 px-4 py-3">
                         {#if check.ok}
-                            <CircleCheck class="size-4 shrink-0 text-green-500" />
+                            <CircleCheck class="size-8 shrink-0 text-indigo-500" />
                         {:else if check.critical}
-                            <CircleX class="size-4 shrink-0 text-destructive" />
+                            <CircleX class="size-8 shrink-0 text-destructive" />
                         {:else}
-                            <TriangleAlert class="size-4 shrink-0 text-amber-500" />
+                            <TriangleAlert class="size-8 shrink-0 text-amber-500" />
                         {/if}
                         <span class="text-sm">{check.label}</span>
                         {#if !check.critical}
@@ -67,10 +82,6 @@
                     </li>
                 {/each}
             </ul>
-
-            {#if criticalPass}
-                <Button class="w-full" onclick={onpass}>Continue anyway</Button>
-            {/if}
         </div>
     </div>
 {/if}

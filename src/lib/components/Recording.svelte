@@ -1,10 +1,14 @@
 <script lang="ts">
-    import { onMount, onDestroy } from 'svelte';
-    import { Button } from '$lib/components/ui/button/index.js';
+    import { ChevronDown, Mic, MicOff, RadioTower, Square, Video, VideoOff } from 'lucide-svelte';
+
+    import * as Empty from '$lib/components/ui/empty/index.js';
+    import { onDestroy, onMount } from 'svelte';
+
     import { buttonVariants } from '$lib/components/ui/button/button.svelte';
+    import { Button } from '$lib/components/ui/button/index.js';
     import * as DropdownMenu from '$lib/components/ui/dropdown-menu/index.js';
     import * as Tooltip from '$lib/components/ui/tooltip/index.js';
-    import { Mic, MicOff, Video, VideoOff, ChevronDown, Square } from 'lucide-svelte';
+
     import { deviceStore } from '$lib/deviceStore.svelte.js';
     import { cn } from '$lib/utils.js';
 
@@ -48,14 +52,14 @@
     );
 
     onMount(async () => {
-        document.title = '● REC 00:00 | ScreenCast';
+        document.title = '● REC 00:00 | YourDemo';
         timerInterval = setInterval(() => {
             elapsed += 1;
             const mm = Math.floor(elapsed / 60)
                 .toString()
                 .padStart(2, '0');
             const ss = (elapsed % 60).toString().padStart(2, '0');
-            document.title = `● REC ${mm}:${ss} | ScreenCast`;
+            document.title = `● REC ${mm}:${ss} | YourDemo`;
         }, 1000);
         const devices = await navigator.mediaDevices
             .enumerateDevices()
@@ -74,16 +78,20 @@
 
     onDestroy(() => {
         clearInterval(timerInterval);
-        console.log('[App] Resetting document.title to ScreenCast');
-        document.title = 'ScreenCast';
+        document.title = 'YourDemo';
     });
 </script>
 
 <div class="flex h-full flex-col">
-    <div class="relative flex-1 overflow-hidden bg-black/20">
-        <div class="flex h-full items-center justify-center">
-            <p class="text-sm text-muted-foreground">Recording in progress</p>
-        </div>
+    <div class="relative flex flex-1 items-center justify-center overflow-hidden bg-black/20">
+        <Empty.Root>
+            <Empty.Media>
+                <RadioTower size={128} class="text-muted-foreground" />
+            </Empty.Media>
+            <Empty.Header>
+                <Empty.Title>Recording in progress</Empty.Title>
+            </Empty.Header>
+        </Empty.Root>
 
         <div
             class="absolute top-4 left-4 flex items-center gap-2 rounded-full bg-black/70 px-3 py-1.5 text-sm text-white backdrop-blur-sm"
@@ -199,14 +207,14 @@
 
         <div class="flex-1"></div>
 
-        <Button variant="destructive" onclick={() => {
-            console.log('[Recording] Stop button clicked');
-            clearInterval(timerInterval);
-            document.title = 'ScreenCast';
-            console.log('[Recording] Calling recorder.stop() via onstop callback');
-            onstop();
-            console.log('[Recording] onstop() returned (async work continues in +page.svelte)');
-        }}>
+        <Button
+            variant="destructive"
+            onclick={() => {
+                clearInterval(timerInterval);
+                document.title = 'YourDemo';
+                onstop();
+            }}
+        >
             <Square class="mr-1 size-4 fill-current" />
             Stop
         </Button>
@@ -219,12 +227,7 @@
     }
 
     @keyframes rec-pulse {
-        0%,
-        100% {
-            opacity: 1;
-        }
-        50% {
-            opacity: 0.3;
-        }
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.3; }
     }
 </style>

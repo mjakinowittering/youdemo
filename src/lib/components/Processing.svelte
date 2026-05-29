@@ -1,22 +1,21 @@
 <script lang="ts">
     import { onMount } from 'svelte';
+
     import { Progress } from '$lib/components/ui/progress/index.js';
 
-    interface CutRegion {
-        id: string;
-        start: number;
-        end: number;
+    interface DeletedRange {
+        startTime: number;
+        endTime: number;
     }
 
     interface Props {
         segments?: Blob[];
-        trimStart?: number;
-        trimEnd?: number;
-        cuts?: CutRegion[];
+        deletedRanges?: DeletedRange[];
+        totalDuration?: number;
         oncomplete: (blob: Blob) => void;
     }
 
-    let { segments = [], trimStart = 0, trimEnd = 0, cuts = [], oncomplete }: Props = $props();
+    let { segments = [], deletedRanges = [], totalDuration = 0, oncomplete }: Props = $props();
 
     let progress = $state(0);
     let errorMessage = $state<string | null>(null);
@@ -29,13 +28,18 @@
               : progress < 80
                 ? 'Applying edits…'
                 : progress < 100
-                  ? 'Encoding MP4…'
+                  ? 'Encoding WebM…'
                   : 'Done!'
     );
 
     onMount(() => {
         console.log('[Processing] onMount — starting FFmpeg worker now (state is processing)');
-        console.log('[Processing] segments:', segments.length, 'trimStart:', trimStart, 'trimEnd:', trimEnd, 'cuts:', cuts.length);
+        console.log(
+            '[Processing] segments:',
+            segments.length,
+            'deletedRanges:',
+            deletedRanges.length
+        );
         const worker = new Worker(new URL('../ffmpegWorker.ts', import.meta.url), {
             type: 'module'
         });
@@ -67,8 +71,19 @@
                 const buffer = await s.arrayBuffer();
                 plainSegments.push(new Blob([buffer], { type: 'video/webm' }));
             }
-            console.log('[Processing] Plain segments ready:', plainSegments.length, plainSegments.map((s) => s.size));
-            worker.postMessage({ segments: [...plainSegments], trimStart, trimEnd, cuts: [...(cuts ?? [])] });
+            console.log(
+                '[Processing] Plain segments ready:',
+                plainSegments.length,
+                plainSegments.map((s) => s.size)
+            );
+            worker.postMessage({
+                segments: [...plainSegments],
+                deletedRanges: [...(deletedRanges ?? [])].map((r) => ({
+                    startTime: r.startTime,
+                    endTime: r.endTime
+                })),
+                totalDuration
+            });
         })();
 
         return () => worker.terminate();
@@ -79,7 +94,7 @@
     {#if errorMessage}
         <div class="w-full max-w-sm space-y-2 text-center">
             <p class="text-sm font-medium text-destructive">Export failed</p>
-            <p class="font-mono text-xs text-muted-foreground break-all">{errorMessage}</p>
+            <p class="font-mono text-xs break-all text-muted-foreground">{errorMessage}</p>
         </div>
     {:else}
         <div class="w-full max-w-sm space-y-3">
@@ -87,7 +102,7 @@
                 <span class="text-muted-foreground">{statusLabel}</span>
                 <span class="font-mono tabular-nums">{progress}%</span>
             </div>
-            <Progress value={progress} />
+            <Progress value={progress} class="*:bg-indigo-500" />
         </div>
     {/if}
 </div>

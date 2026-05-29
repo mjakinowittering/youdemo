@@ -60,7 +60,7 @@
             <button
                 type="button"
                 onclick={onresume}
-                class="flex flex-1 cursor-pointer flex-col gap-2 rounded-xl bg-card p-6 text-left text-card-foreground shadow-sm ring-1 ring-foreground/10 transition-colors hover:bg-muted/50"
+                class="flex flex-1 cursor-pointer flex-col gap-2 rounded-xl bg-card p-6 text-left text-card-foreground shadow-sm ring-2 ring-indigo-500 transition-colors hover:bg-muted/50"
             >
                 <span class="text-sm font-semibold">Resume</span>
                 <span class="text-xs text-muted-foreground">Continue with a new segment</span>
@@ -69,7 +69,7 @@
             <button
                 type="button"
                 onclick={onedit}
-                class="flex flex-1 cursor-pointer flex-col gap-2 rounded-xl bg-card p-6 text-left text-card-foreground shadow-sm ring-1 ring-foreground/10 transition-colors hover:bg-muted/50"
+                class="flex flex-1 cursor-pointer flex-col gap-2 rounded-xl bg-card p-6 text-left text-card-foreground shadow-sm ring-2 ring-indigo-500 transition-colors hover:bg-muted/50"
             >
                 <span class="text-sm font-semibold">Edit & Export</span>
                 <span class="text-xs text-muted-foreground">Trim, cut, and export to MP4</span>

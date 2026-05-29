@@ -11,22 +11,20 @@ export interface RecorderOptions {
     camEnabled: boolean;
 }
 
-export interface CutRegion {
-    id: string;
-    start: number;
-    end: number;
+export interface DeletedRange {
+    startTime: number;
+    endTime: number;
 }
 
 export interface ExportOptions {
     segments: Blob[];
-    trimStart: number;
-    trimEnd: number;
-    cuts: CutRegion[];
+    deletedRanges: DeletedRange[];
+    totalDuration: number;
 }
 
 // ─── constants ────────────────────────────────────────────────────────────────
 
-const BUBBLE = 200;
+const BUBBLE = 275;
 const PAD = 20;
 
 // ─── singleton state ──────────────────────────────────────────────────────────

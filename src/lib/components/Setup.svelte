@@ -1,14 +1,17 @@
 <script lang="ts">
+    import { ChevronDown, Mic, MicOff, Monitor, Video, VideoOff } from 'lucide-svelte';
     import { onMount, untrack } from 'svelte';
-    import { Button } from '$lib/components/ui/button/index.js';
+
     import { buttonVariants } from '$lib/components/ui/button/button.svelte';
+    import { Button } from '$lib/components/ui/button/index.js';
     import * as DropdownMenu from '$lib/components/ui/dropdown-menu/index.js';
+    import * as Empty from '$lib/components/ui/empty/index.js';
     import * as Tooltip from '$lib/components/ui/tooltip/index.js';
-    import { Monitor, Mic, MicOff, Video, VideoOff, ChevronDown } from 'lucide-svelte';
-    import { deviceStore } from '$lib/deviceStore.svelte.js';
-    import { cn } from '$lib/utils.js';
     import WebcamBubble from '$lib/components/WebcamBubble.svelte';
     import type { BubblePosition } from '$lib/components/WebcamBubble.svelte';
+
+    import { deviceStore } from '$lib/deviceStore.svelte.js';
+    import { cn } from '$lib/utils.js';
 
     interface Props {
         onstart: () => void;
@@ -141,7 +144,7 @@
 </script>
 
 <div class="flex h-full flex-col">
-    <div class="relative flex-1 overflow-hidden bg-black">
+    <div class="relative flex flex-1 items-center justify-center overflow-hidden bg-black">
         {#if screenStream}
             <video
                 {@attach setSrcObject(screenStream)}
@@ -151,18 +154,29 @@
                 class="h-full w-full object-contain"
             ></video>
         {:else}
-            <div class="flex h-full flex-col items-center justify-center gap-4">
-                <Monitor class="size-16 text-muted-foreground" />
-                <p class="text-sm text-muted-foreground">
-                    Choose a screen to preview, then hit Record
-                </p>
-                <Button onclick={pickScreen} disabled={picking}>
-                    {picking ? 'Requesting…' : 'Choose Screen'}
-                </Button>
-                {#if pickError}
-                    <p class="text-sm text-destructive">{pickError}</p>
-                {/if}
-            </div>
+            <Empty.Root>
+                <Empty.Media>
+                    <Monitor size={128} class="text-muted-foreground" />
+                </Empty.Media>
+                <Empty.Header>
+                    <Empty.Title>No screen selected</Empty.Title>
+                    <Empty.Description
+                        >Choose a screen to preview, then hit Record</Empty.Description
+                    >
+                </Empty.Header>
+                <Empty.Content>
+                    <Button
+                        class="bg-indigo-500 text-white hover:bg-indigo-600"
+                        onclick={pickScreen}
+                        disabled={picking}
+                    >
+                        {picking ? 'Requesting…' : 'Choose Screen'}
+                    </Button>
+                    {#if pickError}
+                        <p class="text-sm text-destructive">{pickError}</p>
+                    {/if}
+                </Empty.Content>
+            </Empty.Root>
         {/if}
 
         {#if camEnabled}
@@ -191,7 +205,10 @@
                         <DropdownMenu.Root>
                             <DropdownMenu.Trigger
                                 class={cn(
-                                    buttonVariants({ variant: 'outline', size: 'sm' }),
+                                    buttonVariants({
+                                        variant: micMuted ? 'destructive' : 'outline',
+                                        size: 'sm'
+                                    }),
                                     'rounded-l-none px-2'
                                 )}
                                 aria-label="Select microphone"
@@ -242,7 +259,10 @@
                         <DropdownMenu.Root>
                             <DropdownMenu.Trigger
                                 class={cn(
-                                    buttonVariants({ variant: 'outline', size: 'sm' }),
+                                    buttonVariants({
+                                        variant: !camEnabled ? 'destructive' : 'outline',
+                                        size: 'sm'
+                                    }),
                                     'rounded-l-none px-2'
                                 )}
                                 aria-label="Select camera"
@@ -276,11 +296,19 @@
         <div class="flex-1"></div>
 
         {#if screenStream}
-            <Button variant="ghost" size="sm" onclick={pickScreen} disabled={picking}
-                >Re-pick</Button
+            <Button
+                variant="ghost"
+                size="sm"
+                class="text-indigo-500 hover:text-indigo-600"
+                onclick={pickScreen}
+                disabled={picking}>Re-pick</Button
             >
         {/if}
 
-        <Button onclick={onstart} disabled={!screenStream}>Start Recording</Button>
+        <Button
+            class="bg-indigo-500 text-white hover:bg-indigo-600"
+            onclick={onstart}
+            disabled={!screenStream}>Start Recording</Button
+        >
     </div>
 </div>
