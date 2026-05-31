@@ -184,6 +184,7 @@ src/
       Done.svelte
       ErrorScreen.svelte    # Crash/error screen with Skull icon
       WebcamBubble.svelte
+      WelcomeModal.svelte   # First-visit welcome dialog (localStorage gate)
 ```
 
 Note: `ShortcutsPanel.svelte` has been removed entirely.
@@ -277,15 +278,15 @@ Use shadcn `Empty` component for the error/warning states.
 ~1fps in background tabs:
 
 ```ts
-intervalId = setInterval(drawFrame, 1000 / 30)
-mediaRecorder.start(500)
+intervalId = setInterval(drawFrame, 1000 / 30);
+mediaRecorder.start(500);
 ```
 
 **Use `captureStream(0)` + `requestFrame()`** — never `captureStream(30)`:
 
 ```ts
-const canvasStream = canvas.captureStream(0)
-canvasCaptureTrack?.requestFrame() // every tick
+const canvasStream = canvas.captureStream(0);
+canvasCaptureTrack?.requestFrame(); // every tick
 ```
 
 **Wait for `readyState >= 2`** on both video elements before starting.
@@ -293,24 +294,27 @@ canvasCaptureTrack?.requestFrame() // every tick
 **Codec probe:**
 
 ```ts
-const mimeType = ['video/webm;codecs=vp9,opus', 'video/webm;codecs=vp8,opus', 'video/webm'].find(
-  type => MediaRecorder.isTypeSupported(type)
-) ?? 'video/webm'
+const mimeType =
+    [
+        'video/webm;codecs=vp9,opus',
+        'video/webm;codecs=vp8,opus',
+        'video/webm'
+    ].find((type) => MediaRecorder.isTypeSupported(type)) ?? 'video/webm';
 ```
 
 **WebM duration fix:**
 
 ```ts
-const fixedBlob = await fixWebmDuration(rawBlob, durationMs)
+const fixedBlob = await fixWebmDuration(rawBlob, durationMs);
 ```
 
 **Cleanup — release tracks immediately:**
 
 ```ts
-clearInterval(intervalId)
-screenStream.getTracks().forEach(t => t.stop())
-webcamStream?.getTracks().forEach(t => t.stop())
-audioCtx.close()
+clearInterval(intervalId);
+screenStream.getTracks().forEach((t) => t.stop());
+webcamStream?.getTracks().forEach((t) => t.stop());
+audioCtx.close();
 ```
 
 ### Recording UI
@@ -349,30 +353,33 @@ audioCtx.close()
 
 ```ts
 let effectiveDuration = $derived(
-  Math.max(0, (video?.duration ?? 0) -
-    deletedRanges.reduce((sum, r) => sum + (r.endTime - r.startTime), 0))
-)
+    Math.max(
+        0,
+        (video?.duration ?? 0) -
+            deletedRanges.reduce((sum, r) => sum + (r.endTime - r.startTime), 0)
+    )
+);
 
 let effectiveCurrentTime = $derived(() => {
-  const t = video?.currentTime ?? 0
-  const deletedBefore = deletedRanges
-    .filter(r => r.endTime <= t)
-    .reduce((sum, r) => sum + (r.endTime - r.startTime), 0)
-  return Math.max(0, t - deletedBefore)
-})
+    const t = video?.currentTime ?? 0;
+    const deletedBefore = deletedRanges
+        .filter((r) => r.endTime <= t)
+        .reduce((sum, r) => sum + (r.endTime - r.startTime), 0);
+    return Math.max(0, t - deletedBefore);
+});
 ```
 
 ### Safe seek
 
 ```ts
 function safeSeek(targetTime: number) {
-  for (const range of deletedRanges) {
-    if (targetTime >= range.startTime && targetTime < range.endTime) {
-      targetTime = range.endTime
-      break
+    for (const range of deletedRanges) {
+        if (targetTime >= range.startTime && targetTime < range.endTime) {
+            targetTime = range.endTime;
+            break;
+        }
     }
-  }
-  if (video) video.currentTime = Math.min(targetTime, video.duration - 0.001)
+    if (video) video.currentTime = Math.min(targetTime, video.duration - 0.001);
 }
 ```
 
@@ -380,23 +387,29 @@ function safeSeek(targetTime: number) {
 
 ```ts
 function handleTimeUpdate() {
-  if (!video || deletedRanges.length === 0) return
-  for (const range of deletedRanges) {
-    if (video.currentTime >= range.startTime && video.currentTime < range.endTime) {
-      const jumpTo = range.endTime
-      if (jumpTo >= video.duration) {
-        video.pause()
-        video.currentTime = Math.max(0, range.startTime - 0.001)
-        return
-      }
-      requestAnimationFrame(() => {
-        if (video && Math.abs(video.currentTime - video.currentTime) < 0.1) {
-          video.currentTime = jumpTo
+    if (!video || deletedRanges.length === 0) return;
+    for (const range of deletedRanges) {
+        if (
+            video.currentTime >= range.startTime &&
+            video.currentTime < range.endTime
+        ) {
+            const jumpTo = range.endTime;
+            if (jumpTo >= video.duration) {
+                video.pause();
+                video.currentTime = Math.max(0, range.startTime - 0.001);
+                return;
+            }
+            requestAnimationFrame(() => {
+                if (
+                    video &&
+                    Math.abs(video.currentTime - video.currentTime) < 0.1
+                ) {
+                    video.currentTime = jumpTo;
+                }
+            });
+            return;
         }
-      })
-      return
     }
-  }
 }
 ```
 
@@ -405,10 +418,10 @@ function handleTimeUpdate() {
 **Cell dimensions:**
 
 ```ts
-const CELL_WIDTH = 80
-const CELL_HEIGHT = 64
-const CELL_GAP = 3
-const SAMPLE_INTERVAL = 0.2  // 5 cells per second
+const CELL_WIDTH = 80;
+const CELL_HEIGHT = 64;
+const CELL_GAP = 3;
+const SAMPLE_INTERVAL = 0.2; // 5 cells per second
 ```
 
 **Cell states (Tailwind):**
@@ -462,13 +475,13 @@ visible cells and `effectiveDuration`
 
 ```ts
 worker.postMessage({
-  segments: [...plainSegments],
-  deletedRanges: [...(deletedRanges ?? [])].map(r => ({
-    startTime: r.startTime,
-    endTime: r.endTime
-  })),
-  totalDuration: videoDuration
-})
+    segments: [...plainSegments],
+    deletedRanges: [...(deletedRanges ?? [])].map((r) => ({
+        startTime: r.startTime,
+        endTime: r.endTime
+    })),
+    totalDuration: videoDuration
+});
 ```
 
 ### Output format
@@ -509,20 +522,85 @@ Shown when an unhandled error occurs anywhere in the app.
 - Reload button calls `window.location.reload()`
 - Triggered by global error boundary in `+layout.svelte` or `+page.svelte`
 
+## Section 12 — WelcomeModal.svelte
+
+**File:** `src/lib/components/WelcomeModal.svelte`
+
+Shown on first visit only. Manages its own open/close state internally — no
+props, no parent state changes needed.
+
+### First-visit detection
+
+- On mount, reads `ydWelcomed` from `localStorage`
+- If the key is absent the dialog opens automatically
+- On any dismiss path (button click or Escape), sets
+  `localStorage.setItem('ydWelcomed', 'true')` and closes
+
+### Layout (top to bottom)
+
+1. `MonitorPlay` icon — `text-indigo-500`, 52 px, centred
+2. Headline: `"Welcome to YouDemo"`, centred
+3. Body copy: one-sentence description, `text-muted-foreground text-sm`, centred
+4. shadcn `Separator`
+5. Three left-aligned feature rows, each with a lucide icon (`text-indigo-500`,
+   18 px) and a text label:
+    - `Monitor` — "Record your screen with a webcam overlay"
+    - `Scissors` — "Trim the footage right in the browser"
+    - `Download` — "Download it — no sign-up, nothing uploaded"
+6. shadcn `Button` — `bg-indigo-500 hover:bg-indigo-600 text-white w-full`,
+   label `"Let's begin"`, calls `dismiss()` on click
+
+### Components & icons used
+
+- shadcn: `Dialog` (Root + Content), `Separator`, `Button`
+- lucide-svelte: `MonitorPlay`, `Monitor`, `Scissors`, `Download`
+
+### Dismiss behaviour
+
+`dismiss()` always: sets the localStorage flag then sets `open = false`. The
+`onOpenChange` handler on `<Dialog.Root>` also calls `dismiss()` when the dialog
+closes via Escape or overlay click, ensuring the flag is always written.
+
+## meta / OpenGraph (`src/app.html`)
+
+The following tags are added inside `<head>`:
+
+```html
+<meta
+    name="description"
+    content="YouDemo lets you record your screen with a webcam overlay, trim the footage, and download it — all in the browser, all without signing up for anything."
+/>
+<meta property="og:title" content="YouDemo" />
+<meta
+    property="og:description"
+    content="YouDemo lets you record your screen with a webcam overlay, trim the footage, and download it — all in the browser, all without signing up for anything."
+/>
+<meta property="og:type" content="website" />
+<meta property="og:url" content="https://mjakinowittering.github.io/youdemo/" />
+```
+
 ## Key Types
 
 ```ts
-export type BubblePosition = 'tl' | 'tr' | 'bl' | 'br' | 'tc' | 'rc' | 'bc' | 'lc'
+export type BubblePosition =
+    | 'tl'
+    | 'tr'
+    | 'bl'
+    | 'br'
+    | 'tc'
+    | 'rc'
+    | 'bc'
+    | 'lc';
 
 export interface DeletedRange {
-  startTime: number
-  endTime: number
+    startTime: number;
+    endTime: number;
 }
 
 export interface ExportOptions {
-  segments: Blob[]
-  deletedRanges: DeletedRange[]
-  totalDuration: number
+    segments: Blob[];
+    deletedRanges: DeletedRange[];
+    totalDuration: number;
 }
 ```
 
@@ -530,11 +608,11 @@ export interface ExportOptions {
 
 ```ts
 export const deviceStore = {
-  webcamDeviceId: $state<string | null>(null),
-  micDeviceId: $state<string | null>(null),
-  micMuted: $state<boolean>(false),
-  camEnabled: $state<boolean>(true),
-}
+    webcamDeviceId: $state<string | null>(null),
+    micDeviceId: $state<string | null>(null),
+    micMuted: $state<boolean>(false),
+    camEnabled: $state<boolean>(true)
+};
 ```
 
 ## GitHub Pages

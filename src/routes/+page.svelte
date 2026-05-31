@@ -10,6 +10,7 @@
     import Review from '$lib/components/Review.svelte';
     import Setup from '$lib/components/Setup.svelte';
     import type { BubblePosition } from '$lib/components/WebcamBubble.svelte';
+    import WelcomeModal from '$lib/components/WelcomeModal.svelte';
 
     import { deviceStore } from '$lib/deviceStore.svelte.js';
     import {
@@ -211,57 +212,63 @@
     }
 </script>
 
+<WelcomeModal />
+
 {#if hasError}
     <div class="h-full">
         <ErrorScreen error={errorMessage} />
     </div>
 {:else}
-<div class="h-full">
-    {#if appState === 'check'}
-        <BrowserCheck onpass={goToSetup} />
-    {:else if appState === 'setup'}
-        <Setup
-            bind:screenStream
-            bind:bubblePosition
-            {micMuted}
-            {camEnabled}
-            ontogglemic={toggleMic}
-            ontogglecam={toggleCam}
-            onstart={goToCountdown}
-        />
-    {:else if appState === 'countdown'}
-        <Countdown oncomplete={startRecording} />
-    {:else if appState === 'recording'}
-        <Recording
-            {screenStream}
-            {micMuted}
-            {camEnabled}
-            ontogglemic={toggleMic}
-            ontogglecam={toggleCam}
-            onstop={stopRecording}
-            onstreamended={handleStreamEnded}
-        />
-    {:else if appState === 'review'}
-        <Review
-            videoUrl={reviewVideoUrl}
-            duration={totalElapsedSec}
-            micEnabled={!micMuted}
-            {camEnabled}
-            onresume={handleResume}
-            onedit={goToEditor}
-            ondiscard={discard}
-        />
-    {:else if appState === 'editor'}
-        <Editor videoUrl={editorVideoUrl} onback={backToReview} onexport={handleExport} />
-    {:else if appState === 'processing'}
-        <Processing
-            {segments}
-            deletedRanges={exportDeletedRanges}
-            totalDuration={exportTotalDuration}
-            oncomplete={handleProcessingDone}
-        />
-    {:else if appState === 'done'}
-        <Done videoBlob={outputBlob} onbacktoeditor={backToEditor} onnewrecording={newRecording} />
-    {/if}
-</div>
+    <div class="h-full">
+        {#if appState === 'check'}
+            <BrowserCheck onpass={goToSetup} />
+        {:else if appState === 'setup'}
+            <Setup
+                bind:screenStream
+                bind:bubblePosition
+                {micMuted}
+                {camEnabled}
+                ontogglemic={toggleMic}
+                ontogglecam={toggleCam}
+                onstart={goToCountdown}
+            />
+        {:else if appState === 'countdown'}
+            <Countdown oncomplete={startRecording} />
+        {:else if appState === 'recording'}
+            <Recording
+                {screenStream}
+                {micMuted}
+                {camEnabled}
+                ontogglemic={toggleMic}
+                ontogglecam={toggleCam}
+                onstop={stopRecording}
+                onstreamended={handleStreamEnded}
+            />
+        {:else if appState === 'review'}
+            <Review
+                videoUrl={reviewVideoUrl}
+                duration={totalElapsedSec}
+                micEnabled={!micMuted}
+                {camEnabled}
+                onresume={handleResume}
+                onedit={goToEditor}
+                ondiscard={discard}
+            />
+        {:else if appState === 'editor'}
+            <Editor videoUrl={editorVideoUrl} onback={backToReview} onexport={handleExport} />
+        {:else if appState === 'processing'}
+            <Processing
+                {segments}
+                deletedRanges={exportDeletedRanges}
+                totalDuration={exportTotalDuration}
+                oncomplete={handleProcessingDone}
+            />
+        {:else if appState === 'done'}
+            <Done
+                videoBlob={outputBlob}
+                onbacktoeditor={backToEditor}
+                onnewrecording={newRecording}
+            />
+        {/if}
+    </div>
 {/if}

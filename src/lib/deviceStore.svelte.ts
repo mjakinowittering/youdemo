@@ -1,4 +1,4 @@
-const KEYS = { webcam: 'screencast_webcamDeviceId', mic: 'screencast_micDeviceId' };
+const KEYS = { webcam: 'ydWebcamDeviceId', mic: 'ydMicDeviceId' };
 
 function load(key: string): string | null {
     if (typeof localStorage === 'undefined') return null;

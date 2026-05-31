@@ -10,11 +10,11 @@
 
     let { children } = $props();
 
-    let dark = $state((localStorage.getItem('theme') ?? 'dark') === 'dark');
+    let dark = $state((localStorage.getItem('ydTheme') ?? 'dark') === 'dark');
 
     $effect(() => {
         document.documentElement.classList.toggle('dark', dark);
-        localStorage.setItem('theme', dark ? 'dark' : 'light');
+        localStorage.setItem('ydTheme', dark ? 'dark' : 'light');
     });
 
     function toggleTheme() {
