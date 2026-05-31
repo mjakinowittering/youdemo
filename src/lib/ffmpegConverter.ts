@@ -73,10 +73,14 @@ export async function convertVideo(options: ExportOptions): Promise<Blob> {
         await ffmpeg.writeFile('concat.txt', encoder.encode(concatList));
 
         await ffmpeg.exec([
-            '-f', 'concat',
-            '-safe', '0',
-            '-i', 'concat.txt',
-            '-c', 'copy',
+            '-f',
+            'concat',
+            '-safe',
+            '0',
+            '-i',
+            'concat.txt',
+            '-c',
+            'copy',
             'output.webm'
         ]);
 
@@ -103,10 +107,14 @@ export async function convertVideo(options: ExportOptions): Promise<Blob> {
         await ffmpeg.writeFile('concat.txt', encoder.encode(concatList));
 
         await ffmpeg.exec([
-            '-f', 'concat',
-            '-safe', '0',
-            '-i', 'concat.txt',
-            '-c', 'copy',
+            '-f',
+            'concat',
+            '-safe',
+            '0',
+            '-i',
+            'concat.txt',
+            '-c',
+            'copy',
             'combined.webm'
         ]);
         sourceFile = 'combined.webm';
@@ -119,14 +127,21 @@ export async function convertVideo(options: ExportOptions): Promise<Blob> {
         const range = keptRanges[i];
         const outFile = `kept${i}.webm`;
         const duration = range.end - range.start;
-        console.log(`[FFmpegConverter] Extracting range ${i}: start=${range.start}s duration=${duration}s → ${outFile}`);
+        console.log(
+            `[FFmpegConverter] Extracting range ${i}: start=${range.start}s duration=${duration}s → ${outFile}`
+        );
 
         await ffmpeg.exec([
-            '-i', sourceFile,
-            '-ss', String(range.start),
-            '-t', String(duration),
-            '-c', 'copy',
-            '-avoid_negative_ts', 'make_zero',
+            '-i',
+            sourceFile,
+            '-ss',
+            String(range.start),
+            '-t',
+            String(duration),
+            '-c',
+            'copy',
+            '-avoid_negative_ts',
+            'make_zero',
             outFile
         ]);
 
@@ -146,10 +161,14 @@ export async function convertVideo(options: ExportOptions): Promise<Blob> {
     await ffmpeg.writeFile('finalconcat.txt', encoder.encode(finalConcatList));
 
     await ffmpeg.exec([
-        '-f', 'concat',
-        '-safe', '0',
-        '-i', 'finalconcat.txt',
-        '-c', 'copy',
+        '-f',
+        'concat',
+        '-safe',
+        '0',
+        '-i',
+        'finalconcat.txt',
+        '-c',
+        'copy',
         'output.webm'
     ]);
 

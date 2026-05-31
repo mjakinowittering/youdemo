@@ -290,7 +290,12 @@
                 onclick={handleVideoClick}
                 role="button"
                 tabindex="0"
-                onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleVideoClick(); } }}
+                onkeydown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        handleVideoClick();
+                    }
+                }}
                 aria-label="Toggle play/pause"
             >
                 <!-- svelte-ignore a11y_media_has_caption -->
@@ -303,7 +308,9 @@
                     class="h-full w-full object-contain"
                 ></video>
                 {#if showPlayIcon || showPauseIcon}
-                    <div class="pointer-events-none absolute inset-0 flex items-center justify-center">
+                    <div
+                        class="pointer-events-none absolute inset-0 flex items-center justify-center"
+                    >
                         <div class="animate-ping-once text-indigo-500">
                             {#if showPlayIcon}
                                 <Play size={96} fill="currentColor" />
@@ -423,10 +430,14 @@
                             ></div>
                         {/if}
                         {#if cellIndex === currentCell}
-                            <div class="pointer-events-none absolute inset-0 z-10 bg-indigo-500/30"></div>
+                            <div
+                                class="pointer-events-none absolute inset-0 z-10 bg-indigo-500/30"
+                            ></div>
                         {/if}
                         {#if selectedCells.has(cellIndex)}
-                            <div class="pointer-events-none absolute inset-0 z-10 bg-red-500/20"></div>
+                            <div
+                                class="pointer-events-none absolute inset-0 z-10 bg-red-500/20"
+                            ></div>
                         {/if}
                     </div>
                 {/each}

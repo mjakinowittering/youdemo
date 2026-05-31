@@ -38,7 +38,8 @@
                     <Empty.Header>
                         <Empty.Title class="text-white">Browser not supported</Empty.Title>
                         <Empty.Description class="text-white/60">
-                            Required screen capture APIs are missing. Please use Chrome, Edge, or Arc.
+                            Required screen capture APIs are missing. Please use Chrome, Edge, or
+                            Arc.
                         </Empty.Description>
                     </Empty.Header>
                 </Empty.Root>
