@@ -46,7 +46,9 @@
         <ul class="flex flex-col gap-3">
             <li class="flex items-center gap-3">
                 <Monitor class="shrink-0 text-indigo-500" size={18} />
-                <span class="text-sm">Record your screen with a webcam overlay</span>
+                <span class="text-sm"
+                    >Record your screen with a webcam overlay and background blur</span
+                >
             </li>
             <li class="flex items-center gap-3">
                 <Scissors class="shrink-0 text-indigo-500" size={18} />
