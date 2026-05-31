@@ -12,6 +12,7 @@
     import type { BubblePosition } from '$lib/components/WebcamBubble.svelte';
     import WelcomeModal from '$lib/components/WelcomeModal.svelte';
 
+    import type { BlurProcessor } from '$lib/blurProcessor.js';
     import { deviceStore } from '$lib/deviceStore.svelte.js';
     import {
         start as recorderStart,
@@ -19,7 +20,6 @@
         setCamEnabled,
         setMicMuted
     } from '$lib/recorder.js';
-    import type { BlurProcessor } from '$lib/blurProcessor.js';
 
     let errorMessage = $state('');
     let hasError = $state(false);

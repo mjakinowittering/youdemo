@@ -1,4 +1,8 @@
-import { FilesetResolver, ImageSegmenter, type ImageSegmenterResult } from '@mediapipe/tasks-vision';
+import {
+    FilesetResolver,
+    ImageSegmenter,
+    type ImageSegmenterResult
+} from '@mediapipe/tasks-vision';
 
 export type BlurIntensity = 'light' | 'default' | 'heavy';
 

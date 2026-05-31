@@ -260,41 +260,48 @@ Use shadcn `Empty` component for the error/warning states.
 
 ## Section 4a — BlurComboButton.svelte
 
-Combo button immediately right of the cam combo button. Setup screen only.
-Not shown in Recording toolbar.
+Combo button immediately right of the cam combo button. Setup screen only. Not
+shown in Recording toolbar.
 
 Primary button toggles blur on/off. Chevron opens `DropdownMenu` with
 `DropdownMenuRadioGroup` for intensity: Light / Default / Heavy.
 
 **Variants:**
+
 - Off + cam enabled: `outline` variant, slash icon
-- On + cam enabled: `bg-green-900 border border-green-700 text-green-400
-  hover:bg-green-800`, dot icon
+- On + cam enabled:
+  `bg-green-900 border border-green-700 text-green-400 hover:bg-green-800`, dot
+  icon
 - Cam muted (any state): `destructive` variant, disabled, slash icon
 
 Restores previous on/off state when camera re-enabled.
 
 **Intensity:**
+
 - Default: `'default'`
 - Persisted to `localStorage` key `yourdemo-blur-intensity`
 - Changeable from chevron whether blur is on or off
 - `setIntensity()` updates the running processor in place — no restart
 
 **Tooltip:**
+
 - Off: `"Background blur off"`
 - On light: `"Background blur — Light"`
 - On default: `"Background blur"`
 - On heavy: `"Background blur — Heavy"`
 
-**Icon:** Bespoke inline SVG — not from lucide-svelte. Two states: slash
-(off) and dots (on). Uniform dot sizes, no opacity variation, Lucide-style
-24×24 viewBox geometry.
+**Icon:** Bespoke inline SVG — not from lucide-svelte. Two states: slash (off)
+and dots (on). Uniform dot sizes, no opacity variation, Lucide-style 24×24
+viewBox geometry.
 
 **Props:**
+
 - `rawStream: MediaStream | null` — raw webcam stream in
 - `camEnabled: boolean` — from parent
-- `onProcessedStream: (stream: MediaStream | null) => void` — emits processed stream when blur on, null when blur off
-- `onProcessorChange?: (processor: BlurProcessor | null) => void` — emits processor reference for lifecycle management by parent
+- `onProcessedStream: (stream: MediaStream | null) => void` — emits processed
+  stream when blur on, null when blur off
+- `onProcessorChange?: (processor: BlurProcessor | null) => void` — emits
+  processor reference for lifecycle management by parent
 
 ## Section 5 — Countdown.svelte
 
@@ -623,7 +630,7 @@ The following tags are added inside `<head>`:
 ## Key Types
 
 ```ts
-export type BlurIntensity = 'light' | 'default' | 'heavy'
+export type BlurIntensity = 'light' | 'default' | 'heavy';
 
 export type BubblePosition =
     | 'tl'
@@ -663,7 +670,8 @@ export const deviceStore = {
 - `adapter-static` in `svelte.config.js`
 - `export const ssr = false` in `src/routes/+layout.ts`
 - Build: `npm run build` → `/build`
-- Workflow: `.github/workflows/build-and-deploy.yml` (npm cache via `actions/cache@v4`)
+- Workflow: `.github/workflows/build-and-deploy.yml` (npm cache via
+  `actions/cache@v4`)
 
 ## Critical Implementation Notes
 
@@ -698,23 +706,25 @@ export const deviceStore = {
 - **Branding** — YouDemo, MonitorPlay icon, `yourdemo-YYYY-MM-DD.webm` filename
 - **Background blur** — MediaPipe `ImageSegmenter` with selfie segmentation
   model, bundled locally via `@mediapipe/tasks-vision`. Not fetched from CDN.
-  WASM files copied from `node_modules` to build output by `vite-plugin-static-copy`.
-  Model at `static/mediapipe/models/selfie_segmenter.tflite` (244KB, committed).
+  WASM files copied from `node_modules` to build output by
+  `vite-plugin-static-copy`. Model at
+  `static/mediapipe/models/selfie_segmenter.tflite` (244KB, committed).
 - **Blur pipeline** — `blurProcessor.ts` takes raw webcam stream, outputs
   processed canvas `MediaStream`. Same output consumed by `WebcamBubble`
   (preview) and `recorder.ts` (recording). What the user sees is what is
   recorded.
 - **Blur compositor** — `setInterval` at 30fps, `captureStream(0)` +
-  `requestFrame()` per tick. OffscreenCanvas instances pre-allocated outside
-  the loop. Same pattern as `recorder.ts`.
+  `requestFrame()` per tick. OffscreenCanvas instances pre-allocated outside the
+  loop. Same pattern as `recorder.ts`.
 - **Blur intensity** — three levels (light / default / heavy) controlling
   background blur radius and mask edge feathering. Persisted to `localStorage`
   as `yourdemo-blur-intensity`. Default is `'default'`.
 - **Blur disabled when cam muted** — `destructive` variant, disabled. Previous
   on/off state restored on unmute.
 - **Blur icon** — lucide-svelte: `UserRound` (off) and `CircleUserRound` (on).
-- **Blur processor lifecycle** — `BlurProcessor` reference held by `+page.svelte`
-  via `onProcessorChange` callback from `BlurComboButton`. Processor is destroyed
-  in `resetToSetup()` so it doesn't outlive the recording session.
-- **GitHub Actions** — workflow renamed to `build-and-deploy.yml`. npm cache
-  via `actions/cache@v4` keyed on `package-lock.json`.
+- **Blur processor lifecycle** — `BlurProcessor` reference held by
+  `+page.svelte` via `onProcessorChange` callback from `BlurComboButton`.
+  Processor is destroyed in `resetToSetup()` so it doesn't outlive the recording
+  session.
+- **GitHub Actions** — workflow renamed to `build-and-deploy.yml`. npm cache via
+  `actions/cache@v4` keyed on `package-lock.json`.

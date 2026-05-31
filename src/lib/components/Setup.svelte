@@ -2,16 +2,16 @@
     import { ChevronDown, Mic, MicOff, Monitor, Video, VideoOff } from 'lucide-svelte';
     import { onMount, untrack } from 'svelte';
 
+    import BlurComboButton from '$lib/components/BlurComboButton.svelte';
     import { buttonVariants } from '$lib/components/ui/button/button.svelte';
     import { Button } from '$lib/components/ui/button/index.js';
     import * as DropdownMenu from '$lib/components/ui/dropdown-menu/index.js';
     import * as Empty from '$lib/components/ui/empty/index.js';
     import * as Tooltip from '$lib/components/ui/tooltip/index.js';
-    import BlurComboButton from '$lib/components/BlurComboButton.svelte';
     import WebcamBubble from '$lib/components/WebcamBubble.svelte';
     import type { BubblePosition } from '$lib/components/WebcamBubble.svelte';
-    import type { BlurProcessor } from '$lib/blurProcessor.js';
 
+    import type { BlurProcessor } from '$lib/blurProcessor.js';
     import { deviceStore } from '$lib/deviceStore.svelte.js';
     import { cn } from '$lib/utils.js';
 

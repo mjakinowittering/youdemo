@@ -144,6 +144,7 @@ configure Pages to serve from `/build` on `main`.
 - [Tailwind CSS v4](https://tailwindcss.com/)
 - [shadcn-svelte](https://www.shadcn-svelte.com/)
 - [FFmpeg WASM](https://ffmpegwasm.netlify.app/) — in-browser video processing
-- [MediaPipe Tasks Vision](https://ai.google.dev/edge/mediapipe/solutions/vision/image_segmenter) — on-device selfie segmentation for background blur
+- [MediaPipe Tasks Vision](https://ai.google.dev/edge/mediapipe/solutions/vision/image_segmenter)
+  — on-device selfie segmentation for background blur
 - [lucide-svelte](https://lucide.dev/) — icons
 - Deployed to [GitHub Pages](https://pages.github.com/)

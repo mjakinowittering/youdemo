@@ -1,5 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
+
 import { sveltekit } from '@sveltejs/kit/vite';
 import tailwindcss from '@tailwindcss/vite';
 import { playwright } from '@vitest/browser-playwright';
@@ -33,11 +34,7 @@ function mediapipeDevPlugin() {
 }
 
 export default defineConfig({
-    plugins: [
-        tailwindcss(),
-        sveltekit(),
-        mediapipeDevPlugin()
-    ],
+    plugins: [tailwindcss(), sveltekit(), mediapipeDevPlugin()],
     test: {
         expect: { requireAssertions: true },
         projects: [
