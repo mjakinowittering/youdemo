@@ -19,6 +19,7 @@
         setCamEnabled,
         setMicMuted
     } from '$lib/recorder.js';
+    import type { BlurProcessor } from '$lib/blurProcessor.js';
 
     let errorMessage = $state('');
     let hasError = $state(false);
@@ -62,6 +63,10 @@
     let camEnabled = $state(true);
     let bubblePosition = $state<BubblePosition>('tr');
 
+    // Blur processor — owned here so it outlives Setup and can be destroyed on full reset
+    let processedWebcamStream = $state<MediaStream | null>(null);
+    let blurProcessor: BlurProcessor | null = null;
+
     // Duration tracking (across resume sessions)
     let sessionStartMs = 0;
     let totalElapsedSec = $state(0);
@@ -83,7 +88,8 @@
             micDeviceId: deviceStore.micDeviceId,
             bubblePosition,
             micMuted,
-            camEnabled
+            camEnabled,
+            processedWebcamStream
         });
         sessionStartMs = Date.now();
         appState = 'recording';
@@ -108,6 +114,9 @@
         screenStream = null;
         segments = [];
         bubblePosition = 'tr';
+        blurProcessor?.destroy();
+        blurProcessor = null;
+        processedWebcamStream = null;
         if (reviewVideoUrl) URL.revokeObjectURL(reviewVideoUrl);
         reviewVideoUrl = null;
         if (editorVideoUrl) URL.revokeObjectURL(editorVideoUrl);
@@ -226,11 +235,15 @@
             <Setup
                 bind:screenStream
                 bind:bubblePosition
+                bind:processedStream={processedWebcamStream}
                 {micMuted}
                 {camEnabled}
                 ontogglemic={toggleMic}
                 ontogglecam={toggleCam}
                 onstart={goToCountdown}
+                onprocessorchange={(p) => {
+                    blurProcessor = p;
+                }}
             />
         {:else if appState === 'countdown'}
             <Countdown oncomplete={startRecording} />

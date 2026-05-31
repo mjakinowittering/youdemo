@@ -7,8 +7,10 @@
     import * as DropdownMenu from '$lib/components/ui/dropdown-menu/index.js';
     import * as Empty from '$lib/components/ui/empty/index.js';
     import * as Tooltip from '$lib/components/ui/tooltip/index.js';
+    import BlurComboButton from '$lib/components/BlurComboButton.svelte';
     import WebcamBubble from '$lib/components/WebcamBubble.svelte';
     import type { BubblePosition } from '$lib/components/WebcamBubble.svelte';
+    import type { BlurProcessor } from '$lib/blurProcessor.js';
 
     import { deviceStore } from '$lib/deviceStore.svelte.js';
     import { cn } from '$lib/utils.js';
@@ -19,8 +21,10 @@
         micMuted?: boolean;
         camEnabled?: boolean;
         bubblePosition?: BubblePosition;
+        processedStream?: MediaStream | null;
         ontogglemic?: () => void;
         ontogglecam?: () => void;
+        onprocessorchange?: (processor: BlurProcessor | null) => void;
     }
 
     let {
@@ -29,8 +33,10 @@
         micMuted = false,
         camEnabled = true,
         bubblePosition = $bindable<BubblePosition>('tr'),
+        processedStream = $bindable<MediaStream | null>(null),
         ontogglemic = () => {},
-        ontogglecam = () => {}
+        ontogglecam = () => {},
+        onprocessorchange = () => {}
     }: Props = $props();
 
     let pickError = $state('');
@@ -180,7 +186,7 @@
         {/if}
 
         {#if camEnabled}
-            <WebcamBubble bind:position={bubblePosition} stream={webcamStream} />
+            <WebcamBubble bind:position={bubblePosition} stream={webcamStream} {processedStream} />
         {/if}
     </div>
 
@@ -292,6 +298,15 @@
                 <p>{camLabel}</p>
             </Tooltip.Content>
         </Tooltip.Root>
+
+        <BlurComboButton
+            rawStream={webcamStream}
+            {camEnabled}
+            onProcessedStream={(s) => {
+                processedStream = s;
+            }}
+            onProcessorChange={onprocessorchange}
+        />
 
         <div class="flex-1"></div>
 

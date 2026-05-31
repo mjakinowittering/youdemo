@@ -9,6 +9,7 @@ export interface RecorderOptions {
     bubblePosition: BubblePosition;
     micMuted: boolean;
     camEnabled: boolean;
+    processedWebcamStream: MediaStream | null;
 }
 
 export interface DeletedRange {
@@ -169,8 +170,15 @@ function cleanup(): void {
 // ─── public API ───────────────────────────────────────────────────────────────
 
 export async function start(options: RecorderOptions): Promise<void> {
-    const { screenStream, webcamDeviceId, micDeviceId, bubblePosition, micMuted, camEnabled } =
-        options;
+    const {
+        screenStream,
+        webcamDeviceId,
+        micDeviceId,
+        bubblePosition,
+        micMuted,
+        camEnabled,
+        processedWebcamStream
+    } = options;
     _camEnabled = camEnabled;
     _bubblePos = bubblePosition;
     _chunks = [];
@@ -230,9 +238,9 @@ export async function start(options: RecorderOptions): Promise<void> {
         _userStream = userStream;
 
         const videoTracks = userStream.getVideoTracks();
-        if (videoTracks.length && camEnabled) {
+        if (camEnabled && (processedWebcamStream || videoTracks.length)) {
             _webcamVideo = document.createElement('video');
-            _webcamVideo.srcObject = new MediaStream(videoTracks);
+            _webcamVideo.srcObject = processedWebcamStream ?? new MediaStream(videoTracks);
             _webcamVideo.muted = true;
             _webcamVideo.play();
         }

@@ -8,9 +8,10 @@
     interface Props {
         position?: BubblePosition;
         stream?: MediaStream | null;
+        processedStream?: MediaStream | null;
     }
 
-    let { position = $bindable('tr'), stream = null }: Props = $props();
+    let { position = $bindable('tr'), stream = null, processedStream = null }: Props = $props();
 
     let dragging = $state(false);
     let dragLeft = $state(0);
@@ -126,9 +127,9 @@
             {onpointerup}
             onpointercancel={onpointerup}
         >
-            {#if stream}
+            {#if processedStream ?? stream}
                 <video
-                    {@attach setSrcObject(stream)}
+                    {@attach setSrcObject(processedStream ?? stream)}
                     autoplay
                     muted
                     playsinline
