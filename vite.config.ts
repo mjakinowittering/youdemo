@@ -10,8 +10,7 @@ import { defineConfig } from 'vitest/config';
 // The postbuild copy script only runs during build, so dev needs its own middleware.
 function vendoredWasmDevPlugin() {
     const mounts: Record<string, string> = {
-        '/mediapipe/wasm': 'node_modules/@mediapipe/tasks-vision/wasm',
-        '/ffmpeg': 'node_modules/@ffmpeg/core/dist/esm'
+        '/mediapipe/wasm': 'node_modules/@mediapipe/tasks-vision/wasm'
     };
     return {
         name: 'vendored-wasm-dev-serve',

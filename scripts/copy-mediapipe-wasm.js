@@ -13,11 +13,6 @@ const copies = [
             'vision_wasm_nosimd_internal.js',
             'vision_wasm_nosimd_internal.wasm'
         ]
-    },
-    {
-        src: 'node_modules/@ffmpeg/core/dist/esm',
-        dest: 'build/ffmpeg',
-        files: ['ffmpeg-core.js', 'ffmpeg-core.wasm']
     }
 ];
 

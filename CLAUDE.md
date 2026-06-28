@@ -17,8 +17,7 @@ no SSR, no routing library.
 - **Native export — no ffmpeg.** Combining clips and trimming are done by
   replaying footage through a canvas + `MediaRecorder` (`videoStitcher.ts`).
   ffmpeg.wasm was removed from the pipeline because it crashes on Chrome's
-  MediaRecorder output (see Section 9). The `@ffmpeg/*` packages remain
-  installed but are unused and slated for removal.
+  MediaRecorder output (see Section 9).
 - **fix-webm-duration** — patches WebM blob duration header after MediaRecorder
   recording. The `[fix-webm-duration] Duration section is missing` console line
   is benign: the library logs it and then inserts a correct Duration.
@@ -35,7 +34,6 @@ npx sv create yourdemo --template minimal --types ts --add tailwindcss prettier 
 cd yourdemo
 # When prompted for adapter, choose: adapter-static
 npm install lucide-svelte
-npm install @ffmpeg/ffmpeg @ffmpeg/util @ffmpeg/core
 npm install fix-webm-duration
 npx shadcn-svelte@latest init
 ```
@@ -179,8 +177,6 @@ src/
     videoStitcher.ts        # Native export: combine segments + trim (canvas + MediaRecorder)
     blurProcessor.ts        # MediaPipe selfie-segmentation background blur
     deviceStore.svelte.ts   # Svelte 5 rune-based store, persisted to localStorage
-    ffmpegConverter.ts      # LEGACY/unused — kept pending removal
-    ffmpegWorker.ts         # LEGACY/unused — kept pending removal
     components/
       BrowserCheck.svelte
       BlurComboButton.svelte   # Blur toggle + intensity combo (Setup only)
@@ -770,17 +766,9 @@ export const deviceStore = {
   via `videoStitcher.ts` (`stitchSegments`, `renderEditedVideo`). ffmpeg.wasm
   was removed because Chrome's MediaRecorder VP9-with-alpha output crashes its
   encoder and `-c copy` concat drops segments. See Section 9.
-  `ffmpegConverter.ts`, `ffmpegWorker.ts`, the `/ffmpeg` dev middleware, the
-  `build/ffmpeg` copy and the `@ffmpeg/*` deps are now dead and slated for
-  removal.
 - **Editor source** — the Editor loads ONE combined WebM (`editorBlob`, stitched
   on entry, cached) so its timeline/duration/thumbnails/cuts span the whole
   recording; the same blob feeds export.
-- **FFmpeg** — trim+concat approach, WebM output, three-tier speed optimisation.
-  Core (`@ffmpeg/core`) is bundled locally, not from a CDN: served from
-  `node_modules` in dev via a Vite middleware and copied to `build/ffmpeg` by
-  the `postbuild` script. The worker receives the same-origin `coreBaseURL` from
-  `Processing.svelte` (`${origin}${base}/ffmpeg`).
 - **Tailwind v4** — `@theme` in `app.css`
 - **No hand-written CSS** — Tailwind classes only
 - **indigo-500** — primary accent throughout
