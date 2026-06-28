@@ -9,6 +9,7 @@
     import Recording from '$lib/components/Recording.svelte';
     import Review from '$lib/components/Review.svelte';
     import Setup from '$lib/components/Setup.svelte';
+    import { Progress } from '$lib/components/ui/progress/index.js';
     import type { BubblePosition } from '$lib/components/WebcamBubble.svelte';
     import WelcomeModal from '$lib/components/WelcomeModal.svelte';
 
@@ -20,6 +21,7 @@
         setCamEnabled,
         setMicMuted
     } from '$lib/recorder.js';
+    import { stitchSegments } from '$lib/videoStitcher.js';
 
     let errorMessage = $state('');
     let hasError = $state(false);
@@ -41,6 +43,7 @@
         | 'countdown'
         | 'recording'
         | 'review'
+        | 'stitching'
         | 'editor'
         | 'processing'
         | 'done';
@@ -55,6 +58,10 @@
     let segments = $state<Blob[]>([]);
     let reviewVideoUrl = $state<string | null>(null);
     let editorVideoUrl = $state<string | null>(null);
+    // Single combined source for the Editor + export. Built (stitched) from
+    // `segments` on entering the Editor and cached until segments change.
+    let editorBlob = $state<Blob | null>(null);
+    let stitchProgress = $state(0);
     let outputBlob = $state<Blob | null>(null);
 
     // Export params (set when leaving editor → processing)
@@ -102,6 +109,8 @@
         const blob = await recorderStop();
         totalElapsedSec += Math.round((Date.now() - sessionStartMs) / 1000);
         segments = [...segments, blob];
+        // A new segment invalidates any previously stitched Editor source.
+        editorBlob = null;
         if (reviewVideoUrl) URL.revokeObjectURL(reviewVideoUrl);
         reviewVideoUrl = URL.createObjectURL(blob);
         appState = 'review';
@@ -117,6 +126,7 @@
         }
         webcamStream = null;
         segments = [];
+        editorBlob = null;
         bubblePosition = 'tr';
         blurProcessor?.destroy();
         blurProcessor = null;
@@ -151,11 +161,30 @@
         }
     }
 
-    function goToEditor() {
-        if (editorVideoUrl) URL.revokeObjectURL(editorVideoUrl);
-        const stitched = new Blob(segments, { type: 'video/webm' });
-        editorVideoUrl = URL.createObjectURL(stitched);
-        appState = 'editor';
+    async function goToEditor() {
+        try {
+            // Build (once) a single combined source so the Editor timeline, scrubbing
+            // and cuts span the whole recording. Multiple segments are joined natively
+            // via stitchSegments (real-time); the result is cached until segments change.
+            if (!editorBlob) {
+                if (segments.length > 1) {
+                    stitchProgress = 0;
+                    appState = 'stitching';
+                    editorBlob = await stitchSegments(segments, (f) => {
+                        stitchProgress = Math.round(f * 100);
+                    });
+                } else {
+                    editorBlob = segments[0];
+                }
+                if (editorVideoUrl) URL.revokeObjectURL(editorVideoUrl);
+                editorVideoUrl = URL.createObjectURL(editorBlob);
+            }
+            appState = 'editor';
+        } catch (err) {
+            errorMessage =
+                err instanceof Error ? `${err.message}\n${err.stack ?? ''}` : String(err);
+            hasError = true;
+        }
     }
 
     function backToReview() {
@@ -258,11 +287,21 @@
                 onedit={goToEditor}
                 ondiscard={discard}
             />
+        {:else if appState === 'stitching'}
+            <div class="flex h-full flex-col items-center justify-center p-8">
+                <div class="w-full max-w-sm space-y-3">
+                    <div class="flex items-baseline justify-between text-sm">
+                        <span class="text-muted-foreground">Combining recordings…</span>
+                        <span class="font-mono tabular-nums">{stitchProgress}%</span>
+                    </div>
+                    <Progress value={stitchProgress} class="*:bg-indigo-500" />
+                </div>
+            </div>
         {:else if appState === 'editor'}
             <Editor videoUrl={editorVideoUrl} onback={backToReview} onexport={handleExport} />
         {:else if appState === 'processing'}
             <Processing
-                {segments}
+                segments={editorBlob ? [editorBlob] : segments}
                 deletedRanges={exportDeletedRanges}
                 totalDuration={exportTotalDuration}
                 oncomplete={handleProcessingDone}

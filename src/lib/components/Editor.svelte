@@ -43,7 +43,11 @@
     let showPlayIcon = $state(false);
     let showPauseIcon = $state(false);
 
-    let cellCount = $derived(Math.round(videoDuration / SAMPLE_INTERVAL));
+    let cellCount = $derived(
+        Number.isFinite(videoDuration) && videoDuration > 0
+            ? Math.round(videoDuration / SAMPLE_INTERVAL)
+            : 0
+    );
     let currentCell = $derived(Math.round(currentTime / SAMPLE_INTERVAL));
 
     let deletedCells: Set<number> = $derived(
@@ -257,7 +261,10 @@
                 thumbVideo.onloadedmetadata = () => resolve();
                 thumbVideo.load();
             });
-            const count = Math.round(thumbVideo.duration / SAMPLE_INTERVAL);
+            const count =
+                Number.isFinite(thumbVideo.duration) && thumbVideo.duration > 0
+                    ? Math.round(thumbVideo.duration / SAMPLE_INTERVAL)
+                    : 0;
             for (let i = 0; i < count; i++) {
                 if (cancelled) return;
                 thumbVideo.currentTime = i * SAMPLE_INTERVAL;

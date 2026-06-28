@@ -149,7 +149,8 @@ export async function convertVideo(options: ExportOptions): Promise<Blob> {
             // A WASM heap overrun rejects exec (e.g. "memory access out of bounds")
             // rather than returning a non-zero code — surface which step and the log.
             throw new Error(
-                `FFmpeg step "${step}" crashed: ${err}\n${logTail.slice(-25).join('\n')}`
+                `FFmpeg step "${step}" crashed: ${err}\n${logTail.slice(-25).join('\n')}`,
+                { cause: err }
             );
         }
         if (code !== 0) {
