@@ -1,4 +1,6 @@
 <script lang="ts">
+    import { base } from '$app/paths';
+
     import BrowserCheck from '$lib/components/BrowserCheck.svelte';
     import Countdown from '$lib/components/Countdown.svelte';
     import Done from '$lib/components/Done.svelte';
@@ -13,7 +15,11 @@
     import type { BubblePosition } from '$lib/components/WebcamBubble.svelte';
     import WelcomeModal from '$lib/components/WelcomeModal.svelte';
 
-    import type { BlurProcessor } from '$lib/blurProcessor.js';
+    import {
+        createBlurProcessor,
+        type BlurIntensity,
+        type BlurProcessor
+    } from '$lib/blurProcessor.js';
     import { deviceStore } from '$lib/deviceStore.svelte.js';
     import {
         start as recorderStart,
@@ -66,7 +72,6 @@
 
     // Export params (set when leaving editor → processing)
     let exportDeletedRanges = $state<DeletedRange[]>([]);
-    let exportTotalDuration = $state(0);
 
     // Device / recording controls
     let micMuted = $state(false);
@@ -76,10 +81,50 @@
     // Blur processor — owned here so it outlives Setup and can be destroyed on full reset
     let processedWebcamStream = $state<MediaStream | null>(null);
     let blurProcessor: BlurProcessor | null = null;
+    // Whether blur was on when the camera was last released — restored on resume.
+    let cameraBlurOn = false;
 
     // Duration tracking (across resume sessions)
     let sessionStartMs = 0;
     let totalElapsedSec = $state(0);
+
+    // ── camera lifecycle ───────────────────────────────────────────────────────
+    // The webcam is live only during the capture flow (setup preview → countdown →
+    // recording). It is released the moment a recording is captured (Review onward)
+    // so the camera/red-dot isn't left running, and re-acquired on resume.
+
+    function releaseCamera() {
+        cameraBlurOn = blurProcessor !== null;
+        blurProcessor?.destroy();
+        blurProcessor = null;
+        processedWebcamStream = null;
+        webcamStream?.getTracks().forEach((t) => t.stop());
+        webcamStream = null;
+    }
+
+    async function armCamera() {
+        if (!camEnabled) return;
+        try {
+            const deviceId = deviceStore.webcamDeviceId;
+            webcamStream = await navigator.mediaDevices.getUserMedia({
+                video: deviceId ? { deviceId: { ideal: deviceId } } : true
+            });
+            if (cameraBlurOn) {
+                let intensity: BlurIntensity = 'default';
+                try {
+                    const saved = localStorage.getItem('ydBlurIntensity');
+                    if (saved === 'light' || saved === 'default' || saved === 'heavy')
+                        intensity = saved;
+                } catch {
+                    /* localStorage unavailable */
+                }
+                blurProcessor = await createBlurProcessor(webcamStream, intensity, base);
+                processedWebcamStream = blurProcessor.outputStream;
+            }
+        } catch {
+            /* camera unavailable — record without webcam */
+        }
+    }
 
     // ── transitions ──────────────────────────────────────────────────────────
 
@@ -113,6 +158,8 @@
         editorBlob = null;
         if (reviewVideoUrl) URL.revokeObjectURL(reviewVideoUrl);
         reviewVideoUrl = URL.createObjectURL(blob);
+        // Recording captured — let the camera go until/unless the user resumes.
+        releaseCamera();
         appState = 'review';
     }
 
@@ -121,16 +168,11 @@
             screenStream.getTracks().forEach((t) => t.stop());
         }
         screenStream = null;
-        if (webcamStream) {
-            webcamStream.getTracks().forEach((t) => t.stop());
-        }
-        webcamStream = null;
+        releaseCamera();
+        cameraBlurOn = false;
         segments = [];
         editorBlob = null;
         bubblePosition = 'tr';
-        blurProcessor?.destroy();
-        blurProcessor = null;
-        processedWebcamStream = null;
         if (reviewVideoUrl) URL.revokeObjectURL(reviewVideoUrl);
         reviewVideoUrl = null;
         if (editorVideoUrl) URL.revokeObjectURL(editorVideoUrl);
@@ -155,6 +197,8 @@
             newStream.getVideoTracks()[0].addEventListener('ended', () => {
                 handleStreamEnded();
             });
+            // Re-acquire the camera (released when the previous recording stopped).
+            await armCamera();
             appState = 'countdown';
         } catch {
             // Screen picker cancelled — stay on review
@@ -191,9 +235,8 @@
         appState = 'review';
     }
 
-    function handleExport(deletedRanges: DeletedRange[], totalDuration: number) {
+    function handleExport(deletedRanges: DeletedRange[]) {
         exportDeletedRanges = deletedRanges;
-        exportTotalDuration = totalDuration;
         appState = 'processing';
     }
 
@@ -303,7 +346,6 @@
             <Processing
                 segments={editorBlob ? [editorBlob] : segments}
                 deletedRanges={exportDeletedRanges}
-                totalDuration={exportTotalDuration}
                 oncomplete={handleProcessingDone}
             />
         {:else if appState === 'done'}

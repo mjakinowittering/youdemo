@@ -124,7 +124,10 @@
                         <DropdownMenu.Root>
                             <DropdownMenu.Trigger
                                 class={cn(
-                                    buttonVariants({ variant: 'outline', size: 'lg' }),
+                                    buttonVariants({
+                                        variant: micMuted ? 'destructive' : 'outline',
+                                        size: 'lg'
+                                    }),
                                     'rounded-l-none px-2'
                                 )}
                                 aria-label="Select microphone"
@@ -175,7 +178,10 @@
                         <DropdownMenu.Root>
                             <DropdownMenu.Trigger
                                 class={cn(
-                                    buttonVariants({ variant: 'outline', size: 'lg' }),
+                                    buttonVariants({
+                                        variant: !camEnabled ? 'destructive' : 'outline',
+                                        size: 'lg'
+                                    }),
                                     'rounded-l-none px-2'
                                 )}
                                 aria-label="Select camera"

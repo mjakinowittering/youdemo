@@ -125,3 +125,147 @@ async function playSegment(
     video.pause();
     URL.revokeObjectURL(video.src);
 }
+
+interface Range {
+    startTime: number;
+    endTime: number;
+}
+
+/** Invert deleted ranges into the kept ranges of a [0, duration] timeline. */
+function keptRanges(duration: number, deleted: Range[]): { start: number; end: number }[] {
+    const sorted = [...deleted].sort((a, b) => a.startTime - b.startTime);
+    const kept: { start: number; end: number }[] = [];
+    let cursor = 0;
+    for (const d of sorted) {
+        if (cursor < d.startTime) kept.push({ start: cursor, end: d.startTime });
+        cursor = Math.max(cursor, d.endTime);
+    }
+    if (cursor < duration) kept.push({ start: cursor, end: duration });
+    return kept;
+}
+
+function seekTo(video: HTMLVideoElement, time: number): Promise<void> {
+    return new Promise((resolve) => {
+        if (Math.abs(video.currentTime - time) < 0.05) {
+            resolve();
+            return;
+        }
+        const onSeeked = () => {
+            video.removeEventListener('seeked', onSeeked);
+            resolve();
+        };
+        video.addEventListener('seeked', onSeeked);
+        video.currentTime = time;
+    });
+}
+
+/**
+ * Render an edited timeline (source minus deletedRanges) into ONE WebM by
+ * replaying only the kept ranges through a canvas + MediaRecorder — the same
+ * native pipeline as stitchSegments. Avoids ffmpeg entirely: the previous
+ * ffmpeg `-c copy` trim+concat dropped all but the first kept range. Real-time
+ * (plays the kept duration); cut precision is per-frame, better than `-c copy`.
+ */
+export async function renderEditedVideo(
+    source: Blob,
+    deletedRanges: Range[],
+    onProgress?: (fraction: number) => void
+): Promise<Blob> {
+    if (!deletedRanges || deletedRanges.length === 0) return source;
+
+    const video = document.createElement('video');
+    video.src = URL.createObjectURL(source);
+    video.playsInline = true;
+    await mediaEvent(video, 'loadedmetadata');
+    const width = video.videoWidth || 1280;
+    const height = video.videoHeight || 720;
+    const duration = Number.isFinite(video.duration) ? video.duration : 0;
+
+    const ranges = keptRanges(duration, deletedRanges);
+    if (ranges.length === 0) {
+        URL.revokeObjectURL(video.src);
+        return source; // everything deleted — fall back rather than emit empty
+    }
+    const totalKept = ranges.reduce((sum, r) => sum + (r.end - r.start), 0);
+
+    const canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext('2d', { alpha: false })!;
+
+    const audioCtx = new AudioContext();
+    await audioCtx.resume().catch(() => {});
+    const dest = audioCtx.createMediaStreamDestination();
+    let srcNode: MediaElementAudioSourceNode | null = null;
+    try {
+        srcNode = audioCtx.createMediaElementSource(video);
+        srcNode.connect(dest);
+    } catch {
+        /* no audio track */
+    }
+
+    const stream = canvas.captureStream(0);
+    const frameTrack = stream.getVideoTracks()[0] as CanvasCaptureMediaStreamTrack;
+    dest.stream.getAudioTracks().forEach((t) => stream.addTrack(t));
+
+    const recorder = new MediaRecorder(stream, {
+        mimeType: pickMimeType(),
+        videoBitsPerSecond: 8_000_000,
+        audioBitsPerSecond: 128_000
+    });
+    const chunks: BlobPart[] = [];
+    recorder.ondataavailable = (e) => {
+        if (e.data.size > 0) chunks.push(e.data);
+    };
+
+    const startMs = Date.now();
+    recorder.start(500);
+
+    let renderedKept = 0;
+    for (const range of ranges) {
+        await playRange(video, range, ctx, width, height, frameTrack, (played) =>
+            onProgress?.(Math.min(1, (renderedKept + played) / totalKept))
+        );
+        renderedKept += range.end - range.start;
+    }
+
+    await new Promise<void>((resolve) => {
+        recorder.onstop = () => resolve();
+        recorder.stop();
+    });
+    const durationMs = Date.now() - startMs;
+    srcNode?.disconnect();
+    audioCtx.close();
+    frameTrack.stop();
+    URL.revokeObjectURL(video.src);
+
+    return fixWebmDuration(new Blob(chunks, { type: 'video/webm' }), durationMs);
+}
+
+async function playRange(
+    video: HTMLVideoElement,
+    range: { start: number; end: number },
+    ctx: CanvasRenderingContext2D,
+    width: number,
+    height: number,
+    frameTrack: CanvasCaptureMediaStreamTrack,
+    onProgress: (playedInRange: number) => void
+): Promise<void> {
+    await seekTo(video, range.start);
+    await video.play();
+    await new Promise<void>((resolve) => {
+        const id = setInterval(() => {
+            if (video.currentTime >= range.end || video.ended) {
+                clearInterval(id);
+                video.pause();
+                resolve();
+                return;
+            }
+            if (video.readyState >= 2) {
+                ctx.drawImage(video, 0, 0, width, height);
+                frameTrack.requestFrame();
+                onProgress(Math.max(0, video.currentTime - range.start));
+            }
+        }, 1000 / 30);
+    });
+}
