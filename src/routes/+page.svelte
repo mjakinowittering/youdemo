@@ -1,5 +1,6 @@
 <script lang="ts">
     import { base } from '$app/paths';
+    import { untrack } from 'svelte';
 
     import BrowserCheck from '$lib/components/BrowserCheck.svelte';
     import Countdown from '$lib/components/Countdown.svelte';
@@ -15,18 +16,10 @@
     import type { BubblePosition } from '$lib/components/WebcamBubble.svelte';
     import WelcomeModal from '$lib/components/WelcomeModal.svelte';
 
-    import {
-        createBlurProcessor,
-        type BlurIntensity,
-        type BlurProcessor
-    } from '$lib/blurProcessor.js';
+    import { createBlurProcessor } from '$lib/blurProcessor.js';
+    import type { BlurIntensity, BlurProcessor } from '$lib/blurProcessor.js';
     import { deviceStore } from '$lib/deviceStore.svelte.js';
-    import {
-        start as recorderStart,
-        stop as recorderStop,
-        setCamEnabled,
-        setMicMuted
-    } from '$lib/recorder.js';
+    import { start as recorderStart, stop as recorderStop } from '$lib/recorder.js';
     import { stitchSegments } from '$lib/videoStitcher.js';
 
     let errorMessage = $state('');
@@ -62,7 +55,6 @@
     // blur processor across a resume, with deterministic teardown on full reset.
     let webcamStream = $state<MediaStream | null>(null);
     let segments = $state<Blob[]>([]);
-    let reviewVideoUrl = $state<string | null>(null);
     let editorVideoUrl = $state<string | null>(null);
     // Single combined source for the Editor + export. Built (stitched) from
     // `segments` on entering the Editor and cached until segments change.
@@ -73,31 +65,85 @@
     // Export params (set when leaving editor → processing)
     let exportDeletedRanges = $state<DeletedRange[]>([]);
 
-    // Device / recording controls
+    // Device / recording controls — bound down through ControlBar into the leaf
+    // controls (MicControl / CamControl / BlurControl) on each capture screen.
     let micMuted = $state(false);
     let camEnabled = $state(true);
+    let blurOn = $state(false);
+    let blurIntensity = $state<BlurIntensity>(initialBlurIntensity());
     let bubblePosition = $state<BubblePosition>('tr');
 
-    // Blur processor — owned here so it outlives Setup and can be destroyed on full reset
+    // Blur processor — owned here so it outlives Setup. Created/destroyed
+    // reactively by the $effect below; `blurReady` lets startRecording await an
+    // in-flight creation so blur is guaranteed present in the recorded output.
     let processedWebcamStream = $state<MediaStream | null>(null);
     let blurProcessor: BlurProcessor | null = null;
-    // Whether blur was on when the camera was last released — restored on resume.
-    let cameraBlurOn = false;
+    let blurReady: Promise<void> = Promise.resolve();
 
-    // Duration tracking (across resume sessions)
+    // Duration tracking (across resume sessions). Not displayed yet — reserved
+    // for a future "N clips / total duration" summary on Review.
     let sessionStartMs = 0;
-    let totalElapsedSec = $state(0);
+    let totalElapsedSec = 0;
+
+    function initialBlurIntensity(): BlurIntensity {
+        try {
+            const saved = localStorage.getItem('ydBlurIntensity');
+            if (saved === 'light' || saved === 'default' || saved === 'heavy') return saved;
+        } catch {
+            /* localStorage unavailable */
+        }
+        return 'default';
+    }
+
+    // Blur processor lifecycle — follows `blurOn` and the raw `webcamStream`.
+    // Turning the camera off (Setup), releasing it on Review, or a full reset all
+    // null `webcamStream`, tearing the processor down; re-acquiring it while
+    // `blurOn` is still true rebuilds blur with no extra coupling.
+    $effect(() => {
+        const on = blurOn;
+        const stream = webcamStream;
+        if (!on || !stream) return;
+        let cancelled = false;
+        blurReady = (async () => {
+            const p = await createBlurProcessor(
+                stream,
+                untrack(() => blurIntensity),
+                base
+            );
+            if (cancelled) {
+                p.destroy();
+                return;
+            }
+            blurProcessor = p;
+            processedWebcamStream = p.outputStream;
+        })();
+        return () => {
+            cancelled = true;
+            blurProcessor?.destroy();
+            blurProcessor = null;
+            processedWebcamStream = null;
+            blurReady = Promise.resolve();
+        };
+    });
+
+    // Persist intensity and apply it to a running processor in place (no restart).
+    $effect(() => {
+        const i = blurIntensity;
+        try {
+            localStorage.setItem('ydBlurIntensity', i);
+        } catch {
+            /* localStorage unavailable */
+        }
+        untrack(() => blurProcessor)?.setIntensity(i);
+    });
 
     // ── camera lifecycle ───────────────────────────────────────────────────────
     // The webcam is live only during the capture flow (setup preview → countdown →
     // recording). It is released the moment a recording is captured (Review onward)
-    // so the camera/red-dot isn't left running, and re-acquired on resume.
+    // so the camera/red-dot isn't left running, and re-acquired on resume. Blur
+    // follows automatically via the $effect above.
 
     function releaseCamera() {
-        cameraBlurOn = blurProcessor !== null;
-        blurProcessor?.destroy();
-        blurProcessor = null;
-        processedWebcamStream = null;
         webcamStream?.getTracks().forEach((t) => t.stop());
         webcamStream = null;
     }
@@ -109,18 +155,6 @@
             webcamStream = await navigator.mediaDevices.getUserMedia({
                 video: deviceId ? { deviceId: { ideal: deviceId } } : true
             });
-            if (cameraBlurOn) {
-                let intensity: BlurIntensity = 'default';
-                try {
-                    const saved = localStorage.getItem('ydBlurIntensity');
-                    if (saved === 'light' || saved === 'default' || saved === 'heavy')
-                        intensity = saved;
-                } catch {
-                    /* localStorage unavailable */
-                }
-                blurProcessor = await createBlurProcessor(webcamStream, intensity, base);
-                processedWebcamStream = blurProcessor.outputStream;
-            }
         } catch {
             /* camera unavailable — record without webcam */
         }
@@ -137,6 +171,9 @@
     }
 
     async function startRecording() {
+        // Ensure any in-flight blur processor creation has finished so the
+        // blurred stream is locked into the recording from the first frame.
+        await blurReady;
         await recorderStart({
             screenStream: screenStream!,
             webcamStream,
@@ -156,8 +193,6 @@
         segments = [...segments, blob];
         // A new segment invalidates any previously stitched Editor source.
         editorBlob = null;
-        if (reviewVideoUrl) URL.revokeObjectURL(reviewVideoUrl);
-        reviewVideoUrl = URL.createObjectURL(blob);
         // Recording captured — let the camera go until/unless the user resumes.
         releaseCamera();
         appState = 'review';
@@ -168,13 +203,11 @@
             screenStream.getTracks().forEach((t) => t.stop());
         }
         screenStream = null;
+        blurOn = false;
         releaseCamera();
-        cameraBlurOn = false;
         segments = [];
         editorBlob = null;
         bubblePosition = 'tr';
-        if (reviewVideoUrl) URL.revokeObjectURL(reviewVideoUrl);
-        reviewVideoUrl = null;
         if (editorVideoUrl) URL.revokeObjectURL(editorVideoUrl);
         editorVideoUrl = null;
         outputBlob = null;
@@ -197,7 +230,8 @@
             newStream.getVideoTracks()[0].addEventListener('ended', () => {
                 handleStreamEnded();
             });
-            // Re-acquire the camera (released when the previous recording stopped).
+            // Re-acquire the camera (released when the previous recording stopped);
+            // blur rebuilds reactively if it was still on.
             await armCamera();
             appState = 'countdown';
         } catch {
@@ -271,16 +305,6 @@
         // Spec: stream ended → full reset → setup
         resetToSetup();
     }
-
-    function toggleMic() {
-        micMuted = !micMuted;
-        if (appState === 'recording') setMicMuted(micMuted);
-    }
-
-    function toggleCam() {
-        camEnabled = !camEnabled;
-        if (appState === 'recording') setCamEnabled(camEnabled);
-    }
 </script>
 
 <WelcomeModal />
@@ -298,34 +322,31 @@
                 bind:screenStream
                 bind:webcamStream
                 bind:bubblePosition
-                bind:processedStream={processedWebcamStream}
-                {micMuted}
-                {camEnabled}
-                ontogglemic={toggleMic}
-                ontogglecam={toggleCam}
+                bind:micMuted
+                bind:camEnabled
+                bind:blurOn
+                bind:blurIntensity
+                processedStream={processedWebcamStream}
                 onstart={goToCountdown}
-                onprocessorchange={(p) => {
-                    blurProcessor = p;
-                }}
             />
         {:else if appState === 'countdown'}
             <Countdown oncomplete={startRecording} />
         {:else if appState === 'recording'}
             <Recording
                 {screenStream}
-                {micMuted}
-                {camEnabled}
-                ontogglemic={toggleMic}
-                ontogglecam={toggleCam}
+                bind:micMuted
+                bind:camEnabled
+                bind:blurOn
+                bind:blurIntensity
                 onstop={stopRecording}
                 onstreamended={handleStreamEnded}
             />
         {:else if appState === 'review'}
             <Review
-                videoUrl={reviewVideoUrl}
-                duration={totalElapsedSec}
-                micEnabled={!micMuted}
-                {camEnabled}
+                bind:micMuted
+                bind:camEnabled
+                bind:blurOn
+                bind:blurIntensity
                 onresume={handleResume}
                 onedit={goToEditor}
                 ondiscard={discard}

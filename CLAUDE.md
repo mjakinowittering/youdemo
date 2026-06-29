@@ -179,7 +179,10 @@ src/
     deviceStore.svelte.ts   # Svelte 5 rune-based store, persisted to localStorage
     components/
       BrowserCheck.svelte
-      BlurComboButton.svelte   # Blur toggle + intensity combo (Setup only)
+      ControlBar.svelte        # Shared footer: Mic + Cam + Blur controls (Setup/Recording/Review)
+      MicControl.svelte        # Mic mute + device combo (bindable micMuted)
+      CamControl.svelte        # Cam toggle + device combo (bindable camEnabled)
+      BlurControl.svelte       # Blur toggle + intensity combo (bindable blurOn/intensity)
       Setup.svelte
       Countdown.svelte
       Recording.svelte
@@ -205,7 +208,7 @@ Add a global error boundary — if any unhandled error occurs, transition to an
 
 ```
 check:      pass → setup | fail → stays (shows error)
-setup:      Start Recording → countdown
+setup:      Start Recording (picks screen, auto-starts on any surface) → countdown
 countdown:  complete → recording
 recording:  Stop → capture blob → release camera → review
             Stream ended → full reset → setup
@@ -254,14 +257,14 @@ Use shadcn `Empty` component for the error/warning states.
 - **Empty state icon**: `MonitorSmartphone` or similar, 2x size, uses shadcn
   `Empty`
 - **WebcamBubble**: `border-2 border-indigo-500`, visible in Setup only
-- **Bottom toolbar**: Mic combo | Cam combo | [spacer] | Start Recording
-  (`bg-indigo-500`)
+- **Bottom toolbar**: shared `ControlBar` (Mic | Cam | Blur), centred, enabled.
+  No Start Recording / Re-pick buttons in the footer.
 
 ### Screen picker
 
-- "Choose Screen" → `getDisplayMedia`
-- Start Recording disabled until screen picked
-- Auto-start on tab share (`displaySurface === 'browser'`)
+- The empty-state CTA is labelled **"Start Recording"** → `getDisplayMedia`
+- Recording **auto-starts on any surface** (tab, window or screen) the moment a
+  screen is picked — there is no separate Start Recording step
 - Stream ended → full reset → empty state
 
 ## Section 3 — WebcamBubble.svelte
@@ -279,56 +282,54 @@ Use shadcn `Empty` component for the error/warning states.
 - Visible in Setup only, hidden from countdown onwards
 - Disappears when cam is off
 
-## Section 4 — Combo Buttons (Mic & Cam)
+## Section 4 — Shared controls (ControlBar + Mic/Cam/Blur)
 
-- Chevron opens `DropdownMenu` with `DropdownMenuRadioGroup`
-- Wrap in `Tooltip` showing selected device name
-- Muted/Off: shadcn `destructive` variant
+The Mic, Cam and Blur controls are individual reusable components composed by
+`ControlBar.svelte`, which is the shared footer on **all three** capture screens
+(Setup, Recording, Review). DRY: the markup is defined once.
 
-## Section 4a — BlurComboButton.svelte
+- `ControlBar` props (all `$bindable`): `micMuted`, `camEnabled`, `blurOn`,
+  `blurIntensity`, plus a plain `disabled` flag.
+- `disabled` is `false` on Setup (interactive) and `true` on Recording and
+  Review (controls show current state but cannot be operated). Preferring a
+  disabled control over coding around mid-recording toggles keeps the recorder
+  simple — streams are locked in at `start()`.
 
-Combo button immediately right of the cam combo button. Setup screen only. Not
-shown in Recording toolbar.
+### MicControl.svelte / CamControl.svelte
 
-Primary button toggles blur on/off. Chevron opens `DropdownMenu` with
-`DropdownMenuRadioGroup` for intensity: Light / Default / Heavy.
+- `$bindable` `micMuted` / `camEnabled`; primary button toggles on click.
+- Chevron opens `DropdownMenu` with `DropdownMenuRadioGroup`; each enumerates
+  its own devices on mount and reads/writes `deviceStore`.
+- Wrapped in `Tooltip` showing the selected device name.
+- Muted/Off: shadcn `destructive` variant. Both button and chevron honour
+  `disabled`.
+
+### Section 4a — BlurControl.svelte
+
+Controlled, pure-UI combo immediately right of the cam combo. Props (bindable):
+`blurOn`, `intensity`; plus `camEnabled` and `disabled`. Primary button toggles
+`blurOn`; chevron `DropdownMenuRadioGroup` sets `intensity` (Light / Default /
+Heavy). It owns **no** processor — `+page` owns the `BlurProcessor` and reacts
+to `blurOn`/`blurIntensity` via `$effect`s.
 
 **Variants:**
 
-- Off + cam enabled: `outline` variant, slash icon
-- On + cam enabled:
-  `bg-green-900 border border-green-700 text-green-400 hover:bg-green-800`, dot
-  icon
-- Cam muted (any state): `destructive` variant, disabled, slash icon
-
-Restores previous on/off state when camera re-enabled.
+- Off + cam enabled: `outline` variant, `UserRound` icon
+- On + cam enabled: `success` variant, `CircleUserRound` icon
+- Cam off (any state): `destructive` variant, disabled, `UserRound` icon
 
 **Intensity:**
 
-- Default: `'default'`
-- Persisted to `localStorage` key `ydBlurIntensity`
-- Changeable from chevron whether blur is on or off
-- `setIntensity()` updates the running processor in place — no restart
+- Default: `'default'`; persisted to `localStorage` key `ydBlurIntensity` (by
+  `+page`)
+- Changeable from the chevron whether blur is on or off
+- `+page`'s intensity `$effect` calls `setIntensity()` on the running processor
+  in place — no restart
 
-**Tooltip:**
+**Tooltip:** Off `"Background blur off"` · Light `"Background blur — Light"` ·
+Default `"Background blur"` · Heavy `"Background blur — Heavy"`.
 
-- Off: `"Background blur off"`
-- On light: `"Background blur — Light"`
-- On default: `"Background blur"`
-- On heavy: `"Background blur — Heavy"`
-
-**Icon:** Bespoke inline SVG — not from lucide-svelte. Two states: slash (off)
-and dots (on). Uniform dot sizes, no opacity variation, Lucide-style 24×24
-viewBox geometry.
-
-**Props:**
-
-- `rawStream: MediaStream | null` — raw webcam stream in
-- `camEnabled: boolean` — from parent
-- `onProcessedStream: (stream: MediaStream | null) => void` — emits processed
-  stream when blur on, null when blur off
-- `onProcessorChange?: (processor: BlurProcessor | null) => void` — emits
-  processor reference for lifecycle management by parent
+**Icon:** lucide-svelte `UserRound` (off) and `CircleUserRound` (on).
 
 ## Section 5 — Countdown.svelte
 
@@ -346,6 +347,8 @@ viewBox geometry.
 - shadcn `Empty` component with `RadioTower` icon (2x size, static, no
   animation)
 - Label: "Recording in progress"
+- **Stop is the centred CTA** inside the `Empty` (destructive button), like
+  Setup's centred "Start Recording" — not tucked in the footer corner.
 
 ### Canvas compositing — CRITICAL IMPLEMENTATION NOTES
 
@@ -407,20 +410,31 @@ audioCtx.close();
 ### Recording UI
 
 - **Top bar**: MonitorPlay + YouDemo | Theme toggle | `● REC · mm:ss` badge
-- **Bottom toolbar**: Mic combo | Cam combo | [spacer] | Stop
+  (overlaid top-left of the capture area)
+- **Centre**: Stop Recording (destructive button) inside the `RadioTower` empty
+- **Bottom toolbar**: shared `ControlBar` (Mic | Cam | Blur), **disabled** —
+  shows the state chosen in Setup but cannot be operated mid-record
 - `document.title`: `● REC 00:42 | YouDemo`
 - Reset title on stop and `onDestroy`
 
 ## Section 7 — Review.svelte
 
-- Last frame paused, greyscale
-- Three cards tiled horizontally
+- **No** greyscale freeze-frame, no duration/mic/cam badges.
+- Three shadcn `Card`s tiled horizontally, each **fully clickable** via the
+  stretched-button pattern: `Card.Root` is `relative`; the footer `Button`
+  contains `<span class="absolute inset-0">` so a click anywhere on the card
+  fires it (`hover:bg-muted/50 hover:ring-indigo-500`). Each card = lucide icon
+    - `Card.Title` + `Card.Description` + `Card.Footer` button.
+- Bottom toolbar: shared `ControlBar`, **disabled** (consistency with the other
+  capture screens).
 
-| Card          | Style                | Action                      |
-| ------------- | -------------------- | --------------------------- |
-| Resume        | `border-indigo-500`  | → screen picker → countdown |
-| Edit & Export | `border-indigo-500`  | → editor                    |
-| Discard       | shadcn `destructive` | → full reset                |
+| Card              | Icon           | Footer button           | Action                      |
+| ----------------- | -------------- | ----------------------- | --------------------------- |
+| Resume recording  | `Clapperboard` | Continue (`outline`)    | → screen picker → countdown |
+| Edit recording    | `Film`         | Continue (`outline`)    | → editor                    |
+| Discard recording | `Trash2`       | Discard (`destructive`) | → full reset                |
+
+(Duration across N captured clips is a future exploration — not shown today.)
 
 ## Section 8 — Editor.svelte
 
@@ -803,12 +817,15 @@ export const deviceStore = {
 - **Blur intensity** — three levels (light / default / heavy) controlling
   background blur radius and mask edge feathering. Persisted to `localStorage`
   as `ydBlurIntensity`. Default is `'default'`.
-- **Blur disabled when cam muted** — `destructive` variant, disabled. Previous
-  on/off state restored on unmute.
+- **Blur disabled when cam off** — `destructive` variant, disabled. Blur is also
+  disabled (state shown, not interactive) during Recording and Review.
 - **Blur icon** — lucide-svelte: `UserRound` (off) and `CircleUserRound` (on).
-- **Blur processor lifecycle** — `BlurProcessor` reference held by
-  `+page.svelte` via `onProcessorChange` callback from `BlurComboButton`.
-  Processor is destroyed in `resetToSetup()` so it doesn't outlive the recording
-  session.
+- **Blur processor lifecycle** — owned entirely by `+page.svelte`. `blurOn` and
+  `blurIntensity` are `$state`, bound down through `ControlBar` to
+  `BlurControl`. A `$effect` keyed on `blurOn` + `webcamStream` creates/destroys
+  the `BlurProcessor` (and so subsumes cam-off and camera release/re-arm — no
+  remember/restore logic); a second `$effect` persists intensity and applies it
+  in place. `startRecording` awaits a `blurReady` promise so an in-flight
+  processor is locked into the recording from the first frame.
 - **GitHub Actions** — workflow renamed to `build-and-deploy.yml`. npm cache via
   `actions/cache@v4` keyed on `package-lock.json`.
