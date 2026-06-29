@@ -1,4 +1,7 @@
 import fixWebmDuration from 'fix-webm-duration';
+import type { VideoEncodingQuality } from './types/quality';
+import { VIDEO_BPS_OPTIONS, AUDIO_BPS_OPTIONS } from './constants/VIDEO_BPS_OPTIONS';
+
 
 function pickMimeType(): string {
     const types = ['video/webm;codecs=vp9,opus', 'video/webm;codecs=vp8,opus', 'video/webm'];
@@ -21,6 +24,7 @@ function mediaEvent(el: HTMLMediaElement, name: string): Promise<void> {
  */
 export async function stitchSegments(
     blobs: Blob[],
+    quality: VideoEncodingQuality,
     onProgress?: (fraction: number) => void
 ): Promise<Blob> {
     if (blobs.length <= 1) return blobs[0];
@@ -50,8 +54,8 @@ export async function stitchSegments(
 
     const recorder = new MediaRecorder(stream, {
         mimeType: pickMimeType(),
-        videoBitsPerSecond: 8_000_000,
-        audioBitsPerSecond: 128_000
+        videoBitsPerSecond: VIDEO_BPS_OPTIONS[quality],
+        audioBitsPerSecond: AUDIO_BPS_OPTIONS[quality]
     });
     const chunks: BlobPart[] = [];
     recorder.ondataavailable = (e) => {
@@ -166,13 +170,15 @@ function seekTo(video: HTMLVideoElement, time: number): Promise<void> {
  * ffmpeg `-c copy` trim+concat dropped all but the first kept range. Real-time
  * (plays the kept duration); cut precision is per-frame, better than `-c copy`.
  */
-export async function renderEditedVideo(
+
+export async function renderExportedVideo(
     source: Blob,
+    quality: VideoEncodingQuality,
     deletedRanges: Range[],
     onProgress?: (fraction: number) => void
 ): Promise<Blob> {
-    if (!deletedRanges || deletedRanges.length === 0) return source;
 
+    console.info(`Exporting video ${quality} quality (${VIDEO_BPS_OPTIONS[quality]}BPS)`)
     const video = document.createElement('video');
     video.src = URL.createObjectURL(source);
     video.playsInline = true;
@@ -180,7 +186,7 @@ export async function renderEditedVideo(
     const width = video.videoWidth || 1280;
     const height = video.videoHeight || 720;
     const duration = Number.isFinite(video.duration) ? video.duration : 0;
-
+   
     const ranges = keptRanges(duration, deletedRanges);
     if (ranges.length === 0) {
         URL.revokeObjectURL(video.src);
@@ -208,10 +214,12 @@ export async function renderEditedVideo(
     const frameTrack = stream.getVideoTracks()[0] as CanvasCaptureMediaStreamTrack;
     dest.stream.getAudioTracks().forEach((t) => stream.addTrack(t));
 
+
+
     const recorder = new MediaRecorder(stream, {
         mimeType: pickMimeType(),
-        videoBitsPerSecond: 8_000_000,
-        audioBitsPerSecond: 128_000
+        videoBitsPerSecond: VIDEO_BPS_OPTIONS[quality],
+        audioBitsPerSecond: AUDIO_BPS_OPTIONS[quality]
     });
     const chunks: BlobPart[] = [];
     recorder.ondataavailable = (e) => {

@@ -574,8 +574,8 @@ visible cells and `effectiveDuration`
        blob; a `stitchSegments` call remains as a safety net if >1 is ever
        passed).
     2. No cuts → `source` is the final file.
-    3. Cuts → `renderEditedVideo(source, deletedRanges)` re-renders only the
-       kept ranges.
+    3. Cuts → `renderExportedVideo(source, deletedRanges)` handles video export encoding quality also 
+       re-renders only the kept ranges. 
 
 ### Why native (critical history)
 
@@ -597,7 +597,7 @@ per-frame (better than ffmpeg `-c copy`, which snaps to sparse keyframes).
 
 - `stitchSegments(blobs, onProgress)` — play segments back-to-back into one
   WebM.
-- `renderEditedVideo(source, deletedRanges, onProgress)` — play only the kept
+- `renderExportedVideo(source, deletedRanges, onProgress)` — exports only the kept
   ranges into one WebM.
 
 Both use an opaque canvas (`alpha: false`), `captureStream(0)` +

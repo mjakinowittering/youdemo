@@ -1,0 +1,1 @@
+export type VideoEncodingQuality = 'low' | 'medium' | 'high';

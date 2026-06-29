@@ -3,20 +3,22 @@
 
     import { Progress } from '$lib/components/ui/progress/index.js';
 
-    import { renderEditedVideo, stitchSegments } from '$lib/videoStitcher.js';
-
+    import { renderExportedVideo, stitchSegments } from '$lib/videoStitcher.js';
+    import type { VideoEncodingQuality } from '$lib/types/quality';
+ 
     interface DeletedRange {
         startTime: number;
         endTime: number;
     }
 
     interface Props {
+        quality?: VideoEncodingQuality
         segments?: Blob[];
         deletedRanges?: DeletedRange[];
         oncomplete: (blob: Blob) => void;
     }
 
-    let { segments = [], deletedRanges = [], oncomplete }: Props = $props();
+    let { segments = [], quality = "high", deletedRanges = [], oncomplete }: Props = $props();
 
     let progress = $state(0);
     let status = $state('Preparing…');
@@ -26,6 +28,7 @@
         let cancelled = false;
 
         (async () => {
+         
             try {
                 // Everything runs natively (canvas + MediaRecorder) — no ffmpeg.
                 // 1. Combine segments if needed (the Editor normally passes a single
@@ -33,21 +36,23 @@
                 let source = segments[0];
                 if (segments.length > 1) {
                     status = 'Combining recordings…';
-                    source = await stitchSegments(segments, (f) => {
+                    source = await stitchSegments(segments, quality, (f: number) => {
                         progress = Math.round(f * 100);
                     });
                     if (cancelled) return;
                 }
 
                 // 2. Apply cuts by re-rendering only the kept ranges.
-                if (deletedRanges.length > 0) {
+                // if (deletedRanges.length > 0) {
                     status = 'Applying edits…';
                     progress = 0;
-                    source = await renderEditedVideo(source, deletedRanges, (f) => {
+                    source = await renderExportedVideo(source, quality, deletedRanges, (f: number) => {
                         progress = Math.round(f * 100);
                     });
                     if (cancelled) return;
-                }
+
+                // re-encode video t
+            
 
                 progress = 100;
                 status = 'Done!';
