@@ -3,13 +3,15 @@
     import { untrack } from 'svelte';
 
     import ControlBar from '$lib/components/ControlBar.svelte';
-    import { Button } from '$lib/components/ui/button/index.js';
+    import { buttonVariants } from '$lib/components/ui/button/button.svelte';
+    import * as Card from '$lib/components/ui/card/index.js';
     import * as Empty from '$lib/components/ui/empty/index.js';
     import WebcamBubble from '$lib/components/WebcamBubble.svelte';
     import type { BubblePosition } from '$lib/components/WebcamBubble.svelte';
 
     import type { BlurIntensity } from '$lib/blurProcessor.js';
     import { deviceStore } from '$lib/deviceStore.svelte.js';
+    import { cn } from '$lib/utils.js';
 
     interface Props {
         onstart: () => void;
@@ -133,30 +135,45 @@
                 class="h-full w-full object-contain"
             ></video>
         {:else}
-            <Empty.Root>
-                <Empty.Media>
-                    <Monitor size={128} class="text-white" />
-                </Empty.Media>
-                <Empty.Header>
-                    <Empty.Title class="text-white">No screen selected</Empty.Title>
-                    <Empty.Description class="text-white/60"
-                        >Choose a screen and recording starts straight away</Empty.Description
-                    >
-                </Empty.Header>
-                <Empty.Content>
-                    <Button
-                        class="bg-indigo-500 text-white hover:bg-indigo-600"
-                        onclick={pickScreen}
-                        disabled={picking}
-                        size="lg"
-                    >
-                        {picking ? 'Requesting…' : 'Start Recording'}
-                    </Button>
-                    {#if pickError}
-                        <p class="text-sm text-destructive">{pickError}</p>
-                    {/if}
-                </Empty.Content>
-            </Empty.Root>
+            <Card.Root
+                role="button"
+                tabindex={0}
+                onclick={pickScreen}
+                onkeydown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        pickScreen();
+                    }
+                }}
+                class={cn(
+                    'max-w-xl flex-1 cursor-pointer items-center justify-center border transition-colors hover:bg-muted/50 hover:ring-indigo-500 focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:outline-none'
+                )}
+            >
+                <Empty.Root>
+                    <Empty.Media>
+                        <Monitor size={128} class="text-white" />
+                    </Empty.Media>
+                    <Empty.Header>
+                        <Empty.Title class="text-white">No screen selected</Empty.Title>
+                        <Empty.Description class="text-white/60"
+                            >Choose a screen and recording starts straight away</Empty.Description
+                        >
+                    </Empty.Header>
+                    <Empty.Content>
+                        <div
+                            class={cn(
+                                buttonVariants({ size: 'lg' }),
+                                'pointer-events-none bg-indigo-500 text-white'
+                            )}
+                        >
+                            {picking ? 'Requesting…' : 'Start Recording'}
+                        </div>
+                        {#if pickError}
+                            <p class="text-sm text-destructive">{pickError}</p>
+                        {/if}
+                    </Empty.Content>
+                </Empty.Root>
+            </Card.Root>
         {/if}
 
         {#if camEnabled}

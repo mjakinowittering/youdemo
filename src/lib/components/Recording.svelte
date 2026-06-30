@@ -3,10 +3,12 @@
     import { onDestroy, onMount } from 'svelte';
 
     import ControlBar from '$lib/components/ControlBar.svelte';
-    import { Button } from '$lib/components/ui/button/index.js';
+    import { buttonVariants } from '$lib/components/ui/button/button.svelte';
+    import * as Card from '$lib/components/ui/card/index.js';
     import * as Empty from '$lib/components/ui/empty/index.js';
 
     import type { BlurIntensity } from '$lib/blurProcessor.js';
+    import { cn } from '$lib/utils.js';
 
     interface Props {
         onstop: () => void;
@@ -73,20 +75,40 @@
 
 <div class="flex h-full flex-col">
     <div class="relative flex flex-1 items-center justify-center overflow-hidden bg-black/20">
-        <Empty.Root>
-            <Empty.Media>
-                <RadioTower size={128} class="text-white" />
-            </Empty.Media>
-            <Empty.Header>
-                <Empty.Title class="text-white">Recording in progress</Empty.Title>
-            </Empty.Header>
-            <Empty.Content>
-                <Button variant="destructive" size="lg" onclick={stop}>
-                    <Square class="mr-1 size-4 fill-current" />
-                    Stop Recording
-                </Button>
-            </Empty.Content>
-        </Empty.Root>
+        <Card.Root
+            role="button"
+            tabindex={0}
+            onclick={stop}
+            onkeydown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    stop();
+                }
+            }}
+            class={cn(
+                'max-w-xl flex-1 cursor-pointer items-center justify-center border transition-colors hover:bg-muted/50 hover:ring-destructive focus-visible:ring-2 focus-visible:ring-destructive focus-visible:outline-none'
+            )}
+        >
+            <Empty.Root>
+                <Empty.Media>
+                    <RadioTower size={128} class="text-white" />
+                </Empty.Media>
+                <Empty.Header>
+                    <Empty.Title class="text-white">Recording in progress</Empty.Title>
+                </Empty.Header>
+                <Empty.Content>
+                    <div
+                        class={cn(
+                            buttonVariants({ variant: 'destructive', size: 'lg' }),
+                            'pointer-events-none'
+                        )}
+                    >
+                        <Square class="mr-1 size-4 fill-current" />
+                        Stop Recording
+                    </div>
+                </Empty.Content>
+            </Empty.Root>
+        </Card.Root>
 
         <div
             class="absolute top-4 left-4 flex items-center gap-2 rounded-full bg-black/70 px-3 py-1.5 text-sm text-white backdrop-blur-sm"
