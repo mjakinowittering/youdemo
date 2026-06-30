@@ -24,6 +24,9 @@ no SSR, no routing library.
 - **`@mediapipe/tasks-vision`** — in-browser selfie segmentation for webcam
   background blur
 - **Vitest** — unit testing
+- **Storybook** (`@storybook/sveltekit` + `@storybook/addon-svelte-csf`) —
+  component-level functional and visual testing in isolation (see the Storybook
+  section)
 - **ESLint + Prettier** — linting and formatting
 - **npm** as package manager
 
@@ -164,6 +167,61 @@ For every Svelte file:
 - Run `svelte-autofixer` on any Svelte files changed
 - Stop when done and list every file modified
 
+## Storybook — component isolation & testability
+
+Manual end-to-end testing of this app is expensive and hard to automate: every
+real run needs a screen-share grant, a live camera, and a recording. So
+**components are designed to be driven entirely through props** and tested in
+isolation in Storybook — functionally and visually — without the capture
+pipeline.
+
+### Design principle — props down, state up
+
+Build every screen component as a **pure function of its props**:
+
+- **All UI state is a `$bindable` prop**, never read directly from a singleton
+  or the DOM. `micMuted`, `camEnabled`, `blurOn`, `blurIntensity`,
+  `bubblePosition`, the streams, the blob — all flow **down** from
+  `+page.svelte` and changes flow **back up** via binding. `+page.svelte` is the
+  single owner of truth; leaf components hold none.
+- **Side effects (callbacks) are props too** — `onstart`, `onstop`, `onresume`,
+  `onedit`, `ondiscard`, `oncomplete`, `onbacktoeditor`, `onnewrecording`. A
+  component signals intent by calling a prop; it never reaches into the state
+  machine itself.
+- This is what makes a component renderable in Storybook with literal args and a
+  spy (`fn()`) for every callback. **If a component can't be fully exercised
+  from props in a story, that's a design smell — push the state up to `+page`.**
+
+### Story conventions
+
+- **Location:** `src/stories/<Component>.stories.svelte`. Config lives in
+  `.storybook/` (`main.ts`, `preview.ts`). `preview.ts` imports
+  `../src/routes/layout.css` so Tailwind v4 + shadcn theme tokens are available
+  in the preview — without it stories render unstyled.
+- **CSF + `defineMeta`** from `@storybook/addon-svelte-csf` (v5). Title under
+  `Components/<Name>`, `tags: ['autodocs']`,
+  `parameters: { layout: 'fullscreen' }`.
+- **Shared shell via a `template` snippet** wired in as the meta-level
+  `render: template` — `setTemplate` does **not** exist in v5. Define the
+  snippet once in the markup; every `<Story>` reuses it.
+- **Type the snippet arg as `ComponentProps<typeof X>`** (from `svelte`). Do
+  **not** use `Args<typeof Story>` — `Story` derives from `render`, so it
+  self-references and errors.
+- **Shell wrapper:** `<div class="dark h-screen bg-background text-foreground">`
+  because screens are `h-full` and the app defaults to dark mode. Add `relative`
+  when the component is an `absolute inset-0` overlay (e.g. `Countdown`).
+- **`Tooltip.Provider` is required** for any component that renders `ControlBar`
+  (Setup, Recording, Review) — the Mic/Cam/Blur controls use shadcn `Tooltip`,
+  which throws without a provider ancestor (the app supplies one in
+  `+layout.svelte`). Components without tooltips (Done, Countdown) omit it.
+- **Every callback prop gets an `fn()` spy** in `args`; streams/blobs default to
+  `null` so nothing (e.g. `Done`'s auto-download, `Setup`'s `getUserMedia`)
+  fires unexpectedly on load.
+- **Variants** cover the meaningful prop states — typically Default, Mic muted,
+  Camera off, Blur on for capture screens; a single Default where there are no
+  state toggles.
+- **Run `svelte-autofixer`** on every story file, like any other Svelte file.
+
 ## App Structure
 
 ```
@@ -193,6 +251,10 @@ src/
       ErrorScreen.svelte    # Crash/error screen with Skull icon
       WebcamBubble.svelte
       WelcomeModal.svelte   # First-visit welcome dialog (localStorage gate)
+  stories/                  # Storybook stories (one .stories.svelte per screen)
+.storybook/
+  main.ts                   # Stories glob + addons (@storybook/sveltekit)
+  preview.ts                # Imports src/routes/layout.css for Tailwind/theme
 ```
 
 Note: `ShortcutsPanel.svelte` has been removed entirely.
@@ -705,14 +767,7 @@ The following tags are added inside `<head>`:
 export type BlurIntensity = 'light' | 'default' | 'heavy';
 
 export type BubblePosition =
-    | 'tl'
-    | 'tr'
-    | 'bl'
-    | 'br'
-    | 'tc'
-    | 'rc'
-    | 'bc'
-    | 'lc';
+    'tl' | 'tr' | 'bl' | 'br' | 'tc' | 'rc' | 'bc' | 'lc';
 
 export interface DeletedRange {
     startTime: number;
@@ -829,3 +884,13 @@ export const deviceStore = {
   processor is locked into the recording from the first frame.
 - **GitHub Actions** — workflow renamed to `build-and-deploy.yml`. npm cache via
   `actions/cache@v4` keyed on `package-lock.json`.
+- **Props-driven components** — every screen is a pure function of `$bindable`
+  props (state down) + callback props (intent up); `+page.svelte` owns all
+  truth. This is what makes each component testable in isolation in Storybook
+  with literal args + `fn()` spies. If a component needs real streams/state to
+  render, push that state up to `+page`. See the Storybook section.
+- **Storybook** — stories in `src/stories/*.stories.svelte`, CSF `defineMeta`
+  with a shared `render: template` snippet (no `setTemplate` in v5), snippet arg
+  typed `ComponentProps<typeof X>` (not `Args<typeof Story>` — self-references),
+  dark `h-screen` shell, `Tooltip.Provider` wrapper for any `ControlBar` screen.
+  `preview.ts` imports `layout.css`. Run `svelte-autofixer` on story files too.
