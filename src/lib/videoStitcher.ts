@@ -180,7 +180,6 @@ export async function renderExportedVideo(
     onProgress?: (fraction: number) => void
 ): Promise<Blob> {
 
-    console.info(`Exporting video ${quality} quality (${VIDEO_BPS_OPTIONS[quality]}BPS)`)
     const video = document.createElement('video');
     video.src = URL.createObjectURL(source);
     video.playsInline = true;
@@ -196,6 +195,8 @@ export async function renderExportedVideo(
     }
     const totalKept = ranges.reduce((sum, r) => sum + (r.end - r.start), 0);
 
+    //todo(Kiran): Investigate, do we have a memory leak here? 
+    // * Are we creating canvas objects and not disposing of them?
     const canvas = document.createElement('canvas');
     canvas.width = width;
     canvas.height = height;
@@ -216,12 +217,15 @@ export async function renderExportedVideo(
     const frameTrack = stream.getVideoTracks()[0] as CanvasCaptureMediaStreamTrack;
     dest.stream.getAudioTracks().forEach((t) => stream.addTrack(t));
 
+    console.info(`Exporting video ${quality} quality (${VIDEO_BPS_OPTIONS[quality]}BPS)`)
+    const videoBitsPerSecond = VIDEO_BPS_OPTIONS[quality];
+    const audioBitsPerSecond = AUDIO_BPS_OPTIONS[quality];
 
-
+    // ! Note(Kiran): This is the final step so we apply AV quality here.
     const recorder = new MediaRecorder(stream, {
         mimeType: pickMimeType(),
-        videoBitsPerSecond: VIDEO_BPS_OPTIONS[quality],
-        audioBitsPerSecond: AUDIO_BPS_OPTIONS[quality]
+      videoBitsPerSecond,
+      audioBitsPerSecond
     });
     const chunks: BlobPart[] = [];
     recorder.ondataavailable = (e) => {
