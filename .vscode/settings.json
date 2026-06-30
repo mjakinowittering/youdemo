@@ -4,10 +4,5 @@
     },
     "[markdown]": {
         "editor.wordWrap": "off"
-    },
-    "workbench.colorCustomizations": {
-        "activityBar.background": "#51124C",
-        "titleBar.activeBackground": "#71196A",
-        "titleBar.activeForeground": "#FDF8FD"
     }
 }
