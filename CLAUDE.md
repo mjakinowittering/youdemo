@@ -24,6 +24,9 @@ no SSR, no routing library.
 - **`@mediapipe/tasks-vision`** — in-browser selfie segmentation for webcam
   background blur
 - **Vitest** — unit testing
+- **Storybook** (`@storybook/sveltekit` + `@storybook/addon-svelte-csf`) —
+  component-level functional and visual testing in isolation (see the Storybook
+  section)
 - **ESLint + Prettier** — linting and formatting
 - **npm** as package manager
 
@@ -164,6 +167,61 @@ For every Svelte file:
 - Run `svelte-autofixer` on any Svelte files changed
 - Stop when done and list every file modified
 
+## Storybook — component isolation & testability
+
+Manual end-to-end testing of this app is expensive and hard to automate: every
+real run needs a screen-share grant, a live camera, and a recording. So
+**components are designed to be driven entirely through props** and tested in
+isolation in Storybook — functionally and visually — without the capture
+pipeline.
+
+### Design principle — props down, state up
+
+Build every screen component as a **pure function of its props**:
+
+- **All UI state is a `$bindable` prop**, never read directly from a singleton
+  or the DOM. `micMuted`, `camEnabled`, `blurOn`, `blurIntensity`,
+  `bubblePosition`, the streams, the blob — all flow **down** from
+  `+page.svelte` and changes flow **back up** via binding. `+page.svelte` is the
+  single owner of truth; leaf components hold none.
+- **Side effects (callbacks) are props too** — `onstart`, `onstop`, `onresume`,
+  `onedit`, `ondiscard`, `oncomplete`, `onbacktoeditor`, `onnewrecording`. A
+  component signals intent by calling a prop; it never reaches into the state
+  machine itself.
+- This is what makes a component renderable in Storybook with literal args and a
+  spy (`fn()`) for every callback. **If a component can't be fully exercised
+  from props in a story, that's a design smell — push the state up to `+page`.**
+
+### Story conventions
+
+- **Location:** `src/stories/<Component>.stories.svelte`. Config lives in
+  `.storybook/` (`main.ts`, `preview.ts`). `preview.ts` imports
+  `../src/routes/layout.css` so Tailwind v4 + shadcn theme tokens are available
+  in the preview — without it stories render unstyled.
+- **CSF + `defineMeta`** from `@storybook/addon-svelte-csf` (v5). Title under
+  `Components/<Name>`, `tags: ['autodocs']`,
+  `parameters: { layout: 'fullscreen' }`.
+- **Shared shell via a `template` snippet** wired in as the meta-level
+  `render: template` — `setTemplate` does **not** exist in v5. Define the
+  snippet once in the markup; every `<Story>` reuses it.
+- **Type the snippet arg as `ComponentProps<typeof X>`** (from `svelte`). Do
+  **not** use `Args<typeof Story>` — `Story` derives from `render`, so it
+  self-references and errors.
+- **Shell wrapper:** `<div class="dark h-screen bg-background text-foreground">`
+  because screens are `h-full` and the app defaults to dark mode. Add `relative`
+  when the component is an `absolute inset-0` overlay (e.g. `Countdown`).
+- **`Tooltip.Provider` is required** for any component that renders `ControlBar`
+  (Setup, Recording, Review) — the Mic/Cam/Blur controls use shadcn `Tooltip`,
+  which throws without a provider ancestor (the app supplies one in
+  `+layout.svelte`). Components without tooltips (Done, Countdown) omit it.
+- **Every callback prop gets an `fn()` spy** in `args`; streams/blobs default to
+  `null` so nothing (e.g. `Done`'s auto-download, `Setup`'s `getUserMedia`)
+  fires unexpectedly on load.
+- **Variants** cover the meaningful prop states — typically Default, Mic muted,
+  Camera off, Blur on for capture screens; a single Default where there are no
+  state toggles.
+- **Run `svelte-autofixer`** on every story file, like any other Svelte file.
+
 ## App Structure
 
 ```
@@ -176,6 +234,7 @@ src/
     recorder.ts             # Canvas compositor, MediaRecorder, audio mixer
     videoStitcher.ts        # Native export: combine segments + trim (canvas + MediaRecorder)
     blurProcessor.ts        # MediaPipe selfie-segmentation background blur
+    crashStore.ts           # OPFS crash recovery: persist each take, reload the whole recording after a crash
     deviceStore.svelte.ts   # Svelte 5 rune-based store, persisted to localStorage
     components/
       BrowserCheck.svelte
@@ -193,6 +252,10 @@ src/
       ErrorScreen.svelte    # Crash/error screen with Skull icon
       WebcamBubble.svelte
       WelcomeModal.svelte   # First-visit welcome dialog (localStorage gate)
+  stories/                  # Storybook stories (one .stories.svelte per screen)
+.storybook/
+  main.ts                   # Stories glob + addons (@storybook/sveltekit)
+  preview.ts                # Imports src/routes/layout.css for Tailwind/theme
 ```
 
 Note: `ShortcutsPanel.svelte` has been removed entirely.
@@ -207,7 +270,7 @@ Add a global error boundary — if any unhandled error occurs, transition to an
 `error` state that shows `ErrorScreen.svelte`.
 
 ```
-check:      pass → setup | fail → stays (shows error)
+check:      pass → editor (if OPFS crash takes present; stitches if >1) | pass → setup | fail → stays (shows error)
 setup:      Start Recording (picks screen, auto-starts on any surface) → countdown
 countdown:  complete → recording
 recording:  Stop → capture blob → release camera → review
@@ -240,8 +303,42 @@ was on). Both live in `+page.svelte`.
 ### Full reset
 
 **Cleared:** screenStream, webcam stream + blur, blobs/segments, `editorBlob`,
-bubble position, deletedRanges **Preserved:** mic/cam device + mute/enabled
-status, theme
+bubble position, deletedRanges, OPFS crash segments (`crashStore.clear()`)
+**Preserved:** mic/cam device + mute/enabled status, theme
+
+### Crash recovery (OPFS)
+
+`crashStore.ts` persists **every captured take** to the browser's origin-private
+file system (OPFS) so the whole recording — not just the last take — survives a
+tab/renderer crash or accidental reload. Each take is its own file,
+`crash-recording-<index>.webm` (contiguous indices 0, 1, 2, …). The module
+exposes:
+
+- `saveSegment(index, blob)` — write one take's file.
+- `loadSegments()` — read the contiguous files back in order as `Blob[]`; stops
+  at the first missing/empty file (a half-written trailing take is dropped).
+- `clear()` — remove all take files.
+
+Every call is wrapped in try/catch and degrades silently — if OPFS is
+unavailable or quota is exceeded, crash protection is skipped and the app works
+as normal. Per-take files were chosen over one eagerly-combined file so nothing
+is re-encoded on the hot path: takes are stitched **once** at Editor entry
+(existing `stitching` step), avoiding the generational quality loss and per-Stop
+wait that re-stitching the whole recording on every resume would incur.
+
+Wiring in `+page.svelte`:
+
+- **On Stop** (`stopRecording`):
+  `crashStore.saveSegment(segments.length - 1, blob)` persists the take just
+  captured (one file per take; existing files are untouched).
+- **On browser-check pass** (`handleBrowserPass`): `loadSegments()` — if any
+  takes are recovered they become `segments` and the app calls `goToEditor()`,
+  which stitches them (if >1) and jumps straight to the **editor** (skipping
+  setup) to recover the footage.
+- **On export complete** (`handleProcessingDone`) and **full reset**
+  (`resetToSetup`): `crashStore.clear()` removes all take files — the recording
+  has been downloaded or intentionally discarded, so recovery is no longer
+  needed.
 
 ## Section 1 — BrowserCheck.svelte
 
@@ -705,14 +802,7 @@ The following tags are added inside `<head>`:
 export type BlurIntensity = 'light' | 'default' | 'heavy';
 
 export type BubblePosition =
-    | 'tl'
-    | 'tr'
-    | 'bl'
-    | 'br'
-    | 'tc'
-    | 'rc'
-    | 'bc'
-    | 'lc';
+    'tl' | 'tr' | 'bl' | 'br' | 'tc' | 'rc' | 'bc' | 'lc';
 
 export interface DeletedRange {
     startTime: number;
@@ -774,7 +864,13 @@ export const deviceStore = {
 - **Track teardown** — `track.stop()` immediately on Stop (recorder owns the
   screen + mic streams; the raw webcam stream is owned and released by `+page`)
 - **Full reset** — clears screenStream, webcam + blur, blobs, `editorBlob`,
-  deletedRanges. Preserves deviceStore
+  deletedRanges, OPFS crash takes. Preserves deviceStore
+- **Crash recovery (OPFS)** — `crashStore.ts` persists **each** captured take to
+  the origin-private file system (one file per take,
+  `crash-recording-<index>.webm`) on Stop, reloads them all into the Editor
+  (stitching if >1) on next launch if present, and clears them on
+  export-complete and full reset. All calls fail silently when OPFS is
+  unavailable. See the Crash recovery section.
 - **Resume** — calls `getDisplayMedia` then `armCamera()` before countdown
 - **Native export (no ffmpeg)** — combining + trimming run on the main thread
   via `videoStitcher.ts` (`stitchSegments`, `renderEditedVideo`). ffmpeg.wasm
@@ -829,3 +925,13 @@ export const deviceStore = {
   processor is locked into the recording from the first frame.
 - **GitHub Actions** — workflow renamed to `build-and-deploy.yml`. npm cache via
   `actions/cache@v4` keyed on `package-lock.json`.
+- **Props-driven components** — every screen is a pure function of `$bindable`
+  props (state down) + callback props (intent up); `+page.svelte` owns all
+  truth. This is what makes each component testable in isolation in Storybook
+  with literal args + `fn()` spies. If a component needs real streams/state to
+  render, push that state up to `+page`. See the Storybook section.
+- **Storybook** — stories in `src/stories/*.stories.svelte`, CSF `defineMeta`
+  with a shared `render: template` snippet (no `setTemplate` in v5), snippet arg
+  typed `ComponentProps<typeof X>` (not `Args<typeof Story>` — self-references),
+  dark `h-screen` shell, `Tooltip.Provider` wrapper for any `ControlBar` screen.
+  `preview.ts` imports `layout.css`. Run `svelte-autofixer` on story files too.

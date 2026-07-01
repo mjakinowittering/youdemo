@@ -24,6 +24,10 @@ Try [YouDemo](https://mjakinowittering.github.io/youdemo/) now!
 - **WebM export** — combining and trimming are rendered natively in the browser
   (canvas + `MediaRecorder`); output is ready to drop into Slack, Notion, or
   anywhere else
+- **Crash recovery** — every take is saved to the browser's private file storage
+  (OPFS) as you record, so if the tab crashes or you reload by accident, YouDemo
+  reopens straight into the editor with your whole recording intact — nothing
+  leaves your machine
 - **No backend** — everything runs in the browser; nothing is uploaded anywhere
 - **Dark and light mode** — because it matters
 - **Deployable to GitHub Pages** — host it yourself for free

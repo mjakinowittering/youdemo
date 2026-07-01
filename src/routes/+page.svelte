@@ -18,6 +18,7 @@
 
     import { createBlurProcessor } from '$lib/blurProcessor.js';
     import type { BlurIntensity, BlurProcessor } from '$lib/blurProcessor.js';
+    import * as crashStore from '$lib/crashStore.js';
     import { deviceStore } from '$lib/deviceStore.svelte.js';
     import { start as recorderStart, stop as recorderStop } from '$lib/recorder.js';
     import { stitchSegments } from '$lib/videoStitcher.js';
@@ -162,7 +163,16 @@
 
     // ── transitions ──────────────────────────────────────────────────────────
 
-    function goToSetup() {
+    async function handleBrowserPass() {
+        // Recover any takes persisted to OPFS before a crash/reload. Multiple takes
+        // are stitched into the Editor source by goToEditor, exactly as a normal
+        // Edit → Editor transition would.
+        const recovered = await crashStore.loadSegments();
+        if (recovered.length > 0) {
+            segments = recovered;
+            await goToEditor();
+            return;
+        }
         appState = 'setup';
     }
 
@@ -193,6 +203,9 @@
         segments = [...segments, blob];
         // A new segment invalidates any previously stitched Editor source.
         editorBlob = null;
+        // Persist this take to OPFS (one file per take) so a crash/reload can
+        // recover the whole recording, not just the last take.
+        crashStore.saveSegment(segments.length - 1, blob);
         // Recording captured — let the camera go until/unless the user resumes.
         releaseCamera();
         appState = 'review';
@@ -213,6 +226,7 @@
         outputBlob = null;
         totalElapsedSec = 0;
         exportDeletedRanges = [];
+        crashStore.clear();
         appState = 'setup';
         document.title = 'YouDemo';
     }
@@ -276,6 +290,7 @@
 
     function handleProcessingDone(blob: Blob) {
         outputBlob = blob;
+        crashStore.clear();
         appState = 'done';
     }
 
@@ -316,7 +331,7 @@
 {:else}
     <div class="h-full">
         {#if appState === 'check'}
-            <BrowserCheck onpass={goToSetup} />
+            <BrowserCheck onpass={handleBrowserPass} />
         {:else if appState === 'setup'}
             <Setup
                 bind:screenStream
