@@ -4,6 +4,8 @@
     import { SvelteMap } from 'svelte/reactivity';
 
     import { Button } from '$lib/components/ui/button/index.js';
+    import type { VideoEncodingQuality } from '$lib/types/quality';
+    import { VIDEO_BPS_OPTIONS } from '$lib/constants/VIDEO_BPS_OPTIONS';
 
     export interface DeletedRange {
         startTime: number;
@@ -12,7 +14,7 @@
 
     interface Props {
         onback: () => void;
-        onexport: (deletedRanges: DeletedRange[], totalDuration: number) => void;
+        onexport: (quality: VideoEncodingQuality, deletedRanges: DeletedRange[], totalDuration: number) => void;
         videoUrl?: string | null;
     }
 
@@ -42,7 +44,8 @@
     let containerWidth = $state(0);
     let showPlayIcon = $state(false);
     let showPauseIcon = $state(false);
-
+    let quality: VideoEncodingQuality = $state('high');
+    
     let cellCount = $derived(
         Number.isFinite(videoDuration) && videoDuration > 0
             ? Math.round(videoDuration / SAMPLE_INTERVAL)
@@ -465,17 +468,37 @@
     {/if}
 
     <!-- Footer -->
-    <div class="flex items-center border-t px-4 py-3">
+    <div class="flex items-center border-t px-4 py-3 text-sm dark:text-white text-black">
         <Button variant="ghost" size="lg" onclick={onback}>
             <ChevronLeft class="mr-1 size-4" />
             Back to Review
         </Button>
         <div class="flex-1"></div>
+        
+        <div class="flex items-center gap-3 mr-2">
+        <label
+            for="quality"
+            class="text-black dark:text-white text-sm font-medium text-gray-700 whitespace-nowrap"
+        >
+            Export Quality
+        </label>
+
+        <select
+            id="quality"
+            bind:value={quality}
+            class="rounded-lg border-none outline-none dark:bg-black dark:text-white border border-gray-300 bg-white px-3 py-2 transition focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20">
+
+              {#each Object.entries(VIDEO_BPS_OPTIONS) as [quality]}
+                    <option value={quality}>{quality}</option>
+              {/each}
+
+        </select>
+        </div>
+
         <Button
             class="bg-indigo-500 text-white hover:bg-indigo-600"
-            onclick={() => onexport(deletedRanges, videoDuration)}
-            size="lg">Export & Download</Button
-        >
+            onclick={() => onexport(quality, deletedRanges, videoDuration)}
+            size="lg">Download</Button>
     </div>
 </div>
 

@@ -1,4 +1,7 @@
 import fixWebmDuration from 'fix-webm-duration';
+import type { VideoEncodingQuality } from './types/quality';
+import { VIDEO_BPS_OPTIONS, AUDIO_BPS_OPTIONS } from './constants/VIDEO_BPS_OPTIONS';
+
 
 function pickMimeType(): string {
     const types = ['video/webm;codecs=vp9,opus', 'video/webm;codecs=vp8,opus', 'video/webm'];
@@ -21,6 +24,7 @@ function mediaEvent(el: HTMLMediaElement, name: string): Promise<void> {
  */
 export async function stitchSegments(
     blobs: Blob[],
+    quality: VideoEncodingQuality,
     onProgress?: (fraction: number) => void
 ): Promise<Blob> {
     if (blobs.length <= 1) return blobs[0];
@@ -48,10 +52,12 @@ export async function stitchSegments(
     const frameTrack = stream.getVideoTracks()[0] as CanvasCaptureMediaStreamTrack;
     dest.stream.getAudioTracks().forEach((t) => stream.addTrack(t));
 
+    //! Note(Kiran): As this is the first parse we don't want to compress (so high quality). 
+    // * Currently doing 2 parses eventually we should try to reduce to a single parse: complexity n(2) => n(1)
     const recorder = new MediaRecorder(stream, {
         mimeType: pickMimeType(),
-        videoBitsPerSecond: 8_000_000,
-        audioBitsPerSecond: 128_000
+        videoBitsPerSecond: VIDEO_BPS_OPTIONS['high'], 
+        audioBitsPerSecond: AUDIO_BPS_OPTIONS['high'],
     });
     const chunks: BlobPart[] = [];
     recorder.ondataavailable = (e) => {
@@ -166,12 +172,13 @@ function seekTo(video: HTMLVideoElement, time: number): Promise<void> {
  * ffmpeg `-c copy` trim+concat dropped all but the first kept range. Real-time
  * (plays the kept duration); cut precision is per-frame, better than `-c copy`.
  */
-export async function renderEditedVideo(
+
+export async function renderExportedVideo(
     source: Blob,
+    quality: VideoEncodingQuality,
     deletedRanges: Range[],
     onProgress?: (fraction: number) => void
 ): Promise<Blob> {
-    if (!deletedRanges || deletedRanges.length === 0) return source;
 
     const video = document.createElement('video');
     video.src = URL.createObjectURL(source);
@@ -180,7 +187,7 @@ export async function renderEditedVideo(
     const width = video.videoWidth || 1280;
     const height = video.videoHeight || 720;
     const duration = Number.isFinite(video.duration) ? video.duration : 0;
-
+   
     const ranges = keptRanges(duration, deletedRanges);
     if (ranges.length === 0) {
         URL.revokeObjectURL(video.src);
@@ -188,6 +195,8 @@ export async function renderEditedVideo(
     }
     const totalKept = ranges.reduce((sum, r) => sum + (r.end - r.start), 0);
 
+    //todo(Kiran): Investigate, do we have a memory leak here? 
+    // * Are we creating canvas objects and not disposing of them?
     const canvas = document.createElement('canvas');
     canvas.width = width;
     canvas.height = height;
@@ -208,10 +217,15 @@ export async function renderEditedVideo(
     const frameTrack = stream.getVideoTracks()[0] as CanvasCaptureMediaStreamTrack;
     dest.stream.getAudioTracks().forEach((t) => stream.addTrack(t));
 
+    console.info(`Exporting video ${quality} quality (${VIDEO_BPS_OPTIONS[quality]}BPS)`)
+    const videoBitsPerSecond = VIDEO_BPS_OPTIONS[quality];
+    const audioBitsPerSecond = AUDIO_BPS_OPTIONS[quality];
+
+    // ! Note(Kiran): This is the final step so we apply AV quality here.
     const recorder = new MediaRecorder(stream, {
         mimeType: pickMimeType(),
-        videoBitsPerSecond: 8_000_000,
-        audioBitsPerSecond: 128_000
+      videoBitsPerSecond,
+      audioBitsPerSecond
     });
     const chunks: BlobPart[] = [];
     recorder.ondataavailable = (e) => {

@@ -1,4 +1,5 @@
 import fixWebmDuration from 'fix-webm-duration';
+import { AUDIO_BPS_OPTIONS, VIDEO_BPS_OPTIONS } from './constants/VIDEO_BPS_OPTIONS';
 
 export type BubblePosition = 'tl' | 'tr' | 'bl' | 'br' | 'tc' | 'rc' | 'bc' | 'lc';
 
@@ -26,8 +27,6 @@ const PAD_FRAC = 0.025;
 // budget — uncapped 1440p/4K compositing + encode is the main cause of renderer
 // crashes ("white screen") during recording.
 const MAX_DIM = 1920;
-const VIDEO_BITS_PER_SECOND = 5_000_000;
-const AUDIO_BITS_PER_SECOND = 128_000;
 
 // ─── singleton state ──────────────────────────────────────────────────────────
 
@@ -285,8 +284,8 @@ export async function start(options: RecorderOptions): Promise<void> {
 
     _recorder = new MediaRecorder(canvasStream, {
         mimeType: getSupportedMimeType(),
-        videoBitsPerSecond: VIDEO_BITS_PER_SECOND,
-        audioBitsPerSecond: AUDIO_BITS_PER_SECOND
+        videoBitsPerSecond: VIDEO_BPS_OPTIONS['high'],
+        audioBitsPerSecond: AUDIO_BPS_OPTIONS['high']
     });
     _recorder.ondataavailable = (e) => {
         if (e.data.size > 0) _chunks.push(e.data);

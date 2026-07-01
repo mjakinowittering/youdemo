@@ -278,7 +278,7 @@ recording:  Stop → capture blob → release camera → review
 review:     Resume → screen picker → re-acquire camera → countdown
             Edit & Export → [stitching if >1 segment] → editor | Discard → full reset → setup
 stitching:  combine segments (videoStitcher) → editor   (transient; shows progress)
-editor:     Export & Download → processing | Back to Review → review
+editor:     Download → processing | Back to Review → review
 processing: complete → done
 done:       New Recording → full reset → setup | Back to Editor → editor
 any state:  unhandled error → error screen
@@ -658,7 +658,7 @@ visible cells and `effectiveDuration`
 ### Footer
 
 ```
-[Back to Review]                              [Export & Download (bg-indigo-500)]
+[Back to Review]                              [Download (bg-indigo-500)]
 ```
 
 ## Section 9 — Processing.svelte
@@ -671,8 +671,8 @@ visible cells and `effectiveDuration`
        blob; a `stitchSegments` call remains as a safety net if >1 is ever
        passed).
     2. No cuts → `source` is the final file.
-    3. Cuts → `renderEditedVideo(source, deletedRanges)` re-renders only the
-       kept ranges.
+    3. Cuts → `renderExportedVideo(source, deletedRanges)` handles video export encoding quality also 
+       re-renders only the kept ranges. 
 
 ### Why native (critical history)
 
@@ -694,7 +694,7 @@ per-frame (better than ffmpeg `-c copy`, which snaps to sparse keyframes).
 
 - `stitchSegments(blobs, onProgress)` — play segments back-to-back into one
   WebM.
-- `renderEditedVideo(source, deletedRanges, onProgress)` — play only the kept
+- `renderExportedVideo(source, deletedRanges, onProgress)` — exports only the kept
   ranges into one WebM.
 
 Both use an opaque canvas (`alpha: false`), `captureStream(0)` +
@@ -704,12 +704,12 @@ only to the recorder, never the speakers), and `fixWebmDuration` on the result.
 ### Output format
 
 - Output: `.webm`
-- Filename: `yourdemo-YYYY-MM-DD.webm`
+- Filename: `youdemo-YYYY-MM-DD.webm`
 
 ## Section 10 — Done.svelte
 
 - Download auto-triggers on arrival
-- Filename: `yourdemo-YYYY-MM-DD.webm`
+- Filename: `youdemo-YYYY-MM-DD.webm`
 - New Recording → full reset
 - Back to Editor → editor
 

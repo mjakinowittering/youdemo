@@ -22,6 +22,7 @@
     import { deviceStore } from '$lib/deviceStore.svelte.js';
     import { start as recorderStart, stop as recorderStop } from '$lib/recorder.js';
     import { stitchSegments } from '$lib/videoStitcher.js';
+    import type { VideoEncodingQuality } from '$lib/types/quality';
 
     let errorMessage = $state('');
     let hasError = $state(false);
@@ -49,6 +50,7 @@
         | 'done';
 
     let appState = $state<AppState>('check');
+    let quality = $state<VideoEncodingQuality>('high');
 
     // Streams & blobs
     let screenStream = $state<MediaStream | null>(null);
@@ -262,7 +264,7 @@
                 if (segments.length > 1) {
                     stitchProgress = 0;
                     appState = 'stitching';
-                    editorBlob = await stitchSegments(segments, (f) => {
+                    editorBlob = await stitchSegments(segments, 'high' , (f) => {
                         stitchProgress = Math.round(f * 100);
                     });
                 } else {
@@ -283,9 +285,10 @@
         appState = 'review';
     }
 
-    function handleExport(deletedRanges: DeletedRange[]) {
+    function handleExport(videoQuality: VideoEncodingQuality = 'high', deletedRanges: DeletedRange[]) {
         exportDeletedRanges = deletedRanges;
         appState = 'processing';
+        quality = videoQuality
     }
 
     function handleProcessingDone(blob: Blob) {
@@ -380,6 +383,7 @@
             <Editor videoUrl={editorVideoUrl} onback={backToReview} onexport={handleExport} />
         {:else if appState === 'processing'}
             <Processing
+                quality={quality}
                 segments={editorBlob ? [editorBlob] : segments}
                 deletedRanges={exportDeletedRanges}
                 oncomplete={handleProcessingDone}
