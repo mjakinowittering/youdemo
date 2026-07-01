@@ -25,7 +25,7 @@
     ancestor to anchor against — mirroring the preview area it overlays in-app.
 -->
 {#snippet template(args: ComponentProps<typeof Countdown>)}
-    <div class="dark relative h-screen bg-background text-foreground">
+    <div class="relative h-screen bg-background text-foreground">
         <Countdown {...args} />
     </div>
 {/snippet}

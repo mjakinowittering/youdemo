@@ -38,7 +38,7 @@
 
 {#snippet template(args: ComponentProps<typeof Review>)}
     <Tooltip.Provider>
-        <div class="dark h-screen bg-background text-foreground">
+        <div class="h-screen bg-background text-foreground">
             <Review {...args} />
         </div>
     </Tooltip.Provider>

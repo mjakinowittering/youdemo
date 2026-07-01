@@ -207,9 +207,18 @@ Build every screen component as a **pure function of its props**:
 - **Type the snippet arg as `ComponentProps<typeof X>`** (from `svelte`). Do
   **not** use `Args<typeof Story>` — `Story` derives from `render`, so it
   self-references and errors.
-- **Shell wrapper:** `<div class="dark h-screen bg-background text-foreground">`
-  because screens are `h-full` and the app defaults to dark mode. Add `relative`
-  when the component is an `absolute inset-0` overlay (e.g. `Countdown`).
+- **Shell wrapper:** `<div class="h-screen bg-background text-foreground">`
+  because screens are `h-full`. Add `relative` when the component is an
+  `absolute inset-0` overlay (e.g. `Countdown`). The wrapper does **not** carry
+  a `dark` class — the theme is controlled globally by the toolbar toggle (see
+  Theme toggle below), which applies `dark` to `<html>`.
+- **Theme toggle:** `@storybook/addon-themes` is registered in `main.ts`, and
+  `preview.ts` adds a `withThemeByClassName` decorator
+  (`{ light: '', dark: 'dark' }`, `defaultTheme: 'dark'`,
+  `parentSelector: 'html'`). This puts a Light/Dark switcher in the Storybook
+  toolbar for visual testing every screen in both themes. Because it toggles
+  `dark` on `<html>` and the shadcn tokens live on `:root`/`.dark`, story shells
+  must **not** hard-code `dark` themselves or they'd override the toggle.
 - **`Tooltip.Provider` is required** for any component that renders `ControlBar`
   (Setup, Recording, Review) — the Mic/Cam/Blur controls use shadcn `Tooltip`,
   which throws without a provider ancestor (the app supplies one in

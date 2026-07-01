@@ -30,6 +30,10 @@
         }
     }
 
+    // 3, 2, 1 each get a full-second animation; 0 is a brief static flash.
+    const STEP = 1000;
+    const ZERO_HOLD = 300;
+
     onMount(() => {
         document.title = '3… | YouDemo';
         playBeep();
@@ -37,17 +41,23 @@
             count = 2;
             document.title = '2… | YouDemo';
             playBeep();
-        }, 1000);
+        }, STEP);
         const t2 = setTimeout(() => {
             count = 1;
             document.title = '1… | YouDemo';
             playBeep();
-        }, 2000);
-        const t3 = setTimeout(oncomplete, 3000);
+        }, STEP * 2);
+        const t3 = setTimeout(() => {
+            count = 0;
+            document.title = '0… | YouDemo';
+            playBeep();
+        }, STEP * 3);
+        const t4 = setTimeout(oncomplete, STEP * 3 + ZERO_HOLD);
         return () => {
             clearTimeout(t1);
             clearTimeout(t2);
             clearTimeout(t3);
+            clearTimeout(t4);
             document.title = 'YouDemo';
         };
     });
@@ -85,28 +95,37 @@
                 stroke-opacity="0.2"
                 stroke-width="5"
             />
-            {#key count}
-                <circle
-                    cx="90"
-                    cy="90"
-                    r={R}
-                    fill="none"
-                    stroke-width="5"
-                    stroke-linecap="round"
-                    stroke-dasharray={CIRC}
-                    class="ring-arc stroke-indigo-500"
-                />
-            {/key}
+            {#if count > 0}
+                {#key count}
+                    <circle
+                        cx="90"
+                        cy="90"
+                        r={R}
+                        fill="none"
+                        stroke-width="5"
+                        stroke-linecap="round"
+                        stroke-dasharray={CIRC}
+                        class="ring-arc stroke-indigo-500"
+                    />
+                {/key}
+            {/if}
         </svg>
 
         <div class="absolute inset-0" style="display:grid;place-items:center;perspective:400px">
-            {#key count}
+            {#if count > 0}
+                {#key count}
+                    <span
+                        class="text-7xl font-bold text-indigo-500 tabular-nums select-none [grid-area:1/1] backface-hidden"
+                        in:flipIn
+                        out:flipOut>{count}</span
+                    >
+                {/key}
+            {:else}
                 <span
                     class="text-7xl font-bold text-indigo-500 tabular-nums select-none [grid-area:1/1] backface-hidden"
-                    in:flipIn
-                    out:flipOut>{count}</span
+                    >0</span
                 >
-            {/key}
+            {/if}
         </div>
     </div>
 </div>
