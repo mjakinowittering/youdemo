@@ -234,6 +234,7 @@ src/
     recorder.ts             # Canvas compositor, MediaRecorder, audio mixer
     videoStitcher.ts        # Native export: combine segments + trim (canvas + MediaRecorder)
     blurProcessor.ts        # MediaPipe selfie-segmentation background blur
+    crashStore.ts           # OPFS crash recovery: persist each take, reload the whole recording after a crash
     deviceStore.svelte.ts   # Svelte 5 rune-based store, persisted to localStorage
     components/
       BrowserCheck.svelte
@@ -269,7 +270,7 @@ Add a global error boundary — if any unhandled error occurs, transition to an
 `error` state that shows `ErrorScreen.svelte`.
 
 ```
-check:      pass → setup | fail → stays (shows error)
+check:      pass → editor (if OPFS crash takes present; stitches if >1) | pass → setup | fail → stays (shows error)
 setup:      Start Recording (picks screen, auto-starts on any surface) → countdown
 countdown:  complete → recording
 recording:  Stop → capture blob → release camera → review
@@ -302,8 +303,42 @@ was on). Both live in `+page.svelte`.
 ### Full reset
 
 **Cleared:** screenStream, webcam stream + blur, blobs/segments, `editorBlob`,
-bubble position, deletedRanges **Preserved:** mic/cam device + mute/enabled
-status, theme
+bubble position, deletedRanges, OPFS crash segments (`crashStore.clear()`)
+**Preserved:** mic/cam device + mute/enabled status, theme
+
+### Crash recovery (OPFS)
+
+`crashStore.ts` persists **every captured take** to the browser's origin-private
+file system (OPFS) so the whole recording — not just the last take — survives a
+tab/renderer crash or accidental reload. Each take is its own file,
+`crash-recording-<index>.webm` (contiguous indices 0, 1, 2, …). The module
+exposes:
+
+- `saveSegment(index, blob)` — write one take's file.
+- `loadSegments()` — read the contiguous files back in order as `Blob[]`; stops
+  at the first missing/empty file (a half-written trailing take is dropped).
+- `clear()` — remove all take files.
+
+Every call is wrapped in try/catch and degrades silently — if OPFS is
+unavailable or quota is exceeded, crash protection is skipped and the app works
+as normal. Per-take files were chosen over one eagerly-combined file so nothing
+is re-encoded on the hot path: takes are stitched **once** at Editor entry
+(existing `stitching` step), avoiding the generational quality loss and per-Stop
+wait that re-stitching the whole recording on every resume would incur.
+
+Wiring in `+page.svelte`:
+
+- **On Stop** (`stopRecording`):
+  `crashStore.saveSegment(segments.length - 1, blob)` persists the take just
+  captured (one file per take; existing files are untouched).
+- **On browser-check pass** (`handleBrowserPass`): `loadSegments()` — if any
+  takes are recovered they become `segments` and the app calls `goToEditor()`,
+  which stitches them (if >1) and jumps straight to the **editor** (skipping
+  setup) to recover the footage.
+- **On export complete** (`handleProcessingDone`) and **full reset**
+  (`resetToSetup`): `crashStore.clear()` removes all take files — the recording
+  has been downloaded or intentionally discarded, so recovery is no longer
+  needed.
 
 ## Section 1 — BrowserCheck.svelte
 
@@ -829,7 +864,13 @@ export const deviceStore = {
 - **Track teardown** — `track.stop()` immediately on Stop (recorder owns the
   screen + mic streams; the raw webcam stream is owned and released by `+page`)
 - **Full reset** — clears screenStream, webcam + blur, blobs, `editorBlob`,
-  deletedRanges. Preserves deviceStore
+  deletedRanges, OPFS crash takes. Preserves deviceStore
+- **Crash recovery (OPFS)** — `crashStore.ts` persists **each** captured take to
+  the origin-private file system (one file per take,
+  `crash-recording-<index>.webm`) on Stop, reloads them all into the Editor
+  (stitching if >1) on next launch if present, and clears them on
+  export-complete and full reset. All calls fail silently when OPFS is
+  unavailable. See the Crash recovery section.
 - **Resume** — calls `getDisplayMedia` then `armCamera()` before countdown
 - **Native export (no ffmpeg)** — combining + trimming run on the main thread
   via `videoStitcher.ts` (`stitchSegments`, `renderEditedVideo`). ffmpeg.wasm

@@ -164,15 +164,14 @@
     // ── transitions ──────────────────────────────────────────────────────────
 
     async function handleBrowserPass() {
-        if (await crashStore.hasBlob()) {
-            const blob = await crashStore.loadBlob();
-            if (blob && blob.size > 0) {
-                segments = [blob];
-                editorBlob = blob;
-                editorVideoUrl = URL.createObjectURL(blob);
-                appState = 'editor';
-                return;
-            }
+        // Recover any takes persisted to OPFS before a crash/reload. Multiple takes
+        // are stitched into the Editor source by goToEditor, exactly as a normal
+        // Edit → Editor transition would.
+        const recovered = await crashStore.loadSegments();
+        if (recovered.length > 0) {
+            segments = recovered;
+            await goToEditor();
+            return;
         }
         appState = 'setup';
     }
@@ -204,9 +203,9 @@
         segments = [...segments, blob];
         // A new segment invalidates any previously stitched Editor source.
         editorBlob = null;
-        // Persist the latest segment to OPFS for crash recovery (overwrites any
-        // previous crash blob so we never accumulate stale data).
-        crashStore.saveBlob(blob);
+        // Persist this take to OPFS (one file per take) so a crash/reload can
+        // recover the whole recording, not just the last take.
+        crashStore.saveSegment(segments.length - 1, blob);
         // Recording captured — let the camera go until/unless the user resumes.
         releaseCamera();
         appState = 'review';
@@ -227,7 +226,7 @@
         outputBlob = null;
         totalElapsedSec = 0;
         exportDeletedRanges = [];
-        crashStore.deleteBlob();
+        crashStore.clear();
         appState = 'setup';
         document.title = 'YouDemo';
     }
@@ -291,7 +290,7 @@
 
     function handleProcessingDone(blob: Blob) {
         outputBlob = blob;
-        crashStore.deleteBlob();
+        crashStore.clear();
         appState = 'done';
     }
 
