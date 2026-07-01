@@ -18,6 +18,7 @@
 
     import { createBlurProcessor } from '$lib/blurProcessor.js';
     import type { BlurIntensity, BlurProcessor } from '$lib/blurProcessor.js';
+    import * as crashStore from '$lib/crashStore.js';
     import { deviceStore } from '$lib/deviceStore.svelte.js';
     import { start as recorderStart, stop as recorderStop } from '$lib/recorder.js';
     import { stitchSegments } from '$lib/videoStitcher.js';
@@ -162,7 +163,17 @@
 
     // ── transitions ──────────────────────────────────────────────────────────
 
-    function goToSetup() {
+    async function handleBrowserPass() {
+        if (await crashStore.hasBlob()) {
+            const blob = await crashStore.loadBlob();
+            if (blob && blob.size > 0) {
+                segments = [blob];
+                editorBlob = blob;
+                editorVideoUrl = URL.createObjectURL(blob);
+                appState = 'editor';
+                return;
+            }
+        }
         appState = 'setup';
     }
 
@@ -193,6 +204,9 @@
         segments = [...segments, blob];
         // A new segment invalidates any previously stitched Editor source.
         editorBlob = null;
+        // Persist the latest segment to OPFS for crash recovery (overwrites any
+        // previous crash blob so we never accumulate stale data).
+        crashStore.saveBlob(blob);
         // Recording captured — let the camera go until/unless the user resumes.
         releaseCamera();
         appState = 'review';
@@ -213,6 +227,7 @@
         outputBlob = null;
         totalElapsedSec = 0;
         exportDeletedRanges = [];
+        crashStore.deleteBlob();
         appState = 'setup';
         document.title = 'YouDemo';
     }
@@ -276,6 +291,7 @@
 
     function handleProcessingDone(blob: Blob) {
         outputBlob = blob;
+        crashStore.deleteBlob();
         appState = 'done';
     }
 
@@ -316,7 +332,7 @@
 {:else}
     <div class="h-full">
         {#if appState === 'check'}
-            <BrowserCheck onpass={goToSetup} />
+            <BrowserCheck onpass={handleBrowserPass} />
         {:else if appState === 'setup'}
             <Setup
                 bind:screenStream
