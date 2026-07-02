@@ -1,6 +1,9 @@
 <script lang="ts">
+    import { Film, TriangleAlert } from 'lucide-svelte';
     import { onMount } from 'svelte';
 
+    import * as Card from '$lib/components/ui/card/index.js';
+    import * as Empty from '$lib/components/ui/empty/index.js';
     import { Progress } from '$lib/components/ui/progress/index.js';
 
     import { renderEditedVideo, stitchSegments } from '$lib/videoStitcher.js';
@@ -66,18 +69,39 @@
 </script>
 
 <div class="flex h-full flex-col items-center justify-center p-8">
-    {#if errorMessage}
-        <div class="w-full max-w-sm space-y-2 text-center">
-            <p class="text-sm font-medium text-destructive">Export failed</p>
-            <p class="font-mono text-xs break-all text-muted-foreground">{errorMessage}</p>
-        </div>
-    {:else}
-        <div class="w-full max-w-sm space-y-3">
-            <div class="flex items-baseline justify-between text-sm">
-                <span class="text-muted-foreground">{status}</span>
-                <span class="font-mono tabular-nums">{progress}%</span>
-            </div>
-            <Progress value={progress} class="*:bg-indigo-500" />
-        </div>
-    {/if}
+    <Card.Root
+        class="w-full max-w-xl items-center justify-center border-0 ring-2 ring-foreground/25 ring-offset-4 ring-offset-background"
+    >
+        <Empty.Root>
+            {#if errorMessage}
+                <Empty.Media>
+                    <TriangleAlert size={128} class="text-destructive" />
+                </Empty.Media>
+                <Empty.Header>
+                    <Empty.Title>Export failed</Empty.Title>
+                    <Empty.Description class="font-mono break-all">
+                        {errorMessage}
+                    </Empty.Description>
+                </Empty.Header>
+            {:else}
+                <Empty.Media>
+                    <Film size={128} class="text-muted-foreground" />
+                </Empty.Media>
+                <Empty.Header>
+                    <Empty.Title>{status}</Empty.Title>
+                    <Empty.Description>
+                        Combining your recordings, ready for download.
+                    </Empty.Description>
+                </Empty.Header>
+                <Empty.Content>
+                    <div class="w-full max-w-sm space-y-2">
+                        <Progress value={progress} class="*:bg-indigo-500" />
+                        <p class="text-center font-mono text-sm text-muted-foreground tabular-nums">
+                            {progress}%
+                        </p>
+                    </div>
+                </Empty.Content>
+            {/if}
+        </Empty.Root>
+    </Card.Root>
 </div>

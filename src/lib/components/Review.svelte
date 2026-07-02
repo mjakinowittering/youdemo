@@ -52,7 +52,7 @@
             }
         }}
         class={cn(
-            'flex-1 cursor-pointer transition-colors hover:bg-muted/50 focus-visible:ring-2 focus-visible:outline-none',
+            'flex-1 cursor-pointer border-0 ring-2 ring-foreground/25 ring-offset-4 ring-offset-background transition-colors focus-visible:outline-none',
             destructive
                 ? 'hover:ring-destructive focus-visible:ring-destructive'
                 : 'hover:ring-indigo-500 focus-visible:ring-indigo-500'

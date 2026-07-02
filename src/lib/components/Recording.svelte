@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { RadioTower, Square } from 'lucide-svelte';
+    import { Square, Tv } from 'lucide-svelte';
     import { onDestroy, onMount } from 'svelte';
 
     import ControlBar from '$lib/components/ControlBar.svelte';
@@ -86,15 +86,18 @@
                 }
             }}
             class={cn(
-                'max-w-xl flex-1 cursor-pointer items-center justify-center border transition-colors hover:bg-muted/50 hover:ring-destructive focus-visible:ring-2 focus-visible:ring-destructive focus-visible:outline-none'
+                'max-w-xl flex-1 cursor-pointer items-center justify-center border-0 ring-2 ring-foreground/25 ring-offset-4 ring-offset-black transition-colors hover:ring-destructive focus-visible:ring-destructive focus-visible:outline-none'
             )}
         >
             <Empty.Root>
                 <Empty.Media>
-                    <RadioTower size={128} class="text-white" />
+                    <Tv size={128} class="text-muted-foreground" />
                 </Empty.Media>
                 <Empty.Header>
-                    <Empty.Title class="text-white">Recording in progress</Empty.Title>
+                    <Empty.Title>Recording in progress</Empty.Title>
+                    <Empty.Description>
+                        Your screen and webcam are being captured. Click below when you're done.
+                    </Empty.Description>
                 </Empty.Header>
                 <Empty.Content>
                     <div

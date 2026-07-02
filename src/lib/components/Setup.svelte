@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { Monitor } from 'lucide-svelte';
+    import { Clapperboard } from 'lucide-svelte';
     import { untrack } from 'svelte';
 
     import ControlBar from '$lib/components/ControlBar.svelte';
@@ -146,16 +146,16 @@
                     }
                 }}
                 class={cn(
-                    'max-w-xl flex-1 cursor-pointer items-center justify-center border transition-colors hover:bg-muted/50 hover:ring-indigo-500 focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:outline-none'
+                    'max-w-xl flex-1 cursor-pointer items-center justify-center border-0 ring-2 ring-foreground/25 transition-colors hover:ring-indigo-500 focus-visible:ring-indigo-500 focus-visible:outline-none'
                 )}
             >
                 <Empty.Root>
                     <Empty.Media>
-                        <Monitor size={128} class="text-white" />
+                        <Clapperboard size={128} class="text-muted-foreground" />
                     </Empty.Media>
                     <Empty.Header>
-                        <Empty.Title class="text-white">No screen selected</Empty.Title>
-                        <Empty.Description class="text-white/60"
+                        <Empty.Title>No screen selected</Empty.Title>
+                        <Empty.Description
                             >Choose a screen and recording starts straight away</Empty.Description
                         >
                     </Empty.Header>
