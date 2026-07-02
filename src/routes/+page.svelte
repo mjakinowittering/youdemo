@@ -68,9 +68,9 @@
 
     // Device / recording controls — bound down through ControlBar into the leaf
     // controls (MicControl / CamControl / BlurControl) on each capture screen.
-    let micMuted = $state(false);
-    let camEnabled = $state(true);
-    let blurOn = $state(false);
+    let micMuted = $state(initialBool('ydMicMuted', false));
+    let camEnabled = $state(initialBool('ydCamEnabled', true));
+    let blurOn = $state(initialBool('ydBlurOn', false));
     let blurIntensity = $state<BlurIntensity>(initialBlurIntensity());
     let bubblePosition = $state<BubblePosition>('tr');
 
@@ -85,6 +85,17 @@
     // for a future "N clips / total duration" summary on Review.
     let sessionStartMs = 0;
     let totalElapsedSec = 0;
+
+    function initialBool(key: string, fallback: boolean): boolean {
+        try {
+            const saved = localStorage.getItem(key);
+            if (saved === 'true') return true;
+            if (saved === 'false') return false;
+        } catch {
+            /* localStorage unavailable */
+        }
+        return fallback;
+    }
 
     function initialBlurIntensity(): BlurIntensity {
         try {
@@ -125,6 +136,21 @@
             processedWebcamStream = null;
             blurReady = Promise.resolve();
         };
+    });
+
+    // Persist the capture control choices so they're remembered across a full
+    // reset (New Recording / Discard) and page reloads.
+    $effect(() => {
+        const values: [string, boolean][] = [
+            ['ydMicMuted', micMuted],
+            ['ydCamEnabled', camEnabled],
+            ['ydBlurOn', blurOn]
+        ];
+        try {
+            for (const [key, value] of values) localStorage.setItem(key, String(value));
+        } catch {
+            /* localStorage unavailable */
+        }
     });
 
     // Persist intensity and apply it to a running processor in place (no restart).
@@ -216,7 +242,10 @@
             screenStream.getTracks().forEach((t) => t.stop());
         }
         screenStream = null;
-        blurOn = false;
+        // Keep micMuted / camEnabled / blurOn — these preferences are preserved
+        // across a full reset (and reload). releaseCamera() nulls webcamStream,
+        // which tears the blur processor down; it rebuilds on the next armCamera()
+        // while blurOn is still true.
         releaseCamera();
         segments = [];
         editorBlob = null;
