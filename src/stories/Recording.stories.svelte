@@ -42,7 +42,7 @@
 -->
 {#snippet template(args: ComponentProps<typeof Recording>)}
     <Tooltip.Provider>
-        <div class="h-screen bg-background text-foreground">
+        <div class="h-256 bg-background text-foreground">
             <Recording {...args} />
         </div>
     </Tooltip.Provider>

@@ -20,12 +20,8 @@
     });
 </script>
 
-<!--
-    Countdown is an `absolute inset-0` overlay, so it needs a `relative`, sized
-    ancestor to anchor against — mirroring the preview area it overlays in-app.
--->
 {#snippet template(args: ComponentProps<typeof Countdown>)}
-    <div class="relative h-screen bg-background text-foreground">
+    <div class="h-256 bg-background text-foreground">
         <Countdown {...args} />
     </div>
 {/snippet}

@@ -12,9 +12,9 @@
     }
 </script>
 
-<div class="flex h-full items-center justify-center p-6">
+<div class="flex h-full items-center justify-center bg-black/20">
     <Card.Root
-        class="max-w-xl flex-1 items-center justify-center border-0 ring-2 ring-foreground/25 ring-offset-4 ring-offset-background"
+        class="max-w-xl flex-1 items-center justify-center border-0 ring-2 ring-foreground/25 ring-offset-4 ring-offset-transparent"
     >
         <Empty.Root>
             <Empty.Media>

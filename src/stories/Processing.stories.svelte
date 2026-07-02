@@ -25,7 +25,7 @@
 </script>
 
 {#snippet template(args: ComponentProps<typeof Processing>)}
-    <div class="h-screen bg-background text-foreground">
+    <div class="h-256 bg-background text-foreground">
         <Processing {...args} />
     </div>
 {/snippet}

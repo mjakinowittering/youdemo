@@ -121,7 +121,7 @@
 </script>
 
 <div class="flex h-full flex-col">
-    <div class="relative flex flex-1 items-center justify-center overflow-hidden bg-black">
+    <div class="relative flex flex-1 items-center justify-center overflow-hidden bg-black/20">
         {#if screenStream}
             <video
                 {@attach setSrcObject(screenStream)}
@@ -146,7 +146,7 @@
                     }
                 }}
                 class={cn(
-                    'max-w-xl flex-1 cursor-pointer items-center justify-center border-0 ring-2 ring-foreground/25 ring-offset-4 ring-offset-black transition-colors hover:ring-indigo-500 focus-visible:ring-indigo-500 focus-visible:outline-none'
+                    'max-w-xl flex-1 cursor-pointer items-center justify-center border-0 ring-2 ring-foreground/25 ring-offset-4 ring-offset-transparent transition-colors hover:ring-indigo-500 focus-visible:ring-indigo-500 focus-visible:outline-none'
                 )}
             >
                 <Empty.Root>

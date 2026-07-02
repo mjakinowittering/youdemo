@@ -4,12 +4,18 @@
     import MonitorPlay from '@lucide/svelte/icons/monitor-play';
     import Scissors from '@lucide/svelte/icons/scissors';
     import { onMount } from 'svelte';
+    import type { ComponentProps } from 'svelte';
 
     import { Button } from '$lib/components/ui/button/index.js';
     import * as Dialog from '$lib/components/ui/dialog/index.js';
     import { Separator } from '$lib/components/ui/separator/index.js';
 
     const STORAGE_KEY = 'ydWelcomed';
+
+    // Optional pass-through to Dialog.Content — defaults to none, so the app
+    // renders the modal exactly as before. Used only by Storybook to scope the
+    // dialog to a container (disable the portal, ignore outside-click/Escape).
+    let { contentProps }: { contentProps?: ComponentProps<typeof Dialog.Content> } = $props();
 
     let open = $state(false);
 
@@ -31,7 +37,7 @@
         if (!value) dismiss();
     }}
 >
-    <Dialog.Content class="max-w-md" showCloseButton={false}>
+    <Dialog.Content class="max-w-md" showCloseButton={false} {...contentProps}>
         <div class="flex flex-col items-center gap-4 text-center">
             <MonitorPlay class="text-indigo-500" size={52} />
             <h2 class="text-xl font-semibold">Welcome to YouDemo</h2>

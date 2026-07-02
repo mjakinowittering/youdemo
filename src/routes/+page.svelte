@@ -353,72 +353,69 @@
 
 <WelcomeModal />
 
-{#if hasError}
-    <div class="h-full">
+<div class="h-full">
+    {#if hasError}
         <ErrorScreen error={errorMessage} />
-    </div>
-{:else}
-    <div class="h-full">
-        {#if appState === 'check'}
-            <BrowserCheck onpass={handleBrowserPass} />
-        {:else if appState === 'setup'}
-            <Setup
-                bind:screenStream
-                bind:webcamStream
-                bind:bubblePosition
-                bind:micMuted
-                bind:camEnabled
-                bind:blurOn
-                bind:blurIntensity
-                processedStream={processedWebcamStream}
-                onstart={goToCountdown}
-            />
-        {:else if appState === 'countdown'}
-            <Countdown oncomplete={startRecording} />
-        {:else if appState === 'recording'}
-            <Recording
-                {screenStream}
-                bind:micMuted
-                bind:camEnabled
-                bind:blurOn
-                bind:blurIntensity
-                onstop={stopRecording}
-                onstreamended={handleStreamEnded}
-            />
-        {:else if appState === 'review'}
-            <Review
-                bind:micMuted
-                bind:camEnabled
-                bind:blurOn
-                bind:blurIntensity
-                onresume={handleResume}
-                onedit={goToEditor}
-                ondiscard={discard}
-            />
-        {:else if appState === 'stitching'}
-            <div class="flex h-full flex-col items-center justify-center p-8">
-                <div class="w-full max-w-sm space-y-3">
-                    <div class="flex items-baseline justify-between text-sm">
-                        <span class="text-muted-foreground">Combining recordings…</span>
-                        <span class="font-mono tabular-nums">{stitchProgress}%</span>
-                    </div>
-                    <Progress value={stitchProgress} class="*:bg-indigo-500" />
+    {:else if appState === 'check'}
+        <BrowserCheck onpass={handleBrowserPass} />
+    {:else if appState === 'setup'}
+        <Setup
+            bind:screenStream
+            bind:webcamStream
+            bind:bubblePosition
+            bind:micMuted
+            bind:camEnabled
+            bind:blurOn
+            bind:blurIntensity
+            processedStream={processedWebcamStream}
+            onstart={goToCountdown}
+        />
+    {:else if appState === 'countdown'}
+        <Countdown oncomplete={startRecording} />
+    {:else if appState === 'recording'}
+        <Recording
+            {screenStream}
+            bind:micMuted
+            bind:camEnabled
+            bind:blurOn
+            bind:blurIntensity
+            onstop={stopRecording}
+            onstreamended={handleStreamEnded}
+        />
+    {:else if appState === 'review'}
+        <Review
+            bind:micMuted
+            bind:camEnabled
+            bind:blurOn
+            bind:blurIntensity
+            onresume={handleResume}
+            onedit={goToEditor}
+            ondiscard={discard}
+        />
+    {:else if appState === 'stitching'}
+        <div class="flex h-full flex-col items-center justify-center p-8">
+            <div class="w-full max-w-sm space-y-3">
+                <div class="flex items-baseline justify-between text-sm">
+                    <span class="text-muted-foreground">Combining recordings…</span>
+                    <span class="font-mono tabular-nums">{stitchProgress}%</span>
                 </div>
+                <Progress value={stitchProgress} class="*:bg-indigo-500" />
             </div>
-        {:else if appState === 'editor'}
-            <Editor videoUrl={editorVideoUrl} onback={backToReview} onexport={handleExport} />
-        {:else if appState === 'processing'}
-            <Processing
-                segments={editorBlob ? [editorBlob] : segments}
-                deletedRanges={exportDeletedRanges}
-                oncomplete={handleProcessingDone}
-            />
-        {:else if appState === 'done'}
-            <Done
-                videoBlob={outputBlob}
-                onbacktoeditor={backToEditor}
-                onnewrecording={newRecording}
-            />
-        {/if}
-    </div>
-{/if}
+        </div>
+    {:else if appState === 'editor'}
+        <Editor
+            videoUrl={editorVideoUrl}
+            onback={backToReview}
+            onexport={handleExport}
+            ondiscard={discard}
+        />
+    {:else if appState === 'processing'}
+        <Processing
+            segments={editorBlob ? [editorBlob] : segments}
+            deletedRanges={exportDeletedRanges}
+            oncomplete={handleProcessingDone}
+        />
+    {:else if appState === 'done'}
+        <Done videoBlob={outputBlob} onbacktoeditor={backToEditor} onnewrecording={newRecording} />
+    {/if}
+</div>

@@ -73,8 +73,8 @@
     });
 </script>
 
-<div class="flex h-full flex-col">
-    <div class="relative flex flex-1 items-center justify-center overflow-hidden bg-black/20">
+<div class="flex h-full flex-col bg-black/20">
+    <div class="relative flex flex-1 items-center justify-center overflow-hidden">
         <Card.Root
             role="button"
             tabindex={0}
@@ -86,7 +86,7 @@
                 }
             }}
             class={cn(
-                'max-w-xl flex-1 cursor-pointer items-center justify-center border-0 ring-2 ring-foreground/25 ring-offset-4 ring-offset-black transition-colors hover:ring-destructive focus-visible:ring-destructive focus-visible:outline-none'
+                'max-w-xl flex-1 cursor-pointer items-center justify-center border-0 ring-2 ring-foreground/25 ring-offset-4 ring-offset-transparent transition-colors hover:ring-destructive focus-visible:ring-destructive focus-visible:outline-none'
             )}
         >
             <Empty.Root>
