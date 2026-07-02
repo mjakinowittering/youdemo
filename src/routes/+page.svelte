@@ -68,9 +68,9 @@
 
     // Device / recording controls — bound down through ControlBar into the leaf
     // controls (MicControl / CamControl / BlurControl) on each capture screen.
-    let micMuted = $state(false);
-    let camEnabled = $state(true);
-    let blurOn = $state(false);
+    let micMuted = $state(initialBool('ydMicMuted', false));
+    let camEnabled = $state(initialBool('ydCamEnabled', true));
+    let blurOn = $state(initialBool('ydBlurOn', false));
     let blurIntensity = $state<BlurIntensity>(initialBlurIntensity());
     let bubblePosition = $state<BubblePosition>('tr');
 
@@ -85,6 +85,17 @@
     // for a future "N clips / total duration" summary on Review.
     let sessionStartMs = 0;
     let totalElapsedSec = 0;
+
+    function initialBool(key: string, fallback: boolean): boolean {
+        try {
+            const saved = localStorage.getItem(key);
+            if (saved === 'true') return true;
+            if (saved === 'false') return false;
+        } catch {
+            /* localStorage unavailable */
+        }
+        return fallback;
+    }
 
     function initialBlurIntensity(): BlurIntensity {
         try {
@@ -125,6 +136,21 @@
             processedWebcamStream = null;
             blurReady = Promise.resolve();
         };
+    });
+
+    // Persist the capture control choices so they're remembered across a full
+    // reset (New Recording / Discard) and page reloads.
+    $effect(() => {
+        const values: [string, boolean][] = [
+            ['ydMicMuted', micMuted],
+            ['ydCamEnabled', camEnabled],
+            ['ydBlurOn', blurOn]
+        ];
+        try {
+            for (const [key, value] of values) localStorage.setItem(key, String(value));
+        } catch {
+            /* localStorage unavailable */
+        }
     });
 
     // Persist intensity and apply it to a running processor in place (no restart).
@@ -216,7 +242,10 @@
             screenStream.getTracks().forEach((t) => t.stop());
         }
         screenStream = null;
-        blurOn = false;
+        // Keep micMuted / camEnabled / blurOn — these preferences are preserved
+        // across a full reset (and reload). releaseCamera() nulls webcamStream,
+        // which tears the blur processor down; it rebuilds on the next armCamera()
+        // while blurOn is still true.
         releaseCamera();
         segments = [];
         editorBlob = null;
@@ -324,72 +353,69 @@
 
 <WelcomeModal />
 
-{#if hasError}
-    <div class="h-full">
+<div class="h-full">
+    {#if hasError}
         <ErrorScreen error={errorMessage} />
-    </div>
-{:else}
-    <div class="h-full">
-        {#if appState === 'check'}
-            <BrowserCheck onpass={handleBrowserPass} />
-        {:else if appState === 'setup'}
-            <Setup
-                bind:screenStream
-                bind:webcamStream
-                bind:bubblePosition
-                bind:micMuted
-                bind:camEnabled
-                bind:blurOn
-                bind:blurIntensity
-                processedStream={processedWebcamStream}
-                onstart={goToCountdown}
-            />
-        {:else if appState === 'countdown'}
-            <Countdown oncomplete={startRecording} />
-        {:else if appState === 'recording'}
-            <Recording
-                {screenStream}
-                bind:micMuted
-                bind:camEnabled
-                bind:blurOn
-                bind:blurIntensity
-                onstop={stopRecording}
-                onstreamended={handleStreamEnded}
-            />
-        {:else if appState === 'review'}
-            <Review
-                bind:micMuted
-                bind:camEnabled
-                bind:blurOn
-                bind:blurIntensity
-                onresume={handleResume}
-                onedit={goToEditor}
-                ondiscard={discard}
-            />
-        {:else if appState === 'stitching'}
-            <div class="flex h-full flex-col items-center justify-center p-8">
-                <div class="w-full max-w-sm space-y-3">
-                    <div class="flex items-baseline justify-between text-sm">
-                        <span class="text-muted-foreground">Combining recordings…</span>
-                        <span class="font-mono tabular-nums">{stitchProgress}%</span>
-                    </div>
-                    <Progress value={stitchProgress} class="*:bg-indigo-500" />
+    {:else if appState === 'check'}
+        <BrowserCheck onpass={handleBrowserPass} />
+    {:else if appState === 'setup'}
+        <Setup
+            bind:screenStream
+            bind:webcamStream
+            bind:bubblePosition
+            bind:micMuted
+            bind:camEnabled
+            bind:blurOn
+            bind:blurIntensity
+            processedStream={processedWebcamStream}
+            onstart={goToCountdown}
+        />
+    {:else if appState === 'countdown'}
+        <Countdown oncomplete={startRecording} />
+    {:else if appState === 'recording'}
+        <Recording
+            {screenStream}
+            bind:micMuted
+            bind:camEnabled
+            bind:blurOn
+            bind:blurIntensity
+            onstop={stopRecording}
+            onstreamended={handleStreamEnded}
+        />
+    {:else if appState === 'review'}
+        <Review
+            bind:micMuted
+            bind:camEnabled
+            bind:blurOn
+            bind:blurIntensity
+            onresume={handleResume}
+            onedit={goToEditor}
+            ondiscard={discard}
+        />
+    {:else if appState === 'stitching'}
+        <div class="flex h-full flex-col items-center justify-center p-8">
+            <div class="w-full max-w-sm space-y-3">
+                <div class="flex items-baseline justify-between text-sm">
+                    <span class="text-muted-foreground">Combining recordings…</span>
+                    <span class="font-mono tabular-nums">{stitchProgress}%</span>
                 </div>
+                <Progress value={stitchProgress} class="*:bg-indigo-500" />
             </div>
-        {:else if appState === 'editor'}
-            <Editor videoUrl={editorVideoUrl} onback={backToReview} onexport={handleExport} />
-        {:else if appState === 'processing'}
-            <Processing
-                segments={editorBlob ? [editorBlob] : segments}
-                deletedRanges={exportDeletedRanges}
-                oncomplete={handleProcessingDone}
-            />
-        {:else if appState === 'done'}
-            <Done
-                videoBlob={outputBlob}
-                onbacktoeditor={backToEditor}
-                onnewrecording={newRecording}
-            />
-        {/if}
-    </div>
-{/if}
+        </div>
+    {:else if appState === 'editor'}
+        <Editor
+            videoUrl={editorVideoUrl}
+            onback={backToReview}
+            onexport={handleExport}
+            ondiscard={discard}
+        />
+    {:else if appState === 'processing'}
+        <Processing
+            segments={editorBlob ? [editorBlob] : segments}
+            deletedRanges={exportDeletedRanges}
+            oncomplete={handleProcessingDone}
+        />
+    {:else if appState === 'done'}
+        <Done videoBlob={outputBlob} onbacktoeditor={backToEditor} onnewrecording={newRecording} />
+    {/if}
+</div>

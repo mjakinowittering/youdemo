@@ -20,7 +20,7 @@
 </script>
 
 {#snippet template(args: ComponentProps<typeof ErrorScreen>)}
-    <div class="h-screen bg-background text-foreground">
+    <div class="h-256 bg-background text-foreground">
         <ErrorScreen {...args} />
     </div>
 {/snippet}

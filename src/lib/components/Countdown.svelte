@@ -77,7 +77,7 @@
     }
 </script>
 
-<div class="absolute inset-0 flex items-center justify-center bg-black/60">
+<div class="absolute inset-0 flex items-center justify-center bg-black/20">
     <div class="relative" style="width:180px;height:180px">
         <svg
             width="180"

@@ -13,10 +13,11 @@
     interface Props {
         onback: () => void;
         onexport: (deletedRanges: DeletedRange[], totalDuration: number) => void;
+        ondiscard: () => void;
         videoUrl?: string | null;
     }
 
-    let { onback, onexport, videoUrl = null }: Props = $props();
+    let { onback, onexport, ondiscard, videoUrl = null }: Props = $props();
 
     const FRAME_RATE = 30;
     const SAMPLE_INTERVAL = 0.2;
@@ -290,7 +291,7 @@
 
 <div class="flex h-full flex-col">
     <!-- Video player -->
-    <div class="relative min-h-0 flex-1 bg-black/20">
+    <div class="relative min-h-0 flex-1">
         {#if videoUrl}
             <div
                 class="relative h-full cursor-pointer"
@@ -471,8 +472,12 @@
             Back to Review
         </Button>
         <div class="flex-1"></div>
+        <Button variant="destructive" size="lg" onclick={ondiscard}>
+            <Trash2 class="mr-1 size-4" />
+            Discard
+        </Button>
         <Button
-            class="bg-indigo-500 text-white hover:bg-indigo-600"
+            class="ml-2 bg-indigo-500 text-white hover:bg-indigo-600"
             onclick={() => onexport(deletedRanges, videoDuration)}
             size="lg">Export & Download</Button
         >

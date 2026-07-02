@@ -68,9 +68,9 @@
     });
 </script>
 
-<div class="flex h-full flex-col items-center justify-center p-8">
+<div class="flex h-full flex-col items-center justify-center bg-black/20">
     <Card.Root
-        class="w-full max-w-xl items-center justify-center border-0 ring-2 ring-foreground/25 ring-offset-4 ring-offset-background"
+        class="w-full max-w-xl items-center justify-center border-0 ring-2 ring-foreground/25 ring-offset-4 ring-offset-transparent"
     >
         <Empty.Root>
             {#if errorMessage}

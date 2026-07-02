@@ -1,7 +1,7 @@
 <script lang="ts">
-    import BlurControl from '$lib/components/BlurControl.svelte';
-    import CamControl from '$lib/components/CamControl.svelte';
-    import MicControl from '$lib/components/MicControl.svelte';
+    import BlurControl from '$lib/components/Control/BlurControl.svelte';
+    import CamControl from '$lib/components/Control/CamControl.svelte';
+    import MicControl from '$lib/components/Control/MicControl.svelte';
 
     import type { BlurIntensity } from '$lib/blurProcessor.js';
 
