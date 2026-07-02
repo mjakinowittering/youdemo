@@ -146,7 +146,7 @@
                     }
                 }}
                 class={cn(
-                    'max-w-xl flex-1 cursor-pointer items-center justify-center border-0 ring-2 ring-foreground/25 transition-colors hover:ring-indigo-500 focus-visible:ring-indigo-500 focus-visible:outline-none'
+                    'max-w-xl flex-1 cursor-pointer items-center justify-center border-0 ring-2 ring-foreground/25 ring-offset-4 ring-offset-black transition-colors hover:ring-indigo-500 focus-visible:ring-indigo-500 focus-visible:outline-none'
                 )}
             >
                 <Empty.Root>
