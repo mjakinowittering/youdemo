@@ -218,6 +218,17 @@ export async function start(options: RecorderOptions): Promise<void> {
     await _audioCtx.resume().catch(() => {});
     _destination = _audioCtx.createMediaStreamDestination();
 
+    // Keep the destination's audio track alive with continuous silence. With no
+    // mic and no tab audio, an input-less destination feeds MediaRecorder an Opus
+    // track with zero packets; Chromium then rejects the resulting WebM with
+    // "The element has no supported sources" when it is loaded into the Editor.
+    // A started silent source guarantees the track always carries samples. It is
+    // inaudible — the destination is never connected to the speakers.
+    const silence = _audioCtx.createConstantSource();
+    silence.offset.value = 0;
+    silence.connect(_destination);
+    silence.start();
+
     const screenAudioTracks = screenStream.getAudioTracks();
     if (screenAudioTracks.length) {
         _audioCtx.createMediaStreamSource(new MediaStream(screenAudioTracks)).connect(_destination);
