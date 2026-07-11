@@ -3,12 +3,12 @@
     import { fn } from 'storybook/test';
     import type { ComponentProps } from 'svelte';
 
-    import Review from '$lib/components/Review.svelte';
+    import Recording from '$lib/components/Recorder/Recording.svelte';
     import * as Tooltip from '$lib/components/ui/tooltip/index.js';
 
     const { Story } = defineMeta({
-        title: 'Components/Review',
-        component: Review,
+        title: 'Components/Recorder/Recording',
+        component: Recording,
         tags: ['autodocs'],
         // Default template shared by every Story below (snippet defined in the markup).
         render: template,
@@ -25,9 +25,9 @@
             }
         },
         args: {
-            onresume: fn(),
-            onedit: fn(),
-            ondiscard: fn(),
+            onstop: fn(),
+            onstreamended: fn(),
+            screenStream: null,
             micMuted: false,
             camEnabled: true,
             blurOn: false,
@@ -36,10 +36,14 @@
     });
 </script>
 
-{#snippet template(args: ComponentProps<typeof Review>)}
+<!--
+    Recording is `h-full`, so frame it in a full-height, dark-themed shell to
+    mirror how the app shell hosts it. Wired in as the default `render` above.
+-->
+{#snippet template(args: ComponentProps<typeof Recording>)}
     <Tooltip.Provider>
         <div class="h-256 bg-background text-foreground">
-            <Review {...args} />
+            <Recording {...args} />
         </div>
     </Tooltip.Provider>
 {/snippet}

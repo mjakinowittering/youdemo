@@ -2,13 +2,14 @@
     import { Square, Tv } from 'lucide-svelte';
     import { onDestroy, onMount } from 'svelte';
 
-    import ControlBar from '$lib/components/ControlBar.svelte';
     import { buttonVariants } from '$lib/components/ui/button/button.svelte';
     import * as Card from '$lib/components/ui/card/index.js';
     import * as Empty from '$lib/components/ui/empty/index.js';
 
     import type { BlurIntensity } from '$lib/blurProcessor.js';
     import { cn } from '$lib/utils.js';
+
+    import ControlBar from './ControlBar.svelte';
 
     interface Props {
         onstop: () => void;

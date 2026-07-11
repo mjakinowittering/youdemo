@@ -3,17 +3,16 @@
     import { untrack } from 'svelte';
 
     import BrowserCheck from '$lib/components/BrowserCheck.svelte';
-    import Countdown from '$lib/components/Countdown.svelte';
-    import Done from '$lib/components/Done.svelte';
-    import Editor from '$lib/components/Editor.svelte';
-    import type { DeletedRange } from '$lib/components/Editor.svelte';
+    import Done from '$lib/components/Editor/Done.svelte';
+    import Editor from '$lib/components/Editor/Editor.svelte';
+    import Processing from '$lib/components/Editor/Processing.svelte';
     import ErrorScreen from '$lib/components/ErrorScreen.svelte';
-    import Processing from '$lib/components/Processing.svelte';
-    import Recording from '$lib/components/Recording.svelte';
-    import Review from '$lib/components/Review.svelte';
-    import Setup from '$lib/components/Setup.svelte';
+    import Countdown from '$lib/components/Recorder/Countdown.svelte';
+    import Recording from '$lib/components/Recorder/Recording.svelte';
+    import Review from '$lib/components/Recorder/Review.svelte';
+    import Setup from '$lib/components/Recorder/Setup.svelte';
+    import type { BubblePosition } from '$lib/components/Recorder/WebcamBubble.svelte';
     import { Progress } from '$lib/components/ui/progress/index.js';
-    import type { BubblePosition } from '$lib/components/WebcamBubble.svelte';
     import WelcomeModal from '$lib/components/WelcomeModal.svelte';
 
     import { createBlurProcessor } from '$lib/blurProcessor.js';
@@ -21,6 +20,7 @@
     import * as crashStore from '$lib/crashStore.js';
     import { deviceStore } from '$lib/deviceStore.svelte.js';
     import { start as recorderStart, stop as recorderStop } from '$lib/recorder.js';
+    import type { DeletedRange } from '$lib/types.js';
     import { stitchSegments } from '$lib/videoStitcher.js';
 
     let errorMessage = $state('');

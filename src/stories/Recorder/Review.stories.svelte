@@ -3,12 +3,12 @@
     import { fn } from 'storybook/test';
     import type { ComponentProps } from 'svelte';
 
-    import Setup from '$lib/components/Setup.svelte';
+    import Review from '$lib/components/Recorder/Review.svelte';
     import * as Tooltip from '$lib/components/ui/tooltip/index.js';
 
     const { Story } = defineMeta({
-        title: 'Components/Setup',
-        component: Setup,
+        title: 'Components/Recorder/Review',
+        component: Review,
         tags: ['autodocs'],
         // Default template shared by every Story below (snippet defined in the markup).
         render: template,
@@ -22,30 +22,24 @@
             blurIntensity: {
                 control: { type: 'select' },
                 options: ['light', 'default', 'heavy']
-            },
-            bubblePosition: {
-                control: { type: 'select' },
-                options: ['tl', 'tr', 'bl', 'br', 'tc', 'rc', 'bc', 'lc']
             }
         },
         args: {
-            onstart: fn(),
-            screenStream: null,
-            webcamStream: null,
-            processedStream: null,
+            onresume: fn(),
+            onedit: fn(),
+            ondiscard: fn(),
             micMuted: false,
             camEnabled: true,
             blurOn: false,
-            blurIntensity: 'default',
-            bubblePosition: 'tr'
+            blurIntensity: 'default'
         }
     });
 </script>
 
-{#snippet template(args: ComponentProps<typeof Setup>)}
+{#snippet template(args: ComponentProps<typeof Review>)}
     <Tooltip.Provider>
         <div class="h-256 bg-background text-foreground">
-            <Setup {...args} />
+            <Review {...args} />
         </div>
     </Tooltip.Provider>
 {/snippet}

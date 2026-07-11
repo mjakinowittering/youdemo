@@ -1,9 +1,9 @@
 <script lang="ts">
-    import BlurControl from '$lib/components/Control/BlurControl.svelte';
-    import CamControl from '$lib/components/Control/CamControl.svelte';
-    import MicControl from '$lib/components/Control/MicControl.svelte';
-
     import type { BlurIntensity } from '$lib/blurProcessor.js';
+
+    import BlurControl from './Control/BlurControl.svelte';
+    import CamControl from './Control/CamControl.svelte';
+    import MicControl from './Control/MicControl.svelte';
 
     interface Props {
         micMuted?: boolean;

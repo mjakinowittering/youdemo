@@ -2,16 +2,17 @@
     import { Clapperboard } from 'lucide-svelte';
     import { untrack } from 'svelte';
 
-    import ControlBar from '$lib/components/ControlBar.svelte';
     import { buttonVariants } from '$lib/components/ui/button/button.svelte';
     import * as Card from '$lib/components/ui/card/index.js';
     import * as Empty from '$lib/components/ui/empty/index.js';
-    import WebcamBubble from '$lib/components/WebcamBubble.svelte';
-    import type { BubblePosition } from '$lib/components/WebcamBubble.svelte';
 
     import type { BlurIntensity } from '$lib/blurProcessor.js';
     import { deviceStore } from '$lib/deviceStore.svelte.js';
     import { cn } from '$lib/utils.js';
+
+    import ControlBar from './ControlBar.svelte';
+    import WebcamBubble from './WebcamBubble.svelte';
+    import type { BubblePosition } from './WebcamBubble.svelte';
 
     interface Props {
         onstart: () => void;
