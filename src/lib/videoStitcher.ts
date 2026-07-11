@@ -10,6 +10,21 @@ function mediaEvent(el: HTMLMediaElement, name: string): Promise<void> {
 }
 
 /**
+ * Keep a MediaStreamAudioDestinationNode's audio track alive with continuous
+ * silence. A source with no audio (e.g. a screen recording with no mic and no
+ * tab audio) leaves the destination input-less, which feeds MediaRecorder an
+ * Opus track with zero packets — Chromium then rejects the resulting WebM with
+ * "The element has no supported sources". A started silent source guarantees the
+ * track always carries samples. Inaudible: the destination never reaches the speakers.
+ */
+function keepAudioAlive(ctx: AudioContext, dest: MediaStreamAudioDestinationNode): void {
+    const silence = ctx.createConstantSource();
+    silence.offset.value = 0;
+    silence.connect(dest);
+    silence.start();
+}
+
+/**
  * Join recorded WebM segments into ONE valid WebM by replaying them through a
  * canvas + MediaRecorder — i.e. the browser's native encoder.
  *
@@ -43,6 +58,7 @@ export async function stitchSegments(
     const audioCtx = new AudioContext();
     await audioCtx.resume().catch(() => {});
     const dest = audioCtx.createMediaStreamDestination();
+    keepAudioAlive(audioCtx, dest);
 
     const stream = canvas.captureStream(0);
     const frameTrack = stream.getVideoTracks()[0] as CanvasCaptureMediaStreamTrack;
@@ -196,6 +212,7 @@ export async function renderEditedVideo(
     const audioCtx = new AudioContext();
     await audioCtx.resume().catch(() => {});
     const dest = audioCtx.createMediaStreamDestination();
+    keepAudioAlive(audioCtx, dest);
     let srcNode: MediaElementAudioSourceNode | null = null;
     try {
         srcNode = audioCtx.createMediaElementSource(video);
