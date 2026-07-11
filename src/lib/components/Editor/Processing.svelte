@@ -6,12 +6,8 @@
     import * as Empty from '$lib/components/ui/empty/index.js';
     import { Progress } from '$lib/components/ui/progress/index.js';
 
+    import type { DeletedRange } from '$lib/types.js';
     import { renderEditedVideo, stitchSegments } from '$lib/videoStitcher.js';
-
-    interface DeletedRange {
-        startTime: number;
-        endTime: number;
-    }
 
     interface Props {
         segments?: Blob[];

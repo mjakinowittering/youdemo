@@ -16,9 +16,12 @@ const gitignorePath = path.resolve(import.meta.dirname, '.gitignore');
 
 export default defineConfig(
     includeIgnoreFile(gitignorePath),
+    // shadcn-svelte primitives are vendored as-is — don't lint generated code.
+    { ignores: ['src/lib/components/ui/**'] },
     js.configs.recommended,
     ts.configs.recommended,
     svelte.configs.recommended,
+    storybook.configs['flat/recommended'],
     prettier,
     svelte.configs.prettier,
     {
@@ -26,7 +29,17 @@ export default defineConfig(
         rules: {
             // typescript-eslint strongly recommend that you do not use the no-undef lint rule on TypeScript projects.
             // see: https://typescript-eslint.io/troubleshooting/faqs/eslint/#i-get-errors-from-the-no-undef-rule-about-global-variables-not-being-defined-even-though-there-are-no-typescript-errors
-            'no-undef': 'off'
+            'no-undef': 'off',
+            // Allow `_`-prefixed identifiers to signal an intentionally unused
+            // binding (e.g. required-but-unused transition args, reserved state).
+            '@typescript-eslint/no-unused-vars': [
+                'error',
+                {
+                    argsIgnorePattern: '^_',
+                    varsIgnorePattern: '^_',
+                    caughtErrorsIgnorePattern: '^_'
+                }
+            ]
         }
     },
     {
