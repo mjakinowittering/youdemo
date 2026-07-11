@@ -8,6 +8,8 @@ describe('cn', () => {
     });
 
     it('drops falsy / conditional values (clsx)', () => {
+        // Intentional constant falsy conditional — exercises clsx's drop behaviour.
+        // eslint-disable-next-line no-constant-binary-expression
         expect(cn('a', false && 'b', undefined, null, 'c')).toBe('a c');
     });
 

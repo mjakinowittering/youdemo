@@ -15,7 +15,13 @@
     // Optional pass-through to Dialog.Content — defaults to none, so the app
     // renders the modal exactly as before. Used only by Storybook to scope the
     // dialog to a container (disable the portal, ignore outside-click/Escape).
-    let { contentProps }: { contentProps?: ComponentProps<typeof Dialog.Content> } = $props();
+    // `children`/`child` come from this component's own markup below, so callers
+    // only supply the remaining Dialog.Content props (e.g. portal/dismiss config).
+    let {
+        contentProps
+    }: {
+        contentProps?: Omit<ComponentProps<typeof Dialog.Content>, 'children' | 'child'>;
+    } = $props();
 
     let open = $state(false);
 

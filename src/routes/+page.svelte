@@ -84,7 +84,7 @@
     // Duration tracking (across resume sessions). Not displayed yet — reserved
     // for a future "N clips / total duration" summary on Review.
     let sessionStartMs = 0;
-    let totalElapsedSec = 0;
+    let _totalElapsedSec = 0;
 
     function initialBool(key: string, fallback: boolean): boolean {
         try {
@@ -225,7 +225,7 @@
 
     async function stopRecording() {
         const blob = await recorderStop();
-        totalElapsedSec += Math.round((Date.now() - sessionStartMs) / 1000);
+        _totalElapsedSec += Math.round((Date.now() - sessionStartMs) / 1000);
         segments = [...segments, blob];
         // A new segment invalidates any previously stitched Editor source.
         editorBlob = null;
@@ -253,7 +253,7 @@
         if (editorVideoUrl) URL.revokeObjectURL(editorVideoUrl);
         editorVideoUrl = null;
         outputBlob = null;
-        totalElapsedSec = 0;
+        _totalElapsedSec = 0;
         exportDeletedRanges = [];
         crashStore.clear();
         appState = 'setup';
