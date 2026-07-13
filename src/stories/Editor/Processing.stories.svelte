@@ -3,11 +3,11 @@
     import { fn } from 'storybook/test';
     import type { ComponentProps } from 'svelte';
 
-    import Done from '$lib/components/Done.svelte';
+    import Processing from '$lib/components/Editor/Processing.svelte';
 
     const { Story } = defineMeta({
-        title: 'Components/Done',
-        component: Done,
+        title: 'Components/Editor/Processing',
+        component: Processing,
         tags: ['autodocs'],
         // Default template shared by every Story below (snippet defined in the markup).
         render: template,
@@ -15,17 +15,18 @@
             layout: 'fullscreen'
         },
         args: {
-            // Left null so the auto-download in onMount doesn't fire on every load.
-            videoBlob: null,
-            onbacktoeditor: fn(),
-            onnewrecording: fn()
+            // Empty by default so onMount does no real stitching/re-render work and
+            // just settles on the finished state without touching MediaRecorder.
+            segments: [],
+            deletedRanges: [],
+            oncomplete: fn()
         }
     });
 </script>
 
-{#snippet template(args: ComponentProps<typeof Done>)}
+{#snippet template(args: ComponentProps<typeof Processing>)}
     <div class="h-256 bg-background text-foreground">
-        <Done {...args} />
+        <Processing {...args} />
     </div>
 {/snippet}
 

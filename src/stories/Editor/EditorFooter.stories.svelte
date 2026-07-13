@@ -3,26 +3,27 @@
     import { fn } from 'storybook/test';
     import type { ComponentProps } from 'svelte';
 
-    import Countdown from '$lib/components/Countdown.svelte';
+    import EditorFooter from '$lib/components/Editor/EditorFooter.svelte';
 
     const { Story } = defineMeta({
-        title: 'Components/Countdown',
-        component: Countdown,
+        title: 'Components/Editor/EditorFooter',
+        component: EditorFooter,
         tags: ['autodocs'],
-        // Default template shared by every Story below (snippet defined in the markup).
         render: template,
         parameters: {
             layout: 'fullscreen'
         },
         args: {
-            oncomplete: fn()
+            onback: fn(),
+            ondiscard: fn(),
+            onexport: fn()
         }
     });
 </script>
 
-{#snippet template(args: ComponentProps<typeof Countdown>)}
-    <div class="h-256 bg-background text-foreground">
-        <Countdown {...args} />
+{#snippet template(args: ComponentProps<typeof EditorFooter>)}
+    <div class="h-screen bg-background text-foreground">
+        <EditorFooter {...args} />
     </div>
 {/snippet}
 

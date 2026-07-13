@@ -1,4 +1,3 @@
-/// <reference types="vitest/config" />
 import { readFileSync } from 'node:fs';
 import path, { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -74,7 +73,7 @@ export default defineConfig({
                 test: {
                     name: 'server',
                     environment: 'node',
-                    include: ['src/**/*.{test,spec}.{js,ts}'],
+                    include: ['tests/**/*.{test,spec}.{js,ts}', 'src/**/*.{test,spec}.{js,ts}'],
                     exclude: ['src/**/*.svelte.{test,spec}.{js,ts}']
                 }
             },

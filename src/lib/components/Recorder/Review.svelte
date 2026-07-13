@@ -1,12 +1,13 @@
 <script lang="ts">
     import { Clapperboard, Film, Trash2 } from 'lucide-svelte';
 
-    import ControlBar from '$lib/components/ControlBar.svelte';
     import { buttonVariants, type ButtonVariant } from '$lib/components/ui/button/button.svelte';
     import * as Card from '$lib/components/ui/card/index.js';
 
     import type { BlurIntensity } from '$lib/blurProcessor.js';
     import { cn } from '$lib/utils.js';
+
+    import ControlBar from './ControlBar.svelte';
 
     interface Props {
         onresume: () => void;
