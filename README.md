@@ -38,6 +38,7 @@ Try [YouDemo](https://mjakinowittering.github.io/youdemo/) now!
 
 Things that would make YouDemo even better — contributions welcome.
 
+- **Live Recording Preview** — show the composited video as it happens
 - **Undo deleted frames** — restore soft-deleted frames before export
 - **Blur loading indicator** — surface progress when the on-device segmentation
   model and WASM runtime are downloading/initialising on first blur toggle, so

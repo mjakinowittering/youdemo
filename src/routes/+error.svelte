@@ -4,10 +4,12 @@
 
     import { Button } from '$lib/components/ui/button';
     import * as Empty from '$lib/components/ui/empty/index.js';
+
+    import { APP_NAME } from '$lib/titles.js';
 </script>
 
 <svelte:head>
-    <title>{page.status} | YouDemo</title>
+    <title>{page.status} | {APP_NAME}</title>
 </svelte:head>
 
 <div class="flex h-full items-center justify-center">
