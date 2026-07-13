@@ -3,11 +3,10 @@
 
     interface Props {
         oncomplete: () => void;
+        count?: number;
     }
 
-    let { oncomplete }: Props = $props();
-
-    let count = $state(3);
+    let { oncomplete, count = $bindable(3) }: Props = $props();
 
     const R = 72;
     const CIRC = 452.4; // ≈ 2π × R
@@ -35,21 +34,18 @@
     const ZERO_HOLD = 300;
 
     onMount(() => {
-        document.title = '3… | YouDemo';
+        count = 3;
         playBeep();
         const t1 = setTimeout(() => {
             count = 2;
-            document.title = '2… | YouDemo';
             playBeep();
         }, STEP);
         const t2 = setTimeout(() => {
             count = 1;
-            document.title = '1… | YouDemo';
             playBeep();
         }, STEP * 2);
         const t3 = setTimeout(() => {
             count = 0;
-            document.title = '0… | YouDemo';
             playBeep();
         }, STEP * 3);
         const t4 = setTimeout(oncomplete, STEP * 3 + ZERO_HOLD);
@@ -58,7 +54,6 @@
             clearTimeout(t2);
             clearTimeout(t3);
             clearTimeout(t4);
-            document.title = 'YouDemo';
         };
     });
 

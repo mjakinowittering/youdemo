@@ -20,7 +20,8 @@
     import * as crashStore from '$lib/crashStore.js';
     import { deviceStore } from '$lib/deviceStore.svelte.js';
     import { start as recorderStart, stop as recorderStop } from '$lib/recorder.js';
-    import type { DeletedRange } from '$lib/types.js';
+    import { titleFor } from '$lib/titles.js';
+    import type { AppState, DeletedRange } from '$lib/types.js';
     import { stitchSegments } from '$lib/videoStitcher.js';
 
     let errorMessage = $state('');
@@ -37,18 +38,14 @@
         };
     }
 
-    type AppState =
-        | 'check'
-        | 'setup'
-        | 'countdown'
-        | 'recording'
-        | 'review'
-        | 'stitching'
-        | 'editor'
-        | 'processing'
-        | 'done';
-
     let appState = $state<AppState>('check');
+
+    // Live values behind the dynamic titles — bound up out of the components that
+    // own the tick (Countdown, Recording, Processing) so the title has a single
+    // owner here rather than each screen writing `document.title` itself.
+    let countdownValue = $state(3);
+    let recordingElapsed = $state(0);
+    let exportProgress = $state(0);
 
     // Streams & blobs
     let screenStream = $state<MediaStream | null>(null);
@@ -62,6 +59,17 @@
     let editorBlob = $state<Blob | null>(null);
     let stitchProgress = $state(0);
     let outputBlob = $state<Blob | null>(null);
+
+    // The document title for the current moment of the journey — the only place a
+    // title is set. Rendered through `<svelte:head>` below.
+    let pageTitle = $derived(
+        titleFor(appState, {
+            hasError,
+            count: countdownValue,
+            elapsed: recordingElapsed,
+            progress: appState === 'stitching' ? stitchProgress : exportProgress
+        })
+    );
 
     // Export params (set when leaving editor → processing)
     let exportDeletedRanges = $state<DeletedRange[]>([]);
@@ -203,10 +211,14 @@
     }
 
     function goToCountdown() {
+        countdownValue = 3;
         appState = 'countdown';
     }
 
     async function startRecording() {
+        // The timer is owned here now, so it has to be zeroed per take — a resume
+        // mounts a fresh Recording but `recordingElapsed` outlives it.
+        recordingElapsed = 0;
         // Ensure any in-flight blur processor creation has finished so the
         // blurred stream is locked into the recording from the first frame.
         await blurReady;
@@ -255,9 +267,12 @@
         outputBlob = null;
         _totalElapsedSec = 0;
         exportDeletedRanges = [];
+        countdownValue = 3;
+        recordingElapsed = 0;
+        exportProgress = 0;
+        stitchProgress = 0;
         crashStore.clear();
         appState = 'setup';
-        document.title = 'YouDemo';
     }
 
     async function handleResume() {
@@ -276,7 +291,7 @@
             // Re-acquire the camera (released when the previous recording stopped);
             // blur rebuilds reactively if it was still on.
             await armCamera();
-            appState = 'countdown';
+            goToCountdown();
         } catch {
             // Screen picker cancelled — stay on review
         }
@@ -314,6 +329,7 @@
 
     function handleExport(deletedRanges: DeletedRange[]) {
         exportDeletedRanges = deletedRanges;
+        exportProgress = 0;
         appState = 'processing';
     }
 
@@ -351,6 +367,10 @@
     }
 </script>
 
+<svelte:head>
+    <title>{pageTitle}</title>
+</svelte:head>
+
 <WelcomeModal />
 
 <div class="h-full">
@@ -371,7 +391,7 @@
             onstart={goToCountdown}
         />
     {:else if appState === 'countdown'}
-        <Countdown oncomplete={startRecording} />
+        <Countdown bind:count={countdownValue} oncomplete={startRecording} />
     {:else if appState === 'recording'}
         <Recording
             {screenStream}
@@ -379,6 +399,7 @@
             bind:camEnabled
             bind:blurOn
             bind:blurIntensity
+            bind:elapsed={recordingElapsed}
             onstop={stopRecording}
             onstreamended={handleStreamEnded}
         />
@@ -413,6 +434,7 @@
         <Processing
             segments={editorBlob ? [editorBlob] : segments}
             deletedRanges={exportDeletedRanges}
+            bind:progress={exportProgress}
             oncomplete={handleProcessingDone}
         />
     {:else if appState === 'done'}

@@ -9,3 +9,18 @@ export interface DeletedRange {
     startTime: number;
     endTime: number;
 }
+
+/**
+ * Every step of the user journey. Owned as `$state` by `+page.svelte`, which
+ * renders the matching screen; `titles.ts` maps each one to a document title.
+ */
+export type AppState =
+    | 'check'
+    | 'setup'
+    | 'countdown'
+    | 'recording'
+    | 'review'
+    | 'stitching'
+    | 'editor'
+    | 'processing'
+    | 'done';

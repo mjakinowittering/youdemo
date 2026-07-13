@@ -7,6 +7,7 @@
     import * as Empty from '$lib/components/ui/empty/index.js';
 
     import type { BlurIntensity } from '$lib/blurProcessor.js';
+    import { formatElapsed } from '$lib/titles.js';
     import { cn } from '$lib/utils.js';
 
     import ControlBar from './ControlBar.svelte';
@@ -19,6 +20,7 @@
         camEnabled?: boolean;
         blurOn?: boolean;
         blurIntensity?: BlurIntensity;
+        elapsed?: number;
     }
 
     let {
@@ -28,33 +30,22 @@
         micMuted = $bindable(false),
         camEnabled = $bindable(true),
         blurOn = $bindable(false),
-        blurIntensity = $bindable<BlurIntensity>('default')
+        blurIntensity = $bindable<BlurIntensity>('default'),
+        elapsed = $bindable(0)
     }: Props = $props();
 
     let timerInterval: ReturnType<typeof setInterval>;
-    let elapsed = $state(0);
 
-    let formatted = $derived(
-        `${Math.floor(elapsed / 60)
-            .toString()
-            .padStart(2, '0')}:${(elapsed % 60).toString().padStart(2, '0')}`
-    );
+    let formatted = $derived(formatElapsed(elapsed));
 
     function stop() {
         clearInterval(timerInterval);
-        document.title = 'YouDemo';
         onstop();
     }
 
     onMount(() => {
-        document.title = '● REC 00:00 | YouDemo';
         timerInterval = setInterval(() => {
             elapsed += 1;
-            const mm = Math.floor(elapsed / 60)
-                .toString()
-                .padStart(2, '0');
-            const ss = (elapsed % 60).toString().padStart(2, '0');
-            document.title = `● REC ${mm}:${ss} | YouDemo`;
         }, 1000);
     });
 
@@ -70,7 +61,6 @@
 
     onDestroy(() => {
         clearInterval(timerInterval);
-        document.title = 'YouDemo';
     });
 </script>
 

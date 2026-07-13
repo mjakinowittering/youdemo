@@ -13,11 +13,16 @@
         segments?: Blob[];
         deletedRanges?: DeletedRange[];
         oncomplete: (blob: Blob) => void;
+        progress?: number;
     }
 
-    let { segments = [], deletedRanges = [], oncomplete }: Props = $props();
+    let {
+        segments = [],
+        deletedRanges = [],
+        oncomplete,
+        progress = $bindable(0)
+    }: Props = $props();
 
-    let progress = $state(0);
     let status = $state('Preparing…');
     let errorMessage = $state<string | null>(null);
 
