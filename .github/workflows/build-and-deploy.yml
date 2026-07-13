@@ -23,17 +23,17 @@ jobs:
         runs-on: ubuntu-latest
         steps:
             - name: Checkout
-              uses: actions/checkout@v4
+              uses: actions/checkout@v7
             - name: Setup Node
-              uses: actions/setup-node@v4
+              uses: actions/setup-node@v6
               with:
                   node-version: '22'
                   cache: 'npm'
             - name: Setup Pages
               id: pages
-              uses: actions/configure-pages@v5
+              uses: actions/configure-pages@v6
             - name: Cache npm dependencies
-              uses: actions/cache@v4
+              uses: actions/cache@v6
               with:
                   path: ~/.npm
                   key: ${{ runner.os }}-npm-${{ hashFiles('**/package-lock.json') }}
@@ -41,9 +41,17 @@ jobs:
                       ${{ runner.os }}-npm-
             - name: Install dependencies
               run: npm ci
+            - name: Cache Playwright browsers
+              uses: actions/cache@v6
+              with:
+                  path: ~/.cache/ms-playwright
+                  key: ${{ runner.os }}-playwright-${{ hashFiles('**/package-lock.json') }}
             - name: Install Playwright browser
               # Vitest's client + storybook projects run in a real Chromium.
-              run: npx playwright install --with-deps chromium  
+              # No --with-deps: the runner image already ships every library
+              # Chromium needs, and apt stalls fetching the optional CJK fonts.
+              run: npx playwright install chromium
+              timeout-minutes: 5
             - name: Type check
               run: npm run check
             - name: Unit tests
@@ -53,7 +61,7 @@ jobs:
               env:
                   BASE_PATH: ${{ steps.pages.outputs.base_path }}
             - name: Upload artifact
-              uses: actions/upload-pages-artifact@v3
+              uses: actions/upload-pages-artifact@v5
               with:
                   path: build
 
@@ -67,4 +75,4 @@ jobs:
         steps:
             - name: Deploy to GitHub Pages
               id: deployment
-              uses: actions/deploy-pages@v4
+              uses: actions/deploy-pages@v5
