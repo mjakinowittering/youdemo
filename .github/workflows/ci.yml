@@ -7,6 +7,15 @@ on:
     push:
         branches-ignore: ['master']
 
+# A push to a branch with an open PR fires both `push` and `pull_request`.
+# For the PR event `head_ref` is the source branch; for the push event it is
+# empty and `ref_name` is that same branch — so both share one group and
+# `cancel-in-progress` collapses them into a single run. Branches pushed
+# without a PR keep their own group and still run.
+concurrency:
+    group: ci-${{ github.head_ref || github.ref_name }}
+    cancel-in-progress: true
+
 jobs:
     check:
         name: Lint · Check · Test
