@@ -28,7 +28,7 @@
 </script>
 
 {#snippet template(args: ComponentProps<typeof EditorToolbar>)}
-    <div class="h-screen bg-background text-foreground">
+    <div class="bg-background text-foreground">
         <EditorToolbar {...args} />
     </div>
 {/snippet}

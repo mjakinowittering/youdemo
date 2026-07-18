@@ -22,7 +22,7 @@
 </script>
 
 {#snippet template(args: ComponentProps<typeof EditorFooter>)}
-    <div class="h-screen bg-background text-foreground">
+    <div class="bg-background text-foreground">
         <EditorFooter {...args} />
     </div>
 {/snippet}

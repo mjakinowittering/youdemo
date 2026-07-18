@@ -23,7 +23,7 @@
 </script>
 
 {#snippet template(args: ComponentProps<typeof VideoPlayer>)}
-    <div class="h-screen bg-background text-foreground">
+    <div class="flex h-256 bg-background text-foreground">
         <VideoPlayer {...args} />
     </div>
 {/snippet}

@@ -19,7 +19,7 @@
         args: {
             visibleCells,
             thumbnails: new Map<number, string>(),
-            currentCell: 10,
+            currentCell: 2,
             selectedCells: new Set<number>(),
             collapsingCells: new Set<number>(),
             paused: true,
@@ -29,13 +29,13 @@
 </script>
 
 {#snippet template(args: ComponentProps<typeof FrameStrip>)}
-    <div class="h-screen bg-background text-foreground">
+    <div class="bg-background text-foreground">
         <FrameStrip {...args} />
     </div>
 {/snippet}
 
 <Story name="Default" />
 
-<Story name="Selection" args={{ selectedCells: new Set([12, 13, 14, 15]) }} />
+<Story name="Selection" args={{ selectedCells: new Set([5, 6, 7, 8]) }} />
 
 <Story name="Empty" args={{ visibleCells: [], currentCell: 0 }} />

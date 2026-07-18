@@ -29,7 +29,7 @@
         - `interactOutsideBehavior`/`escapeKeydownBehavior` 'ignore' keep it open for inspection
           (bits-ui otherwise dismisses on any document-level click or Escape).
     -->
-    <div class="h-128 transform-gpu bg-background text-foreground">
+    <div class="h-256 transform-gpu bg-background text-foreground">
         <WelcomeModal
             {...args}
             contentProps={{
