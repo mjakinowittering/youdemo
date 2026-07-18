@@ -5,7 +5,7 @@
     import WelcomeModal from '$lib/components/WelcomeModal.svelte';
 
     const { Story } = defineMeta({
-        title: 'Components/WelcomeModal',
+        title: 'Components/WelcomeModal/WelcomeModal',
         component: WelcomeModal,
         tags: ['autodocs'],
         // Default template shared by every Story below (snippet defined in the markup).

@@ -6,7 +6,7 @@
     import BrowserCheck from '$lib/components/BrowserCheck.svelte';
 
     const { Story } = defineMeta({
-        title: 'Components/BrowserCheck',
+        title: 'Components/BrowserCheck/BrowserCheck',
         component: BrowserCheck,
         tags: ['autodocs'],
         // Default template shared by every Story below (snippet defined in the markup).
