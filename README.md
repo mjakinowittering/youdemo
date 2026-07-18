@@ -1,5 +1,7 @@
 # YouDemo
 
+![YouDemo — Record. Trim. Download.](static/youdemo.png)
+
 A browser-only screen and webcam recorder for making quick, personal demo videos
 — no installation, no subscription, no backend. Just open it and record.
 

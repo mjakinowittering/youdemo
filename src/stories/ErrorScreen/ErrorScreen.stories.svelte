@@ -5,7 +5,7 @@
     import ErrorScreen from '$lib/components/ErrorScreen.svelte';
 
     const { Story } = defineMeta({
-        title: 'Components/ErrorScreen',
+        title: 'Components/ErrorScreen/ErrorScreen',
         component: ErrorScreen,
         tags: ['autodocs'],
         // Default template shared by every Story below (snippet defined in the markup).
