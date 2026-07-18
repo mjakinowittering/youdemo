@@ -107,7 +107,7 @@
         <div
             class="absolute top-4 left-4 flex items-center gap-2 rounded-full bg-black/70 px-3 py-1.5 text-sm text-white backdrop-blur-sm"
         >
-            <span class="rec-dot size-2 rounded-full bg-red-500"></span>
+            <span class="size-2 animate-rec-pulse rounded-full bg-red-500"></span>
             <span class="font-semibold tracking-wide">REC</span>
             <span class="font-mono">{formatted}</span>
         </div>
@@ -115,19 +115,3 @@
 
     <ControlBar bind:micMuted bind:camEnabled bind:blurOn bind:blurIntensity disabled={true} />
 </div>
-
-<style>
-    .rec-dot {
-        animation: rec-pulse 1.5s ease-in-out infinite;
-    }
-
-    @keyframes rec-pulse {
-        0%,
-        100% {
-            opacity: 1;
-        }
-        50% {
-            opacity: 0.3;
-        }
-    }
-</style>

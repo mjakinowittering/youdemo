@@ -74,10 +74,15 @@
 
             {#each visibleCells.slice(posStart, posEnd + 1) as cellIndex (cellIndex)}
                 <div
-                    class="frame-cell shrink-0"
-                    class:active={cellIndex === currentCell}
-                    class:selected={selectedCells.has(cellIndex)}
-                    class:collapsing={collapsingCells.has(cellIndex)}
+                    class={[
+                        'shrink-0 cursor-pointer overflow-hidden rounded-xs border-2 transition-[width,margin,opacity] duration-250',
+                        selectedCells.has(cellIndex)
+                            ? 'border-red-500'
+                            : cellIndex === currentCell
+                              ? 'border-indigo-500'
+                              : 'border-transparent',
+                        collapsingCells.has(cellIndex) && 'mr-0! w-0! opacity-0'
+                    ]}
                     style="width: {CELL_WIDTH}px; height: {CELL_HEIGHT}px; margin-right: {CELL_GAP}px; position: relative;"
                     role="button"
                     tabindex="0"
@@ -125,27 +130,3 @@
         </div>
     </div>
 {/if}
-
-<style>
-    .frame-cell {
-        cursor: pointer;
-        border: 2px solid transparent;
-        border-radius: 2px;
-        overflow: hidden;
-        transition:
-            width 250ms ease,
-            margin 250ms ease,
-            opacity 250ms ease;
-    }
-    .frame-cell.active {
-        border-color: #6366f1;
-    }
-    .frame-cell.selected {
-        border-color: #ef4444;
-    }
-    .frame-cell.collapsing {
-        width: 0 !important;
-        margin-right: 0 !important;
-        opacity: 0;
-    }
-</style>
