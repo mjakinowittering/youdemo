@@ -1,19 +1,21 @@
-# Lint, type-check and unit-test on every PR and branch push (not master —
-# that path runs through build-and-deploy.yml before shipping to Pages).
+# Lint, type-check and unit-test every pull request. Master ships through
+# build-and-deploy.yml, so it needs no CI trigger of its own here.
+#
+# PR-only (not `push`) is deliberate: this job is a *required* status check in
+# the master ruleset. If it also ran on `push`, a push to a branch with an open
+# PR would fire both `push` and `pull_request` on the same commit; the
+# concurrency cancel below would cancel one of them, and a cancelled run still
+# posts a `Lint · Check · Test` check onto that commit — which the ruleset reads
+# as a required check that isn't passing, blocking the merge. With `pull_request`
+# alone, rapid pushes produce runs on *different* commits, so a cancelled run
+# only ever lands on a superseded SHA, never on the PR head being evaluated.
 name: CI
 
 on:
     pull_request:
-    push:
-        branches-ignore: ['master']
 
-# A push to a branch with an open PR fires both `push` and `pull_request`.
-# For the PR event `head_ref` is the source branch; for the push event it is
-# empty and `ref_name` is that same branch — so both share one group and
-# `cancel-in-progress` collapses them into a single run. Branches pushed
-# without a PR keep their own group and still run.
 concurrency:
-    group: ci-${{ github.head_ref || github.ref_name }}
+    group: ci-${{ github.head_ref }}
     cancel-in-progress: true
 
 jobs:
