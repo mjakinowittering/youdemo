@@ -125,19 +125,42 @@
     --radius-4xl: calc(var(--radius) * 2.6);
 }
 
-@keyframes ping-once {
-    0% {
-        transform: scale(0.8);
-        opacity: 1;
-    }
-    100% {
-        transform: scale(1.4);
-        opacity: 0;
-    }
-}
+@theme {
+    /* Custom animations registered as v4 theme tokens so `animate-*` utilities
+       are generated (recognised by the linter, no hand-written CSS classes). */
+    --animate-ping-once: ping-once 0.6s ease-out forwards;
+    --animate-rec-pulse: rec-pulse 1.5s ease-in-out infinite;
+    --animate-deplete: deplete 1s linear forwards;
 
-.animate-ping-once {
-    animation: ping-once 0.6s ease-out forwards;
+    @keyframes ping-once {
+        0% {
+            transform: scale(0.8);
+            opacity: 1;
+        }
+        100% {
+            transform: scale(1.4);
+            opacity: 0;
+        }
+    }
+
+    @keyframes rec-pulse {
+        0%,
+        100% {
+            opacity: 1;
+        }
+        50% {
+            opacity: 0.3;
+        }
+    }
+
+    @keyframes deplete {
+        from {
+            stroke-dashoffset: 0;
+        }
+        to {
+            stroke-dashoffset: 452.4;
+        }
+    }
 }
 
 @layer base {

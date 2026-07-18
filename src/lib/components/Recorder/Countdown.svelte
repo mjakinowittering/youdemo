@@ -100,7 +100,7 @@
                         stroke-width="5"
                         stroke-linecap="round"
                         stroke-dasharray={CIRC}
-                        class="ring-arc stroke-indigo-500"
+                        class="animate-deplete stroke-indigo-500 [stroke-dashoffset:0]"
                     />
                 {/key}
             {/if}
@@ -124,19 +124,3 @@
         </div>
     </div>
 </div>
-
-<style>
-    .ring-arc {
-        stroke-dashoffset: 0;
-        animation: deplete 1s linear forwards;
-    }
-
-    @keyframes deplete {
-        from {
-            stroke-dashoffset: 0;
-        }
-        to {
-            stroke-dashoffset: 452.4;
-        }
-    }
-</style>

@@ -27,7 +27,7 @@
 </script>
 
 {#snippet template(args: ComponentProps<typeof Scrubber>)}
-    <div class="h-screen bg-background text-foreground">
+    <div class="bg-background text-foreground">
         <Scrubber {...args} />
     </div>
 {/snippet}

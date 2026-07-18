@@ -42,9 +42,9 @@
                     aria-label="Toggle theme"
                 >
                     {#if dark}
-                        <Sun class="h-4 w-4" />
+                        <Sun class="size-4" />
                     {:else}
-                        <Moon class="h-4 w-4" />
+                        <Moon class="size-4" />
                     {/if}
                 </Button>
             </div>
