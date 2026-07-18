@@ -6,6 +6,7 @@ import js from '@eslint/js';
 import prettier from 'eslint-config-prettier';
 import storybook from 'eslint-plugin-storybook';
 import svelte from 'eslint-plugin-svelte';
+import tailwind from 'eslint-plugin-tailwindcss';
 import { defineConfig } from 'eslint/config';
 import globals from 'globals';
 import ts from 'typescript-eslint';
@@ -50,6 +51,24 @@ export default defineConfig(
                 extraFileExtensions: ['.svelte'],
                 parser: ts.parser,
                 svelteConfig
+            }
+        }
+    },
+    // Validate Tailwind class strings in Svelte markup. Uses the v4-compatible
+    // plugin (Tailwind v4 is CSS-first — no tailwind.config.js), so config is
+    // read from the CSS entry via `cssConfigPath`.
+    {
+        files: ['**/*.svelte'],
+        plugins: { tailwindcss: tailwind },
+        rules: {
+            ...tailwind.configs.recommended.rules,
+            // prettier-plugin-tailwindcss already sorts classes (different
+            // algorithm) — leave ordering to it to avoid conflicting fixes.
+            'tailwindcss/classnames-order': 'off'
+        },
+        settings: {
+            tailwindcss: {
+                cssConfigPath: './src/routes/layout.css'
             }
         }
     },

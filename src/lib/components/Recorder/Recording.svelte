@@ -107,7 +107,7 @@
         <div
             class="absolute top-4 left-4 flex items-center gap-2 rounded-full bg-black/70 px-3 py-1.5 text-sm text-white backdrop-blur-sm"
         >
-            <span class="rec-dot h-2 w-2 rounded-full bg-red-500"></span>
+            <span class="rec-dot size-2 rounded-full bg-red-500"></span>
             <span class="font-semibold tracking-wide">REC</span>
             <span class="font-mono">{formatted}</span>
         </div>

@@ -171,10 +171,10 @@
                     autoplay
                     muted
                     playsinline
-                    class="h-full w-full object-cover"
+                    class="size-full object-cover"
                 ></video>
             {:else}
-                <div class="flex h-full w-full items-center justify-center bg-muted">
+                <div class="flex size-full items-center justify-center bg-muted">
                     <span class="text-xs text-muted-foreground">No cam</span>
                 </div>
             {/if}

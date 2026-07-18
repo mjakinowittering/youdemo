@@ -97,7 +97,7 @@
                 bind:paused
                 bind:currentTime
                 bind:duration
-                class="h-full w-full object-contain"
+                class="size-full object-contain"
             ></video>
             {#if showPlayIcon || showPauseIcon}
                 <div class="pointer-events-none absolute inset-0 flex items-center justify-center">

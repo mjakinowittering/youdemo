@@ -133,7 +133,7 @@
                     const v = e.currentTarget;
                     if (v.videoHeight) screenAspect = v.videoWidth / v.videoHeight;
                 }}
-                class="h-full w-full object-contain"
+                class="size-full object-contain"
             ></video>
         {:else}
             <Card.Root
