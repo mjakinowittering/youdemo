@@ -160,5 +160,5 @@ configure Pages to serve from `/build` on `main`.
   are all done natively in the browser (no server, no WASM transcoder)
 - [MediaPipe Tasks Vision](https://ai.google.dev/edge/mediapipe/solutions/vision/image_segmenter)
   — on-device selfie segmentation for background blur
-- [lucide-svelte](https://lucide.dev/) — icons
+- [@lucide/svelte](https://lucide.dev/) — icons
 - Deployed to [GitHub Pages](https://pages.github.com/)
