@@ -1,7 +1,9 @@
 <script lang="ts">
     import './layout.css';
 
-    import { MonitorPlay, Moon, Sun } from 'lucide-svelte';
+    import MonitorPlay from '@lucide/svelte/icons/monitor-play';
+    import Moon from '@lucide/svelte/icons/moon';
+    import Sun from '@lucide/svelte/icons/sun';
 
     import { Button } from '$lib/components/ui/button';
     import * as Tooltip from '$lib/components/ui/tooltip/index.js';

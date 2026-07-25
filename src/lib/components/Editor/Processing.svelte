@@ -1,5 +1,6 @@
 <script lang="ts">
-    import { Film, TriangleAlert } from 'lucide-svelte';
+    import Film from '@lucide/svelte/icons/film';
+    import TriangleAlert from '@lucide/svelte/icons/triangle-alert';
     import { onMount } from 'svelte';
 
     import * as Card from '$lib/components/ui/card/index.js';

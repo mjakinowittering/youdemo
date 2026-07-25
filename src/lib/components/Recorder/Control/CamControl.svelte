@@ -1,5 +1,7 @@
 <script lang="ts">
-    import { ChevronDown, Video, VideoOff } from 'lucide-svelte';
+    import ChevronDown from '@lucide/svelte/icons/chevron-down';
+    import Video from '@lucide/svelte/icons/video';
+    import VideoOff from '@lucide/svelte/icons/video-off';
     import { onMount } from 'svelte';
 
     import { buttonVariants } from '$lib/components/ui/button/button.svelte';

@@ -1,5 +1,7 @@
 <script lang="ts">
-    import { ChevronDown, CircleUserRound, UserRound } from 'lucide-svelte';
+    import ChevronDown from '@lucide/svelte/icons/chevron-down';
+    import CircleUserRound from '@lucide/svelte/icons/circle-user-round';
+    import UserRound from '@lucide/svelte/icons/user-round';
 
     import { buttonVariants, type ButtonVariant } from '$lib/components/ui/button/button.svelte';
     import { Button } from '$lib/components/ui/button/index.js';

@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { Clapperboard } from 'lucide-svelte';
+    import Clapperboard from '@lucide/svelte/icons/clapperboard';
     import { untrack } from 'svelte';
 
     import { buttonVariants } from '$lib/components/ui/button/button.svelte';

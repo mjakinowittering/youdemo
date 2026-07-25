@@ -1,5 +1,7 @@
 <script lang="ts">
-    import { ChevronDown, Mic, MicOff } from 'lucide-svelte';
+    import ChevronDown from '@lucide/svelte/icons/chevron-down';
+    import Mic from '@lucide/svelte/icons/mic';
+    import MicOff from '@lucide/svelte/icons/mic-off';
     import { onMount } from 'svelte';
 
     import { buttonVariants } from '$lib/components/ui/button/button.svelte';

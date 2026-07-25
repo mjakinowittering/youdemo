@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { CircleCheck } from 'lucide-svelte';
+    import CircleCheck from '@lucide/svelte/icons/circle-check';
     import { onMount } from 'svelte';
 
     import { Button } from '$lib/components/ui/button/index.js';
