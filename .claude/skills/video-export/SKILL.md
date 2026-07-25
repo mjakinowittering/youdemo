@@ -80,7 +80,10 @@ not routed to the global `ErrorScreen`.
 - **Auto-downloads on mount** via a synthesised `<a download>` click, revoking the
   object URL on teardown. A `null` blob is a no-op — which is what lets it render
   safely in Storybook.
-- Filename: **`youdemo-YYYY-MM-DD.webm`** (`new Date().toISOString().slice(0, 10)`).
+- Filename: **`youdemo-YYYY-MM-DD-HHMMSS.webm`** — built by `exportFilename()` in
+  `src/lib/utils.ts` (pure, unit-tested in `tests/utils.spec.ts`). Local time, not
+  UTC, so the stamp matches the user's clock; the seconds keep same-day exports
+  from colliding.
 - Output format is always `.webm`.
 - `Empty` with a 128px `CircleCheck`, title "Download started", and two buttons:
   "Back to Editor" (indigo) and "New Recording" (outline).

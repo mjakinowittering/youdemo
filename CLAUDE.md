@@ -117,7 +117,7 @@ table, camera lifecycle and reset contract: `app-shell`.
 - **Props-driven components.** If a component needs real streams or singletons
   to render, push that state up to `+page.svelte`.
 - Branding: **YouDemo**, `MonitorPlay` icon, download filename
-  `youdemo-YYYY-MM-DD.webm`.
+  `youdemo-YYYY-MM-DD-HHMMSS.webm`.
 
 ## Working Method
 

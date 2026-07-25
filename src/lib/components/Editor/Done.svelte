@@ -6,6 +6,8 @@
     import * as Card from '$lib/components/ui/card/index.js';
     import * as Empty from '$lib/components/ui/empty/index.js';
 
+    import { exportFilename } from '$lib/utils.js';
+
     interface Props {
         videoBlob?: Blob | null;
         onbacktoeditor: () => void;
@@ -19,8 +21,7 @@
         const url = URL.createObjectURL(videoBlob);
         const a = document.createElement('a');
         a.href = url;
-        const date = new Date().toISOString().slice(0, 10);
-        a.download = `youdemo-${date}.webm`;
+        a.download = exportFilename();
         a.click();
         return () => URL.revokeObjectURL(url);
     });
