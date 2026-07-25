@@ -1,5 +1,6 @@
 <script lang="ts">
-    import { Pause, Play } from 'lucide-svelte';
+    import Pause from '@lucide/svelte/icons/pause';
+    import Play from '@lucide/svelte/icons/play';
 
     import { resolveSeekTarget } from '$lib/editorMath.js';
     import type { DeletedRange } from '$lib/types.js';

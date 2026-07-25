@@ -1,5 +1,7 @@
 <script lang="ts">
-    import { Clapperboard, Film, Trash2 } from 'lucide-svelte';
+    import Clapperboard from '@lucide/svelte/icons/clapperboard';
+    import Film from '@lucide/svelte/icons/film';
+    import Trash2 from '@lucide/svelte/icons/trash-2';
 
     import { buttonVariants, type ButtonVariant } from '$lib/components/ui/button/button.svelte';
     import * as Card from '$lib/components/ui/card/index.js';

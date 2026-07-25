@@ -1,5 +1,6 @@
 <script lang="ts">
-    import { Pause, Play } from 'lucide-svelte';
+    import Pause from '@lucide/svelte/icons/pause';
+    import Play from '@lucide/svelte/icons/play';
 
     import { Button } from '$lib/components/ui/button/index.js';
 

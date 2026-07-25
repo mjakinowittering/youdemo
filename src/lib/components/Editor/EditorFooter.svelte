@@ -1,5 +1,6 @@
 <script lang="ts">
-    import { ChevronLeft, Trash2 } from 'lucide-svelte';
+    import ChevronLeft from '@lucide/svelte/icons/chevron-left';
+    import Trash2 from '@lucide/svelte/icons/trash-2';
 
     import { Button } from '$lib/components/ui/button/index.js';
 

@@ -1,5 +1,7 @@
 <script lang="ts">
-    import { Copy, RefreshCw, Skull } from 'lucide-svelte';
+    import Copy from '@lucide/svelte/icons/copy';
+    import RefreshCw from '@lucide/svelte/icons/refresh-cw';
+    import Skull from '@lucide/svelte/icons/skull';
 
     import { Button } from '$lib/components/ui/button/index.js';
     import * as Card from '$lib/components/ui/card/index.js';

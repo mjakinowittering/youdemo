@@ -1,6 +1,6 @@
 <script lang="ts">
+    import MonitorPlay from '@lucide/svelte/icons/monitor-play';
     import { page } from '$app/state';
-    import { MonitorPlay } from 'lucide-svelte';
 
     import { Button } from '$lib/components/ui/button';
     import * as Empty from '$lib/components/ui/empty/index.js';

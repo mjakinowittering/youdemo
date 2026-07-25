@@ -1,5 +1,6 @@
 <script lang="ts">
-    import { Square, Tv } from 'lucide-svelte';
+    import Square from '@lucide/svelte/icons/square';
+    import Tv from '@lucide/svelte/icons/tv';
     import { onDestroy, onMount } from 'svelte';
 
     import { buttonVariants } from '$lib/components/ui/button/button.svelte';
