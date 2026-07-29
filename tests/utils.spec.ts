@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { cn } from '$lib/utils.js';
+import { cn, exportFilename } from '$lib/utils.js';
 
 describe('cn', () => {
     it('joins multiple class strings', () => {
@@ -29,5 +29,25 @@ describe('cn', () => {
     it('returns an empty string for no / empty input', () => {
         expect(cn()).toBe('');
         expect(cn('', false, undefined)).toBe('');
+    });
+});
+
+describe('exportFilename', () => {
+    it('formats local date and time as youdemo-YYYY-MM-DD-HHMMSS.webm', () => {
+        expect(exportFilename(new Date(2026, 6, 25, 14, 30, 12))).toBe(
+            'youdemo-2026-07-25-143012.webm'
+        );
+    });
+
+    it('zero-pads every single-digit part', () => {
+        expect(exportFilename(new Date(2026, 0, 2, 3, 4, 5))).toBe(
+            'youdemo-2026-01-02-030405.webm'
+        );
+    });
+
+    it('gives two recordings a second apart distinct names', () => {
+        const first = exportFilename(new Date(2026, 6, 25, 14, 30, 12));
+        const second = exportFilename(new Date(2026, 6, 25, 14, 30, 13));
+        expect(first).not.toBe(second);
     });
 });
