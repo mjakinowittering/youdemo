@@ -77,7 +77,8 @@ src/
     crashStore.ts           # OPFS crash recovery, one file per take
     deviceStore.svelte.ts   # Rune store: selected mic/cam ids, persisted
     editorMath.ts           # Pure timeline/edit maths (unit-tested, no DOM)
-    titles.ts               # Every document title string (+ co-located titles.test.ts)
+    titles.ts               # Every document title string
+    bubbleGeometry.ts       # Webcam bubble size + positions, shared by preview and recorder
     types.ts                # AppState, DeletedRange
     utils.ts                # cn(), exportFilename()
     index.ts  assets/

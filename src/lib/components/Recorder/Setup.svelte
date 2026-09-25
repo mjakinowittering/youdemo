@@ -7,12 +7,12 @@
     import * as Empty from '$lib/components/ui/empty/index.js';
 
     import type { BlurIntensity } from '$lib/blurProcessor.js';
+    import type { BubblePosition } from '$lib/bubbleGeometry.js';
     import { deviceStore } from '$lib/deviceStore.svelte.js';
     import { cn } from '$lib/utils.js';
 
     import ControlBar from './ControlBar.svelte';
     import WebcamBubble from './WebcamBubble.svelte';
-    import type { BubblePosition } from './WebcamBubble.svelte';
 
     interface Props {
         onstart: () => void;

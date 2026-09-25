@@ -103,8 +103,8 @@ each one and fails on a render error.
 fails. Don't write bare "it doesn't throw" tests.
 
 Existing node specs: `tests/editorMath.spec.ts`, `tests/crashStore.spec.ts`,
-`tests/utils.spec.ts`, plus co-located `src/lib/titles.test.ts`. Pure modules go
-in `tests/`; component tests use the `.svelte.spec.ts` suffix so they land in the
+`tests/utils.spec.ts`, `tests/titles.spec.ts`, `tests/bubbleGeometry.spec.ts`.
+Pure modules go in `tests/`, importing their subject through `$lib/…`; component tests use the `.svelte.spec.ts` suffix so they land in the
 browser project.
 
 ## CI
