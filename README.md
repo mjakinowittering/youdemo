@@ -148,18 +148,22 @@ npm run format
 
 ### Deployment
 
-The app is built as a fully static site using `@sveltejs/adapter-static` and can
-be deployed to GitHub Pages or any static host.
+The app is built as a fully static site using `@sveltejs/adapter-static`.
+
+Every push to `master` deploys to GitHub Pages through
+`.github/workflows/build-and-deploy.yml`: it type-checks, tests, builds with
+`BASE_PATH` set to the Pages sub-path, and publishes `/build`. It can also be
+run by hand from the Actions tab. In the repo's Pages settings, set the source
+to **GitHub Actions**.
+
+To host it anywhere else, build it and serve the `/build` directory:
 
 ```bash
-# Build the static site
 npm run build
-
-# The output is in /build — deploy this directory
 ```
 
-For GitHub Pages, push the contents of `/build` to your `gh-pages` branch, or
-configure Pages to serve from `/build` on `main`.
+Set `BASE_PATH` (e.g. `BASE_PATH=/youdemo`) when the site won't be served from
+the domain root.
 
 ---
 
