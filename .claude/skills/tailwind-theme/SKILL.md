@@ -22,7 +22,6 @@ file so stories render with the real tokens.
 | Active frame cell in Editor | `border-indigo-500` + `bg-indigo-500/30` tint  |
 | Cut button active state     | `bg-indigo-500 text-white`                     |
 | Progress bars               | `accent-indigo-500` or `bg-indigo-500`         |
-| Playhead line               | `bg-indigo-500`                                |
 | Webcam bubble ring          | `ring-2 ring-indigo-500`                       |
 | Countdown number            | `text-indigo-500`                              |
 | Play/pause flash icon       | `text-indigo-500`                              |
