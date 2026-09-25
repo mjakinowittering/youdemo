@@ -45,7 +45,7 @@
     let leftSpacerWidth = $derived(posStart * CELL_STRIDE);
     let timestampLabels = $derived(computeTimestampLabels(visibleCells));
 
-    // Keep the playhead in view while playing.
+    // Keep the current cell in view while playing.
     $effect(() => {
         if (!scrollContainer || paused || currentCellPos < 0) return;
         const targetScrollLeft = currentCellPos * CELL_STRIDE - containerWidth / 2;
@@ -64,23 +64,17 @@
             style="width: {totalStripWidth}px; position: relative; display: flex; align-items: flex-start; height: {CELL_HEIGHT +
                 12}px; transition: width 250ms ease;"
         >
-            {#if currentCellPos >= 0}
-                <div
-                    class="pointer-events-none absolute top-0 z-10 w-0.5 bg-indigo-500"
-                    style="left: {currentCellPos * CELL_STRIDE}px; height: {CELL_HEIGHT}px;"
-                ></div>
-            {/if}
             <div style="width: {leftSpacerWidth}px; flex-shrink: 0;"></div>
 
             {#each visibleCells.slice(posStart, posEnd + 1) as cellIndex (cellIndex)}
                 <div
                     class={[
-                        'shrink-0 cursor-pointer overflow-hidden rounded-xs border-2 transition-[width,margin,opacity] duration-250',
+                        'shrink-0 cursor-pointer overflow-hidden rounded-md border-2 transition-[width,margin,opacity] duration-250',
                         selectedCells.has(cellIndex)
                             ? 'border-red-500'
                             : cellIndex === currentCell
                               ? 'border-indigo-500'
-                              : 'border-transparent',
+                              : 'border-border',
                         collapsingCells.has(cellIndex) && 'mr-0! w-0! opacity-0'
                     ]}
                     style="width: {CELL_WIDTH}px; height: {CELL_HEIGHT}px; margin-right: {CELL_GAP}px; position: relative;"
@@ -94,16 +88,11 @@
                     {#if thumbnails.has(cellIndex)}
                         <img
                             src={thumbnails.get(cellIndex)}
-                            width={CELL_WIDTH}
-                            height={CELL_HEIGHT}
                             alt=""
-                            class="block"
+                            class="block size-full object-cover"
                         />
                     {:else}
-                        <div
-                            class="animate-pulse bg-muted-foreground/20"
-                            style="width: {CELL_WIDTH}px; height: {CELL_HEIGHT}px;"
-                        ></div>
+                        <div class="size-full animate-pulse bg-muted-foreground/20"></div>
                     {/if}
                     {#if cellIndex === currentCell}
                         <div

@@ -13,7 +13,7 @@ composes five presentational children, top to bottom.
 | `VideoPlayer`       | `<video>`, click-to-toggle, deleted-span skipping         |
 | `Scrubber`          | play/pause, `mm:ss / mm:ss`, range input                  |
 | `EditorToolbar`     | Cut · Delete · "Final: <effectiveDuration>"               |
-| `FrameStrip`        | thumbnail cells, playhead, timestamp labels               |
+| `FrameStrip`        | thumbnail cells, timestamp labels                         |
 | `EditorFooter`      | Back to Review · Discard · Export & Download              |
 
 It receives one `videoUrl` — the single combined recording (`editorBlob`), see
@@ -73,21 +73,21 @@ sum). Cell state is a **border plus an absolutely-positioned tint overlay**:
 
 | State                | Classes                                              |
 | -------------------- | ---------------------------------------------------- |
-| Default              | `border-2 border-transparent rounded-xs cursor-pointer` |
+| Default              | `border-2 border-border rounded-md cursor-pointer`   |
 | Active (current)     | `border-indigo-500` + overlay `bg-indigo-500/30`     |
 | Selected (edit mode) | `border-red-500` + overlay `bg-red-500/20`           |
 | Collapsing           | `mr-0! w-0! opacity-0` over `transition-[width,margin,opacity] duration-250` |
 
-- **Playhead**: `absolute top-0 w-0.5 bg-indigo-500 z-10 pointer-events-none`,
-  positioned at `currentCellPos * CELL_STRIDE`.
+- **No playhead line** — the current cell's indigo border and tint mark the
+  playhead.
 - **Virtualized** — only the window from `computeVirtualWindow` (±5 cells of
   slack) renders, behind a left spacer div, with the outer width fixed at
   `visibleCells.length * CELL_STRIDE`.
 - Cells are keyed by **original** index while positioned by rendered index;
   `cellRenderPos` maps between them. Keep that distinction — mixing them up
-  misplaces the playhead after a cut.
+  misplaces the current cell after a cut.
 - Missing thumbnails render an `animate-pulse` placeholder.
-- An `$effect` keeps the playhead centred while playing.
+- An `$effect` keeps the current cell centred while playing.
 
 ## Thumbnails
 
