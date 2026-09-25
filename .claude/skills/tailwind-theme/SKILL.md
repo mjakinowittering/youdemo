@@ -19,11 +19,11 @@ file so stories render with the real tokens.
 | Element                     | Class                                          |
 | --------------------------- | ---------------------------------------------- |
 | Primary action buttons      | `bg-indigo-500 hover:bg-indigo-600 text-white` |
-| Active frame cell in Editor | `ring-2 ring-indigo-500 bg-indigo-500/30`      |
+| Active frame cell in Editor | `border-indigo-500` + `bg-indigo-500/30` tint  |
 | Cut button active state     | `bg-indigo-500 text-white`                     |
 | Progress bars               | `accent-indigo-500` or `bg-indigo-500`         |
 | Playhead line               | `bg-indigo-500`                                |
-| Webcam bubble border        | `border-2 border-indigo-500`                   |
+| Webcam bubble ring          | `ring-2 ring-indigo-500`                       |
 | Countdown number            | `text-indigo-500`                              |
 | Play/pause flash icon       | `text-indigo-500`                              |
 | MonitorPlay brand icon      | `text-indigo-500`                              |
@@ -41,7 +41,7 @@ intent:
 
 | Element              | Class                               |
 | -------------------- | ----------------------------------- |
-| Selected frame cells | `ring-2 ring-red-500 bg-red-500/20` |
+| Selected frame cells | `border-red-500` + `bg-red-500/20` tint |
 | Delete button        | shadcn `destructive` variant        |
 
 What stays red/destructive: Discard button · Mute button (when muted) · Cam-off
@@ -93,10 +93,3 @@ To add one: define `--animate-<name>` plus its `@keyframes` **inside** the
   (`'dark'` | `'light'`). See the `persistence` skill for the key convention.
 - In Storybook the theme is driven by the toolbar switcher, which applies `dark`
   to `<html>` — story shells must not hard-code a `dark` class. See `testing`.
-
-## No hand-written CSS
-
-Never write raw CSS when a Tailwind class exists. The only acceptable exceptions:
-
-- `@theme` / `:root` / `.dark` token definitions in `layout.css`
-- SVG-specific properties with no Tailwind equivalent

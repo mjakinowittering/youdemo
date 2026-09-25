@@ -10,8 +10,8 @@ silently so a locked-down browser still runs the app.
 
 ## Storage key convention
 
-Every `localStorage` / `sessionStorage` key must match `/^yd[A-Z][a-zA-Z0-9]*$/` —
-`yd` prefix, immediately a capital, camelCase, no separators.
+The rule (the regex) lives in `CLAUDE.md`; it covers `localStorage` and
+`sessionStorage` alike.
 
 Valid: `ydTheme`, `ydWelcomed`, `ydWebcamDeviceId`.
 Invalid: `theme`, `youdemo_welcomed`, `yd_theme`, `ydtheme`.

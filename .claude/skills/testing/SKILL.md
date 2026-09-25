@@ -1,6 +1,6 @@
 ---
 name: testing
-description: How YouDemo is tested — the props-down/state-up design that makes it possible, Storybook CSF v5 story conventions, and the three Vitest projects (node unit, browser component, storybook) plus CI. Load when writing or changing a story, adding a unit test, running the test suite, or deciding where new logic should live so it can be tested.
+description: How YouDemo is tested — the props-down/state-up design that makes it possible, Storybook CSF v5 story conventions, and the three Vitest projects (node unit, browser component, storybook). Load when writing or changing a story, adding a unit test, running the test suite, or deciding where new logic should live so it can be tested.
 ---
 
 # Testing
@@ -109,11 +109,5 @@ browser project.
 
 ## CI
 
-`.github/workflows/ci.yml` — `npm run lint`, `npm run check`, `npm test` — plus
-cached npm deps and a cached Playwright Chromium (installed without `--with-deps`;
-the runner image already has the libraries and apt stalls on optional CJK fonts).
-
-It triggers on **`pull_request` only, never `push`**, and the header comment in
-the file explains why in detail: it's a required status check, and dual triggers
-would let a cancelled concurrent run post a failing check onto the PR head. Read
-that comment before changing the triggers.
+Every PR runs `npm run lint`, `npm run check` and `npm test`. The workflow, its
+caching and its deliberate PR-only trigger are in `deployment`.

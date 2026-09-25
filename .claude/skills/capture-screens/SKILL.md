@@ -45,9 +45,8 @@ the bubble lines up with the composited frame (see `capture-pipeline`).
 Type `BubblePosition` is exported from this file (not `types.ts`).
 
 - **Fixed size, no resize.** Diameter and padding are fractions of the *frame*
-  height: `BUBBLE_FRAC = 0.18`, `PAD_FRAC = 0.025`. The same constants are
-  duplicated in `recorder.ts` — **change both together** or preview and recording
-  drift apart.
+  height, duplicated in `recorder.ts` — **change both together**. Values and
+  rationale: `capture-pipeline`.
 - Positions against the **letterboxed video rect**, derived from `screenAspect`,
   not the raw container, because the composited frame has no letterbox bars.
   `screenAspect === 0` falls back to filling the container.

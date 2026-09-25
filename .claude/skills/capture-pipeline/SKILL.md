@@ -58,8 +58,6 @@ const types = [
 library logs it, then inserts a correct Duration. Without this the blob has no
 duration header and the Editor can't seek it.
 
-**No debug logging in hot paths** — nothing per-frame or per-export.
-
 ## Audio graph
 
 System audio (from the screen stream's audio tracks) + mic are mixed through an

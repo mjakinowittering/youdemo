@@ -1,6 +1,6 @@
 ---
 name: deployment
-description: Building and shipping YouDemo to GitHub Pages — adapter-static config, the BASE_PATH/base-path rules, prerendering, the deploy workflow, static assets, and the meta/OpenGraph/Twitter Card tags in app.html. Load when changing the build, the workflow, asset paths, social preview tags, or debugging anything that works locally but 404s on Pages.
+description: Building and shipping YouDemo to GitHub Pages — adapter-static config, the BASE_PATH/base-path rules, prerendering, the deploy and CI workflows, static assets, and the meta/OpenGraph/Twitter Card tags in app.html. Load when changing the build, the workflow, asset paths, social preview tags, or debugging anything that works locally but 404s on Pages.
 ---
 
 # Build & deployment
@@ -66,10 +66,15 @@ and served by a dev-only Vite middleware. Both paths are described in
 `npm run build` with `BASE_PATH` from `configure-pages` → upload → deploy.
 Concurrency group `pages` with `cancel-in-progress: false`.
 
-`.github/workflows/ci.yml` — PR-only lint/check/test. See `testing`; its trigger
-choice is deliberate and documented in the file.
+`.github/workflows/ci.yml` — `npm run lint`, `npm run check`, `npm test` on every
+PR. It triggers on **`pull_request` only, never `push`**: it's a required status
+check, and dual triggers would let a cancelled concurrent run post a failing check
+onto the PR head. The header comment in the file explains in full — read it before
+changing the triggers.
 
-Both cache `~/.npm` keyed on `package-lock.json` and cache Playwright Chromium.
+Both cache `~/.npm` keyed on `package-lock.json` and cache Playwright Chromium
+(installed without `--with-deps`; the runner image already has the libraries and
+apt stalls on optional CJK fonts).
 
 ## meta / OpenGraph (`src/app.html`)
 
