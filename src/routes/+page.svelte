@@ -11,12 +11,12 @@
     import Recording from '$lib/components/Recorder/Recording.svelte';
     import Review from '$lib/components/Recorder/Review.svelte';
     import Setup from '$lib/components/Recorder/Setup.svelte';
-    import type { BubblePosition } from '$lib/components/Recorder/WebcamBubble.svelte';
     import { Progress } from '$lib/components/ui/progress/index.js';
     import WelcomeModal from '$lib/components/WelcomeModal.svelte';
 
     import { createBlurProcessor } from '$lib/blurProcessor.js';
     import type { BlurIntensity, BlurProcessor } from '$lib/blurProcessor.js';
+    import type { BubblePosition } from '$lib/bubbleGeometry.js';
     import * as crashStore from '$lib/crashStore.js';
     import { deviceStore } from '$lib/deviceStore.svelte.js';
     import { start as recorderStart, stop as recorderStop } from '$lib/recorder.js';

@@ -42,11 +42,9 @@ the bubble lines up with the composited frame (see `capture-pipeline`).
 
 ## WebcamBubble.svelte
 
-Type `BubblePosition` is exported from this file (not `types.ts`).
-
-- **Fixed size, no resize.** Diameter and padding are fractions of the *frame*
-  height, duplicated in `recorder.ts` — **change both together**. Values and
-  rationale: `capture-pipeline`.
+- **Fixed size, no resize.** Size, the eight positions and their coordinates all
+  come from `$lib/bubbleGeometry.ts`, shared with the recorder — see
+  `capture-pipeline`.
 - Positions against the **letterboxed video rect**, derived from `screenAspect`,
   not the raw container, because the composited frame has no letterbox bars.
   `screenAspect === 0` falls back to filling the container.

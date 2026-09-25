@@ -88,17 +88,13 @@ leaves a partial-coverage seam at the cardinal points — visible as straight
 The webcam frame is **centre-cropped to a square** before drawing, matching the
 preview's `object-cover`, so faces aren't stretched.
 
-Geometry constants are duplicated in this file and in
-`Recorder/WebcamBubble.svelte`:
-
-```ts
-const BUBBLE_FRAC = 0.18;  // diameter as a fraction of frame height
-const PAD_FRAC = 0.025;    // corner padding, same basis
-```
-
-**Change both together.** They're fractions of frame *height* precisely so the
-Setup preview and the composited recording agree at any resolution. `bubbleCoords`
-here mirrors `coords()` there for the eight positions — see `capture-screens`.
+**Geometry lives in `src/lib/bubbleGeometry.ts`**, shared with the Setup preview
+(`WebcamBubble.svelte`) so the two cannot drift: `BubblePosition`,
+`BUBBLE_POSITIONS`, `BUBBLE_FRAC` (0.18, diameter) and `PAD_FRAC` (0.025, corner
+padding), and `bubbleCoords(pos, frame)`. Sizes are fractions of frame *height* so
+preview and recording agree at any resolution. The recorder passes the whole canvas
+as the frame; the preview passes its letterboxed rect. Covered by
+`tests/bubbleGeometry.spec.ts`.
 
 ## Stream ownership & teardown
 
@@ -113,8 +109,3 @@ here mirrors `coords()` there for the eight positions — see `capture-screens`.
 - When `processedWebcamStream` (blurred) is present it is drawn in preference to
   the raw stream, so what the user previewed is what gets recorded. See
   `background-blur`.
-
-## Note
-
-`BubblePosition` is declared in both `recorder.ts` and `WebcamBubble.svelte`.
-Neither imports the other's copy; keep them identical if the set ever changes.
