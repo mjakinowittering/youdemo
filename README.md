@@ -36,20 +36,33 @@ Try [YouDemo](https://mjakinowittering.github.io/youdemo/) now!
 
 ---
 
-## Backlog
+## Todo
 
 Things that would make YouDemo even better — contributions welcome.
 
-- **Live Recording Preview** — show the composited video as it happens
-- **Undo deleted frames** — restore soft-deleted frames before export
-- **Blur loading indicator** — surface progress when the on-device segmentation
-  model and WASM runtime are downloading/initialising on first blur toggle, so
-  the brief delay before blur appears is clearly communicated
-- **Recording resolution cap** — option to cap the recording resolution (e.g.
-  1280×720) for smaller file sizes
-- **Quick trim** — trim-to-highlight shortcut for the most common editing
-  workflow
-- **Easter eggs** — there should definitely be easter eggs
+### Bugs
+
+### Features
+
+#### Capture
+
+- [ ] **Live Recording Preview** — show the composited video as it happens
+- [ ] **Blur loading indicator** — surface progress when the on-device
+      segmentation model and WASM runtime are downloading/initialising on first
+      blur toggle, so the brief delay before blur appears is clearly
+      communicated
+- [ ] **Recording resolution cap** — option to cap the recording resolution
+      (e.g. 1280×720) for smaller file sizes
+
+#### Editor
+
+- [ ] **Undo deleted frames** — restore soft-deleted frames before export
+- [ ] **Quick trim** — trim-to-highlight shortcut for the most common editing
+      workflow
+
+#### Fun
+
+- [ ] **Easter eggs** — there should definitely be easter eggs
 
 ---
 

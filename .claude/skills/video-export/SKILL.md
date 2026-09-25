@@ -31,29 +31,22 @@ ffmpeg.wasm could not produce a correct multi-clip or trimmed export here:
 Re-recording through the browser's own pipeline sidesteps both. Cut precision is
 also better — per-frame, versus ffmpeg `-c copy` snapping to sparse keyframes.
 
-The canvases here are opaque (`alpha: false`) as a belt-and-braces measure even
-though the source segments fully cover the frame.
-
 If you are tempted to reintroduce ffmpeg/WASM transcoding, read this section
 first and raise it explicitly.
 
 ## Shared implementation notes
 
-Both functions follow the same recipe (mirroring `capture-pipeline`):
+Both functions follow the recorder's recipe — the loop, opaque canvas, silent
+`ConstantSource` (`keepAudioAlive()` here) and `fixWebmDuration`, each explained in
+`capture-pipeline`. What differs:
 
 - Probe the first blob for output dimensions (fallback 1280×720).
-- Opaque canvas, `captureStream(0)` + `requestFrame()` per tick, `setInterval`
-  driving the draw loop.
-- `createMediaElementSource` → `MediaStreamAudioDestinationNode`, routed **only**
-  to the recorder, never to the speakers.
-- `keepAudioAlive()` adds a silent `ConstantSource` — same load-bearing trick as
-  the recorder; without it a silent recording produces a zero-packet Opus track
-  and Chromium later refuses the file with "The element has no supported sources".
-- `videoBitsPerSecond: 8_000_000`, `audioBitsPerSecond: 128_000` — higher than the
+- Audio comes from `createMediaElementSource` → `MediaStreamAudioDestinationNode`,
+  routed **only** to the recorder, never to the speakers.
+- `videoBitsPerSecond: 8_000_000` (`audioBitsPerSecond: 128_000`) — higher than the
   recorder's 5 Mbps, to limit generational loss on this second encode.
-- `fixWebmDuration` on the result.
-- Codec probe is three entries here (vp9 → vp8 → webm); the recorder's has an
-  extra h264 rung.
+- Codec probe is three entries (vp9 → vp8 → webm); the recorder's has an extra h264
+  rung.
 
 ## Processing.svelte
 
@@ -80,10 +73,9 @@ not routed to the global `ErrorScreen`.
 - **Auto-downloads on mount** via a synthesised `<a download>` click, revoking the
   object URL on teardown. A `null` blob is a no-op — which is what lets it render
   safely in Storybook.
-- Filename: **`youdemo-YYYY-MM-DD-HHMMSS.webm`** — built by `exportFilename()` in
+- Filename (format in `CLAUDE.md`'s branding rule) is built by `exportFilename()` in
   `src/lib/utils.ts` (pure, unit-tested in `tests/utils.spec.ts`). Local time, not
   UTC, so the stamp matches the user's clock; the seconds keep same-day exports
   from colliding.
-- Output format is always `.webm`.
 - `Empty` with a 128px `CircleCheck`, title "Download started", and two buttons:
   "Back to Editor" (indigo) and "New Recording" (outline).

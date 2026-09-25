@@ -5,9 +5,8 @@ description: The YouDemo state machine and shell — +page.svelte state ownershi
 
 # App shell & state machine
 
-`src/routes/+page.svelte` is the **single owner of truth**. Every screen is a pure
-function of `$bindable` props (state down) + callback props (intent up); leaf
-components hold no app state. See the `testing` skill for why this matters.
+`src/routes/+page.svelte` is the **single owner of truth** — the props-driven rule in
+`CLAUDE.md`, with its rationale in `testing`. This skill is what it owns and how.
 
 ## Routes
 
@@ -74,9 +73,8 @@ The webcam and blur processor are live **only** during the capture flow
 - `armCamera()` re-acquires via `getUserMedia`, honouring
   `deviceStore.webcamDeviceId`. Called on Resume. It no-ops when `camEnabled` is
   false and swallows failures — a missing camera records screen-only.
-- **Blur needs no restore logic.** The blur `$effect` is keyed on `blurOn` +
-  `webcamStream`, so nulling the stream tears the processor down and re-arming
-  rebuilds it. Don't add remember/restore code. See `background-blur`.
+- **Blur needs no restore logic** — releasing and re-arming the camera tears down
+  and rebuilds it for free. See `background-blur`.
 - The raw webcam stream is owned here, not by `Setup` or `recorder.ts`, so it
   survives a resume and there is only ever **one** camera capture.
 
