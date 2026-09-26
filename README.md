@@ -65,15 +65,6 @@ Things that would make YouDemo even better — contributions welcome.
       readers announce an unnamed dialog. Use `Dialog.Title` (and
       `Dialog.Description` for the intro line)
 
-#### Deployment
-
-- [ ] **Fix blur under `npm run preview`** — `postbuild` copies the MediaPipe
-      WASM into `build/`, but `vite preview` serves SvelteKit's own output, so
-      turning blur on 404s on `vision_wasm_internal.js`. Pages is unaffected (it
-      serves `build/`), but the README tells people to preview this way. The E2E
-      suite sidesteps it with `scripts/serve-build.js`; either point the
-      README's preview step at that or serve `build/` from `preview`
-
 ### Features
 
 #### Capture
@@ -167,7 +158,7 @@ npm run dev
 # Build for production
 npm run build
 
-# Preview the production build locally
+# Preview the production build locally (run `npm run build` first)
 npm run preview
 
 # Run tests

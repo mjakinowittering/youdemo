@@ -34,7 +34,7 @@ export default defineConfig({
         }
     ],
     webServer: {
-        command: 'npm run build && node scripts/serve-build.js',
+        command: 'npm run build && npm run preview',
         env: { BASE_PATH: '/youdemo' },
         url: 'http://localhost:4173/youdemo/',
         reuseExistingServer: !process.env.CI,
