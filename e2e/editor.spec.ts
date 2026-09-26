@@ -20,16 +20,17 @@ test('cuts shorten the final duration and survive a round trip to Done', async (
     await app.recordTake(4);
     await app.openEditor();
     const before = await app.finalDuration();
-    await app.cut(10, 14);
-    const cells = await app.cells.count();
-    // 5 cells × 0.2 s = 1 s; the read-out is whole seconds.
-    expect(await app.finalDuration()).toBeLessThanOrEqual(before - 1 + 0.5);
+    // 10 cells × 0.2 s = 2 s, enough to move the whole-second read-out.
+    await app.cut(5, 14);
+    const after = await app.finalDuration();
+    expect(after).toBeLessThan(before);
 
     await app.exportAndDownload();
     await expect(app.page.getByText('Download started')).toBeVisible();
     await app.page.getByRole('button', { name: 'Back to Editor' }).click();
-    await expect(app.exportButton).toBeVisible();
-    await expect(app.cells).toHaveCount(cells);
+    // The read-out is 0:00 until the video loads, then the real value.
+    await expect.poll(() => app.finalDuration()).toBeGreaterThan(0);
+    expect(await app.finalDuration()).toBe(after);
 });
 
 test('cutting every cell leaves nothing to export', async ({ app }) => {

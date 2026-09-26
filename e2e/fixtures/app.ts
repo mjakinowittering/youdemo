@@ -62,7 +62,20 @@ export class App {
     async openEditor(): Promise<void> {
         await this.card(/Edit recording/).click();
         await expect(this.exportButton).toBeVisible({ timeout: 60_000 });
-        await expect(this.cells.first()).toBeVisible({ timeout: 10_000 });
+        // The strip renders a partial window until it has measured its width;
+        // wait until the cell count stops changing.
+        let last = -1;
+        await expect
+            .poll(
+                async () => {
+                    const n = await this.cells.count();
+                    const settled = n > 0 && n === last;
+                    last = n;
+                    return settled;
+                },
+                { intervals: [300], timeout: 10_000 }
+            )
+            .toBe(true);
     }
 
     get exportButton() {
