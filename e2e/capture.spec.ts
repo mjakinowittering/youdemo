@@ -6,8 +6,14 @@ test('picking a screen counts down, records, and stops to review', async ({ app 
     await expect(page).toHaveTitle(/^[123]… \| YouDemo$/);
     await expect(page.getByText('REC', { exact: true })).toBeVisible({ timeout: 10_000 });
     await expect(page).toHaveTitle(/^● REC \d\d:\d\d \| YouDemo$/);
+    // The live preview plays the composited frame being encoded.
+    const preview = page.getByLabel('Live recording preview');
+    await expect(preview).toBeVisible();
+    await expect
+        .poll(() => preview.evaluate((v: HTMLVideoElement) => v.readyState))
+        .toBeGreaterThanOrEqual(2);
     await page.waitForTimeout(1500);
-    await app.card(/Recording in progress/).click();
+    await app.stopButton.click();
     await expect(app.card(/Resume recording/)).toBeVisible();
     await expect(page).toHaveTitle('Review recording | YouDemo');
     await expect.poll(() => app.opfsTakeCount()).toBe(1);

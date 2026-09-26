@@ -106,6 +106,17 @@ preview and recording agree at any resolution. The recorder passes the whole can
 as the frame; the preview passes its letterboxed rect. Covered by
 `tests/bubbleGeometry.spec.ts`.
 
+## Live preview and the picker
+
+`start()` resolves with a **video-only** `MediaStream` holding the canvas capture
+track itself — not a clone, and no audio, so the preview can't echo. `+page.svelte`
+keeps it as `previewStream` for the Recording screen; it ends with the recorder.
+
+`DISPLAY_MEDIA_OPTIONS` is the one screen-picker request (Setup and Resume):
+`selfBrowserSurface: 'exclude'` keeps the YouDemo tab out of the picker so the
+preview isn't recorded inside itself. A whole-screen share with YouDemo visible
+still mirrors — accepted.
+
 ## Stream ownership & teardown
 
 - **The recorder owns** the screen stream and the mic stream it acquires. Both are
