@@ -74,7 +74,6 @@ Things that would make YouDemo even better — contributions welcome.
 
 #### Capture
 
-- [ ] **Live Recording Preview** — show the composited video as it happens
 - [ ] **Recording resolution cap** — option to cap the recording resolution
       (e.g. 1280×720) for smaller file sizes
 
