@@ -5,9 +5,7 @@ test.describe('first visit', () => {
 
     test('shows the welcome modal once, then remembers it was dismissed', async ({ app }) => {
         const { page } = app;
-        // The dialog has no accessible name (its heading isn't a Dialog.Title),
-        // so find it by its text.
-        const dialog = page.getByRole('dialog').filter({ hasText: 'Welcome to YouDemo' });
+        const dialog = page.getByRole('dialog', { name: 'Welcome to YouDemo' });
         await expect(dialog).toBeVisible();
         await dialog.getByRole('button', { name: "Let's begin" }).click();
         await expect(dialog).toBeHidden();

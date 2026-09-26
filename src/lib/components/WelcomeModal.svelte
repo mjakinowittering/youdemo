@@ -46,11 +46,11 @@
     <Dialog.Content class="max-w-md" showCloseButton={false} {...contentProps}>
         <div class="flex flex-col items-center gap-4 text-center">
             <MonitorPlay class="text-indigo-500" size={52} />
-            <h2 class="text-xl font-semibold">Welcome to YouDemo</h2>
-            <p class="text-sm text-muted-foreground">
+            <Dialog.Title class="text-xl font-semibold">Welcome to YouDemo</Dialog.Title>
+            <Dialog.Description>
                 YouDemo lets you record your screen with a webcam overlay, trim the footage, and
                 download it — all in the browser, all without signing up for anything.
-            </p>
+            </Dialog.Description>
         </div>
 
         <Separator />

@@ -58,13 +58,6 @@ Things that would make YouDemo even better — contributions welcome.
       function is wrong on its own; add the edge case to
       `tests/editorMath.spec.ts`
 
-#### App shell
-
-- [ ] **Give the welcome dialog an accessible name** — `WelcomeModal.svelte`
-      renders its heading as a plain `<h2>`, not `Dialog.Title`, so screen
-      readers announce an unnamed dialog. Use `Dialog.Title` (and
-      `Dialog.Description` for the intro line)
-
 #### Deployment
 
 - [ ] **Fix blur under `npm run preview`** — `postbuild` copies the MediaPipe
