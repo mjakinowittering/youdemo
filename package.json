@@ -15,6 +15,7 @@
         "format": "prettier --write .",
         "test:unit": "vitest",
         "test": "npm run test:unit -- --run",
+        "test:e2e": "playwright test",
         "storybook": "storybook dev -p 6006",
         "build-storybook": "storybook build"
     },
@@ -26,6 +27,7 @@
         "@ianvs/prettier-plugin-sort-imports": "^4.7.1",
         "@internationalized/date": "^3.12.1",
         "@lucide/svelte": "^1.17.0",
+        "@playwright/test": "^1.63.0",
         "@storybook/addon-a11y": "^10.4.6",
         "@storybook/addon-docs": "^10.4.6",
         "@storybook/addon-svelte-csf": "^5.1.2",
@@ -48,6 +50,7 @@
         "eslint-plugin-svelte": "^3.17.0",
         "eslint-plugin-tailwindcss": "^4.3.0-svelte.beta.0",
         "globals": "^17.4.0",
+        "mediabunny": "^1.60.0",
         "playwright": "^1.59.1",
         "prettier": "^3.8.1",
         "prettier-plugin-svelte": "^3.5.1",

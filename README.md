@@ -42,6 +42,52 @@ Things that would make YouDemo even better — contributions welcome.
 
 ### Bugs
 
+#### Export
+
+- [ ] **Fix dropped frames in exports with cuts or several takes** — joining
+      takes (`stitchSegments`) and applying cuts (`renderEditedVideo`) in
+      `videoStitcher.ts` replay the video in real time through a canvas and
+      `MediaRecorder`, driven by `setInterval`. When the machine can't keep up,
+      frames are dropped: with the CPU slowed 20× the E2E "slow machine"
+      scenario exports at ~7 fps with 0.28 s stalls. Each pass also re-encodes,
+      losing quality, and the output has no seek index (Cues). Fix by copying
+      encoded packets instead of re-encoding (Mediabunny), with the recorder
+      emitting a keyframe every `SAMPLE_INTERVAL` so every cut lands on one —
+      planned as `bug/lossless-export`. Its E2E `test.fail()` markers in
+      `e2e/export.spec.ts` flip green when it lands
+
+#### Editor
+
+- [ ] **Keep cuts on Back to Editor** — Done's "Back to Editor" remounts
+      `Editor.svelte`, which owns `deletedRanges`, so every cut is lost and the
+      full recording comes back. Lift the cuts into `+page.svelte` (it already
+      holds `exportDeletedRanges`) and pass them down. The E2E test "cuts
+      shorten the final duration and survive a round trip to Done" is marked
+      `test.fail()` until then
+- [ ] **Fix `effectiveToRawTime` at a cut boundary** — in `editorMath.ts`, a
+      kept time that lands exactly on the start of a deleted span maps to that
+      span's start rather than its end (the `remaining <= keptDuration` check),
+      so effective time 0 with the opening seconds cut returns 0. Harmless in
+      the app today because `resolveSeekTarget` snaps it forward, but the
+      function is wrong on its own; add the edge case to
+      `tests/editorMath.spec.ts`
+
+#### App shell
+
+- [ ] **Give the welcome dialog an accessible name** — `WelcomeModal.svelte`
+      renders its heading as a plain `<h2>`, not `Dialog.Title`, so screen
+      readers announce an unnamed dialog. Use `Dialog.Title` (and
+      `Dialog.Description` for the intro line)
+
+#### Deployment
+
+- [ ] **Fix blur under `npm run preview`** — `postbuild` copies the MediaPipe
+      WASM into `build/`, but `vite preview` serves SvelteKit's own output, so
+      turning blur on 404s on `vision_wasm_internal.js`. Pages is unaffected (it
+      serves `build/`), but the README tells people to preview this way. The E2E
+      suite sidesteps it with `scripts/serve-build.js`; either point the
+      README's preview step at that or serve `build/` from `preview`
+
 ### Features
 
 #### Capture

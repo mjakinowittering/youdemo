@@ -42,7 +42,8 @@ thing to check for a "works in dev" asset bug.
 | `npm run dev`          | Vite dev server                                           |
 | `npm run build`        | → `build/`, then runs `postbuild`                         |
 | `npm run postbuild`    | `scripts/copy-mediapipe-wasm.js`                          |
-| `npm run preview`      | serve the built output                                    |
+| `npm run preview`      | serve SvelteKit's output — **without** the vendored WASM, so blur 404s |
+| `npm run test:e2e`     | build, serve `build/` like Pages (`scripts/serve-build.js`), run Playwright |
 | `npm run check`        | `svelte-kit sync` + `svelte-check`                        |
 | `npm run lint`         | `prettier --check .` + `eslint .`                         |
 | `npm run format`       | `prettier --write .` (also runs on every file write hook)  |
@@ -66,8 +67,10 @@ and served by a dev-only Vite middleware. Both paths are described in
 `npm run build` with `BASE_PATH` from `configure-pages` → upload → deploy.
 Concurrency group `pages` with `cancel-in-progress: false`.
 
-`.github/workflows/ci.yml` — `npm run lint`, `npm run check`, `npm test` on every
-PR. It triggers on **`pull_request` only, never `push`**: it's a required status
+`.github/workflows/ci.yml` — on every PR, job `check` runs `npm run lint`,
+`npm run check`, `npm test`, and job `e2e` runs `npm run test:e2e` (report
+uploaded as an artifact on failure). Only `check` is a required status check
+until E2E proves stable in CI. It triggers on **`pull_request` only, never `push`**: it's a required status
 check, and dual triggers would let a cancelled concurrent run post a failing check
 onto the PR head. The header comment in the file explains in full — read it before
 changing the triggers.
