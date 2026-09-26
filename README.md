@@ -58,15 +58,6 @@ Things that would make YouDemo even better — contributions welcome.
       function is wrong on its own; add the edge case to
       `tests/editorMath.spec.ts`
 
-#### Deployment
-
-- [ ] **Fix blur under `npm run preview`** — `postbuild` copies the MediaPipe
-      WASM into `build/`, but `vite preview` serves SvelteKit's own output, so
-      turning blur on 404s on `vision_wasm_internal.js`. Pages is unaffected (it
-      serves `build/`), but the README tells people to preview this way. The E2E
-      suite sidesteps it with `scripts/serve-build.js`; either point the
-      README's preview step at that or serve `build/` from `preview`
-
 ### Features
 
 #### Capture
