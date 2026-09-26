@@ -2,11 +2,15 @@ import { computeEffectiveDuration } from '../src/lib/editorMath';
 import type { DeletedRange } from '../src/lib/types';
 
 import { expect, newAppPage, test, type AppOptions } from './fixtures/app';
-import { checkContent, longestFreeze, losslessShare, maxFrameGap } from './lib/checks';
+import {
+    checkContent,
+    longestFreeze,
+    losslessShare,
+    maxFrameGap,
+    maxKeyframeGap,
+    takeLength
+} from './lib/checks';
 import { Inspector, type Inspection } from './lib/inspect';
-
-const FLAKY =
-    'real-time re-encode drops frames intermittently; bug/lossless-export re-enables this';
 
 interface Scenario {
     /** Seconds per take; more than one means pause/resume. */
@@ -19,6 +23,8 @@ interface Scenario {
      * and Playwright turns background throttling off.)
      */
     slowExport?: number;
+    /** Takes differ in size, so export re-encodes them to one (not lossless). */
+    normalised?: boolean;
     options?: AppOptions;
 }
 
@@ -28,14 +34,6 @@ interface Scenario {
  * which property broke.
  */
 function exportScenario(title: string, scenario: Scenario): void {
-    // Joins and cuts replay in real time today, so their timing varies run to
-    // run and even an unthrottled export drops frames now and then — the
-    // reported bug. Smoothness on the slow machine is the one reliable failure
-    // and is marked test.fail(); the other timing checks on re-encoded exports
-    // are skipped until bug/lossless-export removes the replay.
-    const reencoded = scenario.takes.length > 1 || (scenario.cuts?.length ?? 0) > 0;
-    const slow = !!scenario.slowExport;
-
     test.describe(title, () => {
         let exported: Inspection;
         let takes: Inspection[];
@@ -56,7 +54,9 @@ function exportScenario(title: string, scenario: Scenario): void {
             if (scenario.slowExport) {
                 await cdp.send('Emulation.setCPUThrottlingRate', { rate: scenario.slowExport });
             }
+            const started = Date.now();
             const file = await app.exportAndDownload();
+            const exportMs = Date.now() - started;
             await cdp.send('Emulation.setCPUThrottlingRate', { rate: 1 });
             filename = file.filename;
 
@@ -68,8 +68,11 @@ function exportScenario(title: string, scenario: Scenario): void {
                 type: 'baseline',
                 description: JSON.stringify({
                     maxFrameGap: maxFrameGap(exported),
+                    takeFrameGap: Math.max(...takes.map(maxFrameGap)),
                     longestFreeze: longestFreeze(exported),
                     lossless: losslessShare(exported, takes),
+                    keyframeGap: Math.max(...takes.map(maxKeyframeGap)),
+                    exportMs,
                     content: checkContent(exported, takes, deleted),
                     frames: exported.frames.length,
                     duration: exported.duration
@@ -78,10 +81,14 @@ function exportScenario(title: string, scenario: Scenario): void {
             await app.page.context().close();
         });
 
+        test('the takes have a keyframe on every editor cell', () => {
+            // Cuts copy from the keyframe nearest the cut; see recorder.ts.
+            for (const take of takes) expect(maxKeyframeGap(take)).toBeLessThan(0.22);
+        });
+
         test('plays, with the edited duration', () => {
-            test.skip(slow, FLAKY);
             expect(exported.playError).toBeNull();
-            const joined = takes.reduce((sum, t) => sum + t.duration, 0);
+            const joined = takes.reduce((sum, t) => sum + takeLength(t), 0);
             const expected = computeEffectiveDuration(joined, deleted);
             expect(exported.duration).toBeGreaterThan(expected - 0.3);
             expect(exported.duration).toBeLessThan(expected + 0.3);
@@ -91,17 +98,18 @@ function exportScenario(title: string, scenario: Scenario): void {
             expect(filename).toMatch(/^youdemo-\d{4}-\d{2}-\d{2}-\d{6}\.webm$/);
         });
 
-        test('is smooth: no stalls or frozen frames', () => {
-            // With the CPU slowed 20x the export drops to ~7 fps: the reported
-            // jumpy export. bug/lossless-export makes this pass.
-            test.fail(slow, 'real-time export drops frames when slow');
-            test.skip(reencoded && !slow, FLAKY);
-            expect(maxFrameGap(exported)).toBeLessThan(0.1);
-            expect(longestFreeze(exported)).toBeLessThan(0.1);
+        test('is smooth: adds no stalls or frozen frames', () => {
+            // Measured against the takes: the recorder's own timer can miss a
+            // frame under load, and that is recording, not export. A cut may
+            // add up to one frame at its seam.
+            const allowance = 1 / 30 + 0.005;
+            const takeGap = Math.max(...takes.map(maxFrameGap));
+            const takeFreeze = Math.max(...takes.map(longestFreeze));
+            expect(maxFrameGap(exported)).toBeLessThan(Math.max(0.1, takeGap + allowance));
+            expect(longestFreeze(exported)).toBeLessThan(Math.max(0.1, takeFreeze + allowance));
         });
 
         test('shows the right footage at the right time', () => {
-            test.skip(reencoded, FLAKY);
             const report = checkContent(exported, takes, deleted);
             expect(report.unmatched / exported.frames.length).toBeLessThan(0.02);
             expect(report.deletedShown).toBe(0);
@@ -113,24 +121,21 @@ function exportScenario(title: string, scenario: Scenario): void {
         });
 
         test('has a seek index', () => {
-            // MediaRecorder never writes Cues, and every export is MediaRecorder
-            // output today. bug/lossless-export makes this pass; remove the marker there.
-            test.fail(true, 'MediaRecorder output has no Cues');
-            expect(exported.hasCues).toBe(true);
+            // A single uncut take is the recording itself, which MediaRecorder
+            // writes without Cues; everything export writes has them.
+            const untouched = scenario.takes.length === 1 && !scenario.cuts?.length;
+            expect(exported.hasCues).toBe(!untouched);
         });
 
         test('keeps its audio for the whole video', () => {
             test.skip(!!scenario.options?.noMic, 'no audio source in this scenario');
-            test.skip(slow, FLAKY);
             expect(exported.audio).not.toBeNull();
             expect(Math.abs(exported.audio!.end - exported.duration)).toBeLessThan(0.15);
         });
 
         test('is lossless: every video frame is byte-identical to the recording', () => {
-            // Joins and cuts re-encode through canvas + MediaRecorder today.
-            // bug/lossless-export makes this pass; remove the marker there.
-            test.fail(reencoded, 'export re-encodes joins and cuts');
-            expect(losslessShare(exported, takes)).toBe(1);
+            if (scenario.normalised) expect(losslessShare(exported, takes)).toBe(0);
+            else expect(losslessShare(exported, takes)).toBe(1);
         });
     });
 }
@@ -157,6 +162,18 @@ exportScenario('three takes and a cut, on a slow machine', {
     takes: [2.5, 2.5, 2.5],
     cuts: [[15, 22]],
     slowExport: 20
+});
+exportScenario('three takes of different screen sizes, and a cut', {
+    takes: [2.5, 2.5, 2.5],
+    cuts: [[15, 22]],
+    normalised: true,
+    options: {
+        sizes: [
+            [1280, 720],
+            [1920, 1080],
+            [1280, 720]
+        ]
+    }
 });
 exportScenario('no microphone and no screen audio', {
     takes: [3],

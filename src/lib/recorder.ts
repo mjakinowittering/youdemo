@@ -1,6 +1,7 @@
 import fixWebmDuration from 'fix-webm-duration';
 
 import { BUBBLE_FRAC, bubbleCoords, type BubblePosition } from '$lib/bubbleGeometry.js';
+import { FRAME_RATE, SAMPLE_INTERVAL } from '$lib/editorMath.js';
 
 export interface RecorderOptions {
     screenStream: MediaStream;
@@ -20,8 +21,15 @@ export interface RecorderOptions {
 // budget — uncapped 1440p/4K compositing + encode is the main cause of renderer
 // crashes ("white screen") during recording.
 const MAX_DIM = 1920;
-const VIDEO_BITS_PER_SECOND = 5_000_000;
+/** Also the export fallback's re-encode bitrate (`videoStitcher.ts`). */
+export const VIDEO_BITS_PER_SECOND = 5_000_000;
 const AUDIO_BITS_PER_SECOND = 128_000;
+// A keyframe on every editor cell (6 frames = 0.2 s), so export can cut by
+// copying packets: a copied stretch must start on a keyframe. Chrome's default
+// is a single keyframe at the start. A count, not a duration — 200 ms rounds up
+// to 7-frame groups — and Chrome counts the frames *between* keyframes, hence
+// the − 1 below.
+const KEYFRAME_EVERY = Math.round(SAMPLE_INTERVAL * FRAME_RATE);
 
 // ─── singleton state ──────────────────────────────────────────────────────────
 
@@ -260,16 +268,19 @@ export async function start(options: RecorderOptions): Promise<void> {
     _canvasCaptureTrack = canvasStream.getVideoTracks()[0] as CanvasCaptureMediaStreamTrack;
     _destination.stream.getAudioTracks().forEach((t) => canvasStream.addTrack(t));
 
-    _recorder = new MediaRecorder(canvasStream, {
+    // Not yet in TypeScript's DOM typings; Chromium supports it.
+    const mediaOptions: MediaRecorderOptions & { videoKeyFrameIntervalCount: number } = {
         mimeType: getSupportedMimeType(),
         videoBitsPerSecond: VIDEO_BITS_PER_SECOND,
-        audioBitsPerSecond: AUDIO_BITS_PER_SECOND
-    });
+        audioBitsPerSecond: AUDIO_BITS_PER_SECOND,
+        videoKeyFrameIntervalCount: KEYFRAME_EVERY - 1
+    };
+    _recorder = new MediaRecorder(canvasStream, mediaOptions);
     _recorder.ondataavailable = (e) => {
         if (e.data.size > 0) _chunks.push(e.data);
     };
 
-    _intervalId = setInterval(drawFrame, 1000 / 30);
+    _intervalId = setInterval(drawFrame, 1000 / FRAME_RATE);
     _recorder.start(500);
     _recordingStartTime = Date.now();
 }

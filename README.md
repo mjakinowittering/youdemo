@@ -42,20 +42,6 @@ Things that would make YouDemo even better — contributions welcome.
 
 ### Bugs
 
-#### Export
-
-- [ ] **Fix dropped frames in exports with cuts or several takes** — joining
-      takes (`stitchSegments`) and applying cuts (`renderEditedVideo`) in
-      `videoStitcher.ts` replay the video in real time through a canvas and
-      `MediaRecorder`, driven by `setInterval`. When the machine can't keep up,
-      frames are dropped: with the CPU slowed 20× the E2E "slow machine"
-      scenario exports at ~7 fps with 0.28 s stalls. Each pass also re-encodes,
-      losing quality, and the output has no seek index (Cues). Fix by copying
-      encoded packets instead of re-encoding (Mediabunny), with the recorder
-      emitting a keyframe every `SAMPLE_INTERVAL` so every cut lands on one —
-      planned as `bug/lossless-export`. Its E2E `test.fail()` markers in
-      `e2e/export.spec.ts` flip green when it lands
-
 #### Editor
 
 - [ ] **Keep cuts on Back to Editor** — Done's "Back to Editor" remounts
@@ -219,8 +205,10 @@ the domain root.
 - [TypeScript](https://www.typescriptlang.org/)
 - [Tailwind CSS v4](https://tailwindcss.com/)
 - [shadcn-svelte](https://www.shadcn-svelte.com/)
-- **Canvas + `MediaRecorder`** — recording, plus combining clips and trimming,
-  are all done natively in the browser (no server, no WASM transcoder)
+- **Canvas + `MediaRecorder`** — recording, natively in the browser
+- [Mediabunny](https://mediabunny.dev) — combining clips and trimming by copying
+  the recorded video, so exports lose no quality and take seconds (no server, no
+  WASM transcoder)
 - [MediaPipe Tasks Vision](https://ai.google.dev/edge/mediapipe/solutions/vision/image_segmenter)
   — on-device selfie segmentation for background blur
 - [@lucide/svelte](https://lucide.dev/) — icons

@@ -40,7 +40,17 @@ compositing + encode is the main cause of renderer crashes ("white screen") mid
 recording.
 
 **Bitrates:** `videoBitsPerSecond: 5_000_000`, `audioBitsPerSecond: 128_000`.
-(The stitcher uses 8 Mbps — see `video-export`.)
+`VIDEO_BITS_PER_SECOND` is exported: export's re-encode fallback reuses it.
+
+**A keyframe on every editor cell** — `videoKeyFrameIntervalCount` is one less
+than `KEYFRAME_EVERY`, which is `SAMPLE_INTERVAL × FRAME_RATE` (6 frames = 0.2 s).
+Export cuts by copying packets, and a copied stretch must start on a keyframe;
+Chrome's default is one keyframe at the start, which would make every cut snap
+to 0 or force a re-encode. Chrome counts the frames *between* keyframes (5 gives
+a key every 6th frame), and a duration (`videoKeyFrameIntervalDuration: 200`)
+rounds up to 7-frame groups. The option isn't in TypeScript's DOM typings yet,
+hence the intersection type. The E2E export suite checks the spacing. See
+`video-export`.
 
 **Codec probe** — first supported wins:
 

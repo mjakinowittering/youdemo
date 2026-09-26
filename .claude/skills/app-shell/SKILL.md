@@ -55,8 +55,9 @@ not as its own component.
 ## Combined Editor source
 
 On entering the Editor, `goToEditor()` builds **one** WebM and caches it as
-`editorBlob`: multiple segments go through `stitchSegments` (real-time, shows
-`stitching`), a single segment is used as-is. The Editor's player, timeline,
+`editorBlob`: multiple segments go through `stitchSegments` (a lossless packet
+copy, usually well under a second, shows `stitching`), a single segment is used
+as-is. The Editor's player, timeline,
 thumbnails, duration and cuts all run off this one blob, and the same blob feeds
 export (`Processing` receives `[editorBlob]`).
 
