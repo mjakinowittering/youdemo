@@ -44,7 +44,7 @@ skill is more detailed, the skill wins on the _how_.
 | `editor-timeline`   | the Editor, playback, seeking, trimming, frame strip, `editorMath`                  |
 | `video-export`      | export, stitching, `videoStitcher.ts`, Processing, Done                             |
 | `persistence`       | localStorage, `deviceStore`, OPFS crash recovery                                    |
-| `testing`           | stories, Vitest, testability                                                        |
+| `testing`           | stories, Vitest, Playwright E2E, testability                                        |
 | `deployment`        | build, GitHub Pages, base paths, CI/deploy workflows, meta/OG tags                  |
 | `ascii-wireframes`  | any change a user will see, before it's built; a data flow worth a sequence diagram |
 | `branch-and-commit` | branching, staging, commit messages, pushing, PRs                                   |
@@ -56,8 +56,8 @@ skill is more detailed, the skill wins on the _how_.
 
 SvelteKit + `adapter-static` · Svelte 5 runes · TypeScript · Tailwind v4
 (CSS-first) · shadcn-svelte · `@lucide/svelte` · canvas + `MediaRecorder` ·
-fix-webm-duration · `@mediapipe/tasks-vision` · Vitest (3 projects) + Storybook
-· ESLint + Prettier · npm · GitHub Pages.
+fix-webm-duration · `@mediapipe/tasks-vision` · Vitest (3 projects) +
+Storybook + Playwright E2E · ESLint + Prettier · npm · GitHub Pages.
 
 ## App Structure
 
@@ -96,8 +96,9 @@ src/
       ui/                   # shadcn-svelte generated — do not hand-edit
   stories/                  # Storybook, mirrors the component folders
 tests/                      # Vitest node specs
+e2e/                        # Playwright E2E: fixtures/, lib/ (export checks), *.spec.ts
 .storybook/                 # main.ts, preview.ts
-scripts/copy-mediapipe-wasm.js
+scripts/copy-mediapipe-wasm.js  serve-build.js
 ```
 
 ## State Machine (`+page.svelte`)
