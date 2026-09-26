@@ -300,8 +300,8 @@
     async function goToEditor() {
         try {
             // Build (once) a single combined source so the Editor timeline, scrubbing
-            // and cuts span the whole recording. Multiple segments are joined natively
-            // via stitchSegments (real-time); the result is cached until segments change.
+            // and cuts span the whole recording. Multiple segments are joined losslessly
+            // via stitchSegments (a packet copy); the result is cached until segments change.
             if (!editorBlob) {
                 if (segments.length > 1) {
                     stitchProgress = 0;

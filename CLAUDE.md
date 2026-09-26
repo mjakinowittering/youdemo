@@ -56,8 +56,8 @@ skill is more detailed, the skill wins on the _how_.
 
 SvelteKit + `adapter-static` · Svelte 5 runes · TypeScript · Tailwind v4
 (CSS-first) · shadcn-svelte · `@lucide/svelte` · canvas + `MediaRecorder` ·
-fix-webm-duration · `@mediapipe/tasks-vision` · Vitest (3 projects) +
-Storybook + Playwright E2E · ESLint + Prettier · npm · GitHub Pages.
+fix-webm-duration · Mediabunny · `@mediapipe/tasks-vision` · Vitest (3
+projects) + Storybook + Playwright E2E · ESLint + Prettier · npm · GitHub Pages.
 
 ## App Structure
 
@@ -72,7 +72,8 @@ src/
   app.html                  # dark by default, meta/OG/Twitter tags
   lib/
     recorder.ts             # Canvas compositor, MediaRecorder, audio mixer
-    videoStitcher.ts        # Native export: stitchSegments + renderEditedVideo
+    videoStitcher.ts        # Lossless export: stitchSegments + renderEditedVideo
+    remuxPlan.ts            # Pure packet planning for joins and cuts (unit-tested)
     blurProcessor.ts        # MediaPipe selfie-segmentation background blur
     crashStore.ts           # OPFS crash recovery, one file per take
     deviceStore.svelte.ts   # Rune store: selected mic/cam ids, persisted
@@ -135,11 +136,11 @@ Full transition table, camera lifecycle and reset contract: **`app-shell`**.
 
 **Capture & export**
 
-- **`setInterval`, not rAF**, and `captureStream(0)` + `requestFrame()`, in
-  every capture/encode loop. **Opaque canvases** (`{ alpha: false }`) in the
-  recorder and stitcher. Why: **`capture-pipeline`**.
-- **Native export — never reintroduce ffmpeg/WASM transcoding** without reading
-  the history in **`video-export`**.
+- **`setInterval`, not rAF**, and `captureStream(0)` + `requestFrame()`, in the
+  recorder's capture loop. **Opaque canvases** (`{ alpha: false }`) wherever
+  frames are drawn for encoding. Why: **`capture-pipeline`**.
+- **Export copies packets — never a real-time replay, and never reintroduce
+  ffmpeg/WASM transcoding** without reading the history in **`video-export`**.
 
 **UI**
 

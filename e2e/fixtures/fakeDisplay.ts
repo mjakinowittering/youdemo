@@ -14,6 +14,8 @@ export interface FakeDisplayOptions {
      * microphone, and the screen shares no audio. The case behind e6990f1.
      */
     noMic?: boolean;
+    /** Screen size per getDisplayMedia call, cycling; defaults to WIDTH × HEIGHT. */
+    sizes?: [number, number][];
 }
 
 export const WIDTH = 1280;
@@ -42,7 +44,8 @@ export function installFakeDisplay(
         codeMs: number;
     }
 ): void {
-    const { width, height, barcode, codeMs } = opts;
+    const { barcode, codeMs } = opts;
+    let calls = 0;
     const origin = performance.now();
     const tracks: MediaStreamTrack[] = [];
 
@@ -56,7 +59,7 @@ export function installFakeDisplay(
         }
     };
 
-    function paint(ctx: CanvasRenderingContext2D): void {
+    function paint(ctx: CanvasRenderingContext2D, width: number, height: number): void {
         const ms = performance.now() - origin;
         const code = Math.floor(ms / codeMs) & 0xffff;
         ctx.fillStyle = '#404040';
@@ -79,12 +82,16 @@ export function installFakeDisplay(
     md.getDisplayMedia = async (constraints?: DisplayMediaStreamOptions) => {
         if (opts.cancel) throw new DOMException('Permission denied', 'NotAllowedError');
         const canvas = document.createElement('canvas');
+        const [width, height] = opts.sizes?.[calls++ % opts.sizes.length] ?? [
+            opts.width,
+            opts.height
+        ];
         canvas.width = width;
         canvas.height = height;
         const ctx = canvas.getContext('2d', { alpha: false })!;
-        paint(ctx);
+        paint(ctx, width, height);
         const stream = canvas.captureStream(30);
-        const id = setInterval(() => paint(ctx), 1000 / 30);
+        const id = setInterval(() => paint(ctx, width, height), 1000 / 30);
         const video = stream.getVideoTracks()[0];
         video.addEventListener('ended', () => clearInterval(id));
         tracks.length = 0;

@@ -1,4 +1,5 @@
 import { effectiveToRawTime, resolveSeekTarget } from '../../src/lib/editorMath';
+import { maxKeyframeGap as keyframeGap } from '../../src/lib/remuxPlan';
 import type { DeletedRange } from '../../src/lib/types';
 
 import type { Inspection } from './inspect';
@@ -37,20 +38,39 @@ export function losslessShare(file: Inspection, takes: Inspection[]): number {
 }
 
 /**
+ * How long a take lasts on the joined timeline: where its last video frame or
+ * audio packet ends, as `takeEnd` in remuxPlan.ts measures it.
+ */
+export function takeLength(take: Inspection): number {
+    const lastFrame = take.frames.at(-1)?.ts ?? 0;
+    return Math.max(lastFrame + 1 / 30, take.audio?.end ?? 0);
+}
+
+/**
  * Where each take's frames sit on the joined timeline the editor shows: takes
- * back to back, each starting where the previous one's duration ends.
+ * back to back, each starting where the previous one ends.
  */
 function joinedFrames(takes: Inspection[]): { code: number; joined: number }[] {
     const out: { code: number; joined: number }[] = [];
     let offset = 0;
     for (const take of takes) {
-        const first = take.frames[0]?.ts ?? 0;
         for (const f of take.frames) {
-            if (f.code !== -1) out.push({ code: f.code, joined: offset + f.ts - first });
+            if (f.code !== -1) out.push({ code: f.code, joined: offset + f.ts });
         }
-        offset += take.duration;
+        offset += takeLength(take);
     }
     return out;
+}
+
+/** Longest stretch of a file's video without a keyframe (see remuxPlan.ts). */
+export function maxKeyframeGap(file: Inspection): number {
+    return keyframeGap(
+        file.packets.map((p, i, all) => ({
+            ts: p.ts,
+            key: p.key,
+            dur: (all[i + 1]?.ts ?? p.ts + 1 / 30) - p.ts
+        }))
+    );
 }
 
 export interface ContentReport {
@@ -70,10 +90,11 @@ export function checkContent(
     file: Inspection,
     takes: Inspection[],
     deleted: DeletedRange[],
-    edge = 0.1
+    // Cuts start on the keyframe nearest the cut, up to ~0.1 s either side.
+    edge = 0.15
 ): ContentReport {
     const source = joinedFrames(takes);
-    const joinedDuration = takes.reduce((sum, t) => sum + t.duration, 0);
+    const joinedDuration = takes.reduce((sum, t) => sum + takeLength(t), 0);
     const first = file.frames[0]?.ts ?? 0;
     let unmatched = 0;
     let maxError = 0;
@@ -95,12 +116,14 @@ export function checkContent(
             continue;
         }
         // effectiveToRawTime maps a kept-range boundary onto the start of the
-        // deleted span before it; the editor snaps past it the same way.
-        const expected = resolveSeekTarget(
-            effectiveToRawTime(f.ts - first, deleted, joinedDuration),
-            deleted
+        // deleted span before it; the editor snaps past it the same way. A frame
+        // at a seam can sit either side of it, so allow one frame either way.
+        const expected = (t: number) =>
+            resolveSeekTarget(effectiveToRawTime(t, deleted, joinedDuration), deleted);
+        const error = Math.min(
+            ...[-1, 0, 1].map((n) => Math.abs(best.joined - expected(f.ts - first + n / 30)))
         );
-        maxError = Math.max(maxError, Math.abs(best.joined - expected));
+        maxError = Math.max(maxError, error);
         if (
             deleted.some((d) => best.joined > d.startTime + edge && best.joined < d.endTime - edge)
         ) {

@@ -78,10 +78,10 @@ normally — never let a storage failure surface to the user.
 
 ### Why per-take files
 
-Rather than eagerly maintaining one combined file. Nothing is re-encoded on the
-hot path: takes are stitched **once**, at Editor entry (the existing `stitching`
-step). Re-stitching the whole recording on every Stop would cost generational
-quality loss plus a wait proportional to total length, every time.
+Rather than eagerly maintaining one combined file. Each Stop writes only the new
+take, and a take already on disk is never rewritten, so a crash mid-write can
+only lose the take being written. Takes are joined **once**, at Editor entry (the
+existing `stitching` step) — a lossless packet copy, see `video-export`.
 
 ### Wiring in `+page.svelte`
 
