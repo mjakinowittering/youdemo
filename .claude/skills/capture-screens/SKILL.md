@@ -57,6 +57,9 @@ the bubble lines up with the composited frame (see `capture-pipeline`).
   centre-crop, matching the recorder). Falls back to a "No cam" placeholder.
 - Prefers `processedStream` (blurred) over the raw `stream` when present, so the
   preview shows exactly what gets recorded.
+- While `loading` (blur being set up), a `role="status"` overlay dims the raw
+  preview under a white `LoaderCircle` spinner, so the unblurred frame is never
+  mistaken for blur.
 - Visible in Setup only — hidden from countdown onwards.
 
 ## Countdown.svelte

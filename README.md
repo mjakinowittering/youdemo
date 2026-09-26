@@ -42,6 +42,18 @@ Things that would make YouDemo even better — contributions welcome.
 
 ### Bugs
 
+#### Capture
+
+- [ ] **Handle blur failing to load** — if `createBlurProcessor` rejects (WASM
+      or model 404, no GPU or CPU delegate), the blur effect in `+page.svelte`
+      doesn't catch it: the loading overlay clears and Setup previews the raw
+      camera while the blur button still reads on. Then `startRecording`'s
+      `await blurReady` rethrows once the countdown ends, and the global
+      unhandled-rejection handler swaps in the `ErrorScreen`, so the take never
+      starts. Catch it in the effect, turn `blurOn` off and tell the user blur
+      isn't available. Because blur is a privacy control, the fix must never
+      record an unblurred background while the button says blur is on
+
 #### Editor
 
 - [ ] **Keep cuts on Back to Editor** — Done's "Back to Editor" remounts
@@ -63,10 +75,6 @@ Things that would make YouDemo even better — contributions welcome.
 #### Capture
 
 - [ ] **Live Recording Preview** — show the composited video as it happens
-- [ ] **Blur loading indicator** — surface progress when the on-device
-      segmentation model and WASM runtime are downloading/initialising on first
-      blur toggle, so the brief delay before blur appears is clearly
-      communicated
 - [ ] **Recording resolution cap** — option to cap the recording resolution
       (e.g. 1280×720) for smaller file sizes
 
@@ -151,7 +159,7 @@ npm run dev
 # Build for production
 npm run build
 
-# Preview the production build locally
+# Preview the production build locally (run `npm run build` first)
 npm run preview
 
 # Run tests

@@ -19,6 +19,7 @@
             micMuted: { control: 'boolean' },
             camEnabled: { control: 'boolean' },
             blurOn: { control: 'boolean' },
+            blurLoading: { control: 'boolean' },
             blurIntensity: {
                 control: { type: 'select' },
                 options: ['light', 'default', 'heavy']
@@ -36,6 +37,7 @@
             micMuted: false,
             camEnabled: true,
             blurOn: false,
+            blurLoading: false,
             blurIntensity: 'default',
             bubblePosition: 'tr'
         }
@@ -57,3 +59,5 @@
 <Story name="Camera off" args={{ camEnabled: false }} />
 
 <Story name="Blur on" args={{ blurOn: true, blurIntensity: 'heavy' }} />
+
+<Story name="Blur loading" args={{ blurOn: true, blurLoading: true }} />

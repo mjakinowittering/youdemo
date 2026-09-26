@@ -81,6 +81,11 @@ values.
    `setIntensity()` on the running processor (via `untrack`, so it doesn't
    re-create anything).
 
+`blurLoading` is true from the start of creation until the processor is published,
+creation fails, or the effect is torn down. It goes to Setup only, where
+`WebcamBubble` dims the raw preview under a spinner (see `capture-screens`); no
+other screen can be mid-load.
+
 `startRecording()` awaits a `blurReady` promise so an in-flight processor is locked
 into the recording from the first frame.
 

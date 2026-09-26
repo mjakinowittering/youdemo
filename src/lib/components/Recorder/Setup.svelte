@@ -24,6 +24,7 @@
         blurIntensity?: BlurIntensity;
         bubblePosition?: BubblePosition;
         processedStream?: MediaStream | null;
+        blurLoading?: boolean;
     }
 
     let {
@@ -35,7 +36,8 @@
         blurOn = $bindable(false),
         blurIntensity = $bindable<BlurIntensity>('default'),
         bubblePosition = $bindable<BubblePosition>('tr'),
-        processedStream = null
+        processedStream = null,
+        blurLoading = false
     }: Props = $props();
 
     let pickError = $state('');
@@ -182,6 +184,7 @@
                 bind:position={bubblePosition}
                 stream={webcamStream}
                 {processedStream}
+                loading={blurLoading}
                 {screenAspect}
             />
         {/if}

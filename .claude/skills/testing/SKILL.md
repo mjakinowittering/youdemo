@@ -111,8 +111,8 @@ browser project.
 
 `npm run test:e2e` — `@playwright/test` specs in `e2e/`, one per area (first
 visit, setup, capture, editor, export, lifecycle). They drive the **production
-build under `/youdemo/`**, served like Pages by `scripts/serve-build.js` (not
-`vite preview`, which lacks the MediaPipe WASM `postbuild` copies into `build/`).
+build under `/youdemo/`**, served like Pages by `npm run preview`
+(`scripts/serve-build.js`).
 One worker: recording is real time.
 
 - **No test hooks in the app.** Specs drive screens by role and visible text
