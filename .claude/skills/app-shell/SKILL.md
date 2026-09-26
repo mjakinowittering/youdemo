@@ -81,7 +81,7 @@ The webcam and blur processor are live **only** during the capture flow
 
 ## Full reset (`resetToSetup`)
 
-**Cleared:** `screenStream` (tracks stopped), webcam + blur (via
+**Cleared:** `screenStream` (tracks stopped), `previewStream`, webcam + blur (via
 `releaseCamera()`), `segments`, `editorBlob`, `editorVideoUrl` (revoked),
 `outputBlob`, `bubblePosition`, `exportDeletedRanges`, all progress/elapsed
 counters, and OPFS takes (`crashStore.clear()`).

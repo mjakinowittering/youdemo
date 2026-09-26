@@ -7,6 +7,7 @@
         bubbleCoords,
         type BubblePosition
     } from '$lib/bubbleGeometry.js';
+    import { srcObject } from '$lib/utils.js';
 
     interface Props {
         position?: BubblePosition;
@@ -68,15 +69,6 @@
     let snapTarget = $derived(dragging ? nearest(dragLeft, dragTop) : position);
     let bx = $derived(dragging ? dragLeft : coords(position).x);
     let by = $derived(dragging ? dragTop : coords(position).y);
-
-    function setSrcObject(s: MediaStream | null) {
-        return (node: HTMLVideoElement) => {
-            node.srcObject = s;
-            return () => {
-                node.srcObject = null;
-            };
-        };
-    }
 
     function attachContainer(node: HTMLDivElement) {
         containerEl = node;
@@ -146,7 +138,7 @@
         >
             {#if processedStream ?? stream}
                 <video
-                    {@attach setSrcObject(processedStream ?? stream)}
+                    {@attach srcObject(processedStream ?? stream)}
                     autoplay
                     muted
                     playsinline

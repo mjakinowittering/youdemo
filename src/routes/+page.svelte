@@ -19,7 +19,11 @@
     import type { BubblePosition } from '$lib/bubbleGeometry.js';
     import * as crashStore from '$lib/crashStore.js';
     import { deviceStore } from '$lib/deviceStore.svelte.js';
-    import { start as recorderStart, stop as recorderStop } from '$lib/recorder.js';
+    import {
+        DISPLAY_MEDIA_OPTIONS,
+        start as recorderStart,
+        stop as recorderStop
+    } from '$lib/recorder.js';
     import { titleFor } from '$lib/titles.js';
     import type { AppState, DeletedRange } from '$lib/types.js';
     import { stitchSegments } from '$lib/videoStitcher.js';
@@ -52,6 +56,8 @@
     // Raw webcam stream — owned here so it outlives Setup and feeds the recorder /
     // blur processor across a resume, with deterministic teardown on full reset.
     let webcamStream = $state<MediaStream | null>(null);
+    // The recorder's composited canvas track, shown live on the Recording screen.
+    let previewStream = $state<MediaStream | null>(null);
     let segments = $state<Blob[]>([]);
     let editorVideoUrl = $state<string | null>(null);
     // Single combined source for the Editor + export. Built (stitched) from
@@ -231,7 +237,7 @@
         // Ensure any in-flight blur processor creation has finished so the
         // blurred stream is locked into the recording from the first frame.
         await blurReady;
-        await recorderStart({
+        previewStream = await recorderStart({
             screenStream: screenStream!,
             webcamStream,
             micDeviceId: deviceStore.micDeviceId,
@@ -246,6 +252,7 @@
 
     async function stopRecording() {
         const blob = await recorderStop();
+        previewStream = null;
         _totalElapsedSec += Math.round((Date.now() - sessionStartMs) / 1000);
         segments = [...segments, blob];
         // A new segment invalidates any previously stitched Editor source.
@@ -263,6 +270,7 @@
             screenStream.getTracks().forEach((t) => t.stop());
         }
         screenStream = null;
+        previewStream = null;
         // Keep micMuted / camEnabled / blurOn — these preferences are preserved
         // across a full reset (and reload). releaseCamera() nulls webcamStream,
         // which tears the blur processor down; it rebuilds on the next armCamera()
@@ -286,10 +294,7 @@
 
     async function handleResume() {
         try {
-            const newStream = await navigator.mediaDevices.getDisplayMedia({
-                video: true,
-                audio: true
-            });
+            const newStream = await navigator.mediaDevices.getDisplayMedia(DISPLAY_MEDIA_OPTIONS);
             if (screenStream) {
                 screenStream.getTracks().forEach((t) => t.stop());
             }
@@ -405,6 +410,7 @@
     {:else if appState === 'recording'}
         <Recording
             {screenStream}
+            {previewStream}
             bind:micMuted
             bind:camEnabled
             bind:blurOn

@@ -9,7 +9,8 @@
     import type { BlurIntensity } from '$lib/blurProcessor.js';
     import type { BubblePosition } from '$lib/bubbleGeometry.js';
     import { deviceStore } from '$lib/deviceStore.svelte.js';
-    import { cn } from '$lib/utils.js';
+    import { DISPLAY_MEDIA_OPTIONS } from '$lib/recorder.js';
+    import { cn, srcObject } from '$lib/utils.js';
 
     import ControlBar from './ControlBar.svelte';
     import WebcamBubble from './WebcamBubble.svelte';
@@ -44,23 +45,11 @@
     let picking = $state(false);
     let screenAspect = $state(0);
 
-    function setSrcObject(stream: MediaStream | null) {
-        return (node: HTMLVideoElement) => {
-            node.srcObject = stream;
-            return () => {
-                node.srcObject = null;
-            };
-        };
-    }
-
     async function pickScreen() {
         try {
             pickError = '';
             picking = true;
-            const stream = await navigator.mediaDevices.getDisplayMedia({
-                video: true,
-                audio: true
-            });
+            const stream = await navigator.mediaDevices.getDisplayMedia(DISPLAY_MEDIA_OPTIONS);
             screenStream = stream;
             // Recording auto-starts the moment a screen is picked — no separate
             // "Start Recording" step. Applies to any surface (tab, window, screen).
@@ -127,7 +116,7 @@
     <div class="relative flex flex-1 items-center justify-center overflow-hidden bg-black/20">
         {#if screenStream}
             <video
-                {@attach setSrcObject(screenStream)}
+                {@attach srcObject(screenStream)}
                 autoplay
                 muted
                 playsinline

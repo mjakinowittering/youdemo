@@ -24,6 +24,14 @@ const MAX_DIM = 1920;
 /** Also the export fallback's re-encode bitrate (`videoStitcher.ts`). */
 export const VIDEO_BITS_PER_SECOND = 5_000_000;
 const AUDIO_BITS_PER_SECOND = 128_000;
+
+/**
+ * The screen picker request, shared by Setup and Resume. Excluding YouDemo's own
+ * tab stops the live preview being recorded inside itself. Not yet in
+ * TypeScript's DOM typings; Chromium supports it.
+ */
+export const DISPLAY_MEDIA_OPTIONS: DisplayMediaStreamOptions & { selfBrowserSurface: 'exclude' } =
+    { video: true, audio: true, selfBrowserSurface: 'exclude' };
 // A keyframe on every editor cell (6 frames = 0.2 s), so export can cut by
 // copying packets: a copied stretch must start on a keyframe. Chrome's default
 // is a single keyframe at the start. A count, not a duration — 200 ms rounds up
@@ -166,7 +174,11 @@ function cleanup(): void {
 
 // ─── public API ───────────────────────────────────────────────────────────────
 
-export async function start(options: RecorderOptions): Promise<void> {
+/**
+ * Starts recording. Resolves with a video-only stream of the composited canvas —
+ * the very track being encoded — for the Recording screen's live preview.
+ */
+export async function start(options: RecorderOptions): Promise<MediaStream> {
     const { screenStream, webcamStream, micDeviceId, bubblePosition, micMuted, camEnabled } =
         options;
     _camEnabled = camEnabled;
@@ -283,6 +295,7 @@ export async function start(options: RecorderOptions): Promise<void> {
     _intervalId = setInterval(drawFrame, 1000 / FRAME_RATE);
     _recorder.start(500);
     _recordingStartTime = Date.now();
+    return new MediaStream([_canvasCaptureTrack]);
 }
 
 export function stop(): Promise<Blob> {

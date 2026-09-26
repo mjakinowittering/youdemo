@@ -54,7 +54,7 @@ export class App {
         else await this.card(/No screen selected/).click();
         await expect(this.page.getByText('REC', { exact: true })).toBeVisible({ timeout: 10_000 });
         await this.page.waitForTimeout(seconds * 1000);
-        await this.card(/Recording in progress/).click();
+        await this.stopButton.click();
         await expect(this.card(/Resume recording/)).toBeVisible({ timeout: 10_000 });
     }
 
@@ -76,6 +76,10 @@ export class App {
                 { intervals: [300], timeout: 10_000 }
             )
             .toBe(true);
+    }
+
+    get stopButton() {
+        return this.page.getByRole('button', { name: 'Stop Recording' });
     }
 
     get exportButton() {
