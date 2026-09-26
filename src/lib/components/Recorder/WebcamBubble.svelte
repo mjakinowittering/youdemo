@@ -1,4 +1,6 @@
 <script lang="ts">
+    import LoaderCircle from '@lucide/svelte/icons/loader-circle';
+
     import {
         BUBBLE_FRAC,
         BUBBLE_POSITIONS,
@@ -10,6 +12,8 @@
         position?: BubblePosition;
         stream?: MediaStream | null;
         processedStream?: MediaStream | null;
+        /** Blur is being set up — dims the raw preview under a spinner. */
+        loading?: boolean;
         /** Screen frame aspect ratio (width / height). 0 → fill container. */
         screenAspect?: number;
     }
@@ -18,6 +22,7 @@
         position = $bindable('tr'),
         stream = null,
         processedStream = null,
+        loading = false,
         screenAspect = 0
     }: Props = $props();
 
@@ -150,6 +155,15 @@
             {:else}
                 <div class="flex size-full items-center justify-center bg-muted">
                     <span class="text-xs text-muted-foreground">No cam</span>
+                </div>
+            {/if}
+            {#if loading}
+                <div
+                    role="status"
+                    class="absolute inset-0 flex items-center justify-center bg-black/50"
+                >
+                    <LoaderCircle class="size-8 animate-spin text-white" aria-hidden="true" />
+                    <span class="sr-only">Loading background blur…</span>
                 </div>
             {/if}
         </div>
