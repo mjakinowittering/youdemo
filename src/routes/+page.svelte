@@ -86,6 +86,9 @@
     // reactively by the $effect below; `blurReady` lets startRecording await an
     // in-flight creation so blur is guaranteed present in the recorded output.
     let processedWebcamStream = $state<MediaStream | null>(null);
+    // True while a processor is being created, so Setup can show that blur is on
+    // its way rather than silently previewing the raw camera.
+    let blurLoading = $state(false);
     let blurProcessor: BlurProcessor | null = null;
     let blurReady: Promise<void> = Promise.resolve();
 
@@ -124,21 +127,27 @@
         const stream = webcamStream;
         if (!on || !stream) return;
         let cancelled = false;
+        blurLoading = true;
         blurReady = (async () => {
-            const p = await createBlurProcessor(
-                stream,
-                untrack(() => blurIntensity),
-                base
-            );
-            if (cancelled) {
-                p.destroy();
-                return;
+            try {
+                const p = await createBlurProcessor(
+                    stream,
+                    untrack(() => blurIntensity),
+                    base
+                );
+                if (cancelled) {
+                    p.destroy();
+                    return;
+                }
+                blurProcessor = p;
+                processedWebcamStream = p.outputStream;
+            } finally {
+                if (!cancelled) blurLoading = false;
             }
-            blurProcessor = p;
-            processedWebcamStream = p.outputStream;
         })();
         return () => {
             cancelled = true;
+            blurLoading = false;
             blurProcessor?.destroy();
             blurProcessor = null;
             processedWebcamStream = null;
@@ -388,6 +397,7 @@
             bind:blurOn
             bind:blurIntensity
             processedStream={processedWebcamStream}
+            {blurLoading}
             onstart={goToCountdown}
         />
     {:else if appState === 'countdown'}
