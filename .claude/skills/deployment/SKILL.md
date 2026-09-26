@@ -42,8 +42,8 @@ thing to check for a "works in dev" asset bug.
 | `npm run dev`          | Vite dev server                                           |
 | `npm run build`        | → `build/`, then runs `postbuild`                         |
 | `npm run postbuild`    | `scripts/copy-mediapipe-wasm.js`                          |
-| `npm run preview`      | serve SvelteKit's output — **without** the vendored WASM, so blur 404s |
-| `npm run test:e2e`     | build, serve `build/` like Pages (`scripts/serve-build.js`), run Playwright |
+| `npm run preview`      | serve `build/` like Pages (`scripts/serve-build.js`); set `BASE_PATH` to match the build |
+| `npm run test:e2e`     | build, then `preview` under `/youdemo/`, run Playwright   |
 | `npm run check`        | `svelte-kit sync` + `svelte-check`                        |
 | `npm run lint`         | `prettier --check .` + `eslint .`                         |
 | `npm run format`       | `prettier --write .` (also runs on every file write hook)  |

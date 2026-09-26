@@ -2,12 +2,12 @@ import { readFile, stat } from 'node:fs/promises';
 import { createServer } from 'node:http';
 import { extname, join, normalize } from 'node:path';
 
-// Serves build/ the way GitHub Pages does: under /youdemo/, index.html for
-// directories, 404.html otherwise. `vite preview` serves SvelteKit's own
-// output instead, which lacks the MediaPipe WASM that postbuild copies into
-// build/, so the E2E suite uses this.
+// Serves build/ the way GitHub Pages does: under BASE_PATH (match the build),
+// index.html for directories, 404.html otherwise. Backs `npm run preview` and
+// the E2E suite. Not `vite preview`: that serves SvelteKit's own output, which
+// lacks the MediaPipe WASM that postbuild copies into build/.
 
-const BASE = '/youdemo';
+const BASE = process.env.BASE_PATH ?? '';
 const ROOT = 'build';
 const PORT = Number(process.env.PORT ?? 4173);
 const TYPES = {

@@ -7,7 +7,7 @@
         "dev": "vite dev",
         "build": "vite build",
         "postbuild": "node scripts/copy-mediapipe-wasm.js",
-        "preview": "vite preview",
+        "preview": "node scripts/serve-build.js",
         "prepare": "svelte-kit sync || echo ''",
         "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
         "check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
