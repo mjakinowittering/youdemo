@@ -28,12 +28,28 @@
             onstop: fn(),
             onstreamended: fn(),
             screenStream: null,
+            previewStream: null,
             micMuted: false,
             camEnabled: true,
             blurOn: false,
             blurIntensity: 'default'
         }
     });
+
+    // Stands in for the recorder's composited canvas track: one static 16:9 frame.
+    function fakePreview(): MediaStream {
+        const canvas = document.createElement('canvas');
+        canvas.width = 1280;
+        canvas.height = 720;
+        const ctx = canvas.getContext('2d', { alpha: false })!;
+        ctx.fillStyle = '#1e1b4b';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = '#6366f1';
+        ctx.beginPath();
+        ctx.arc(1100, 140, 90, 0, Math.PI * 2);
+        ctx.fill();
+        return canvas.captureStream();
+    }
 </script>
 
 <!--
@@ -49,6 +65,8 @@
 {/snippet}
 
 <Story name="Default" />
+
+<Story name="Live preview" args={{ previewStream: fakePreview() }} />
 
 <Story name="Mic muted" args={{ micMuted: true }} />
 

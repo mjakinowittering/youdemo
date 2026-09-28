@@ -4,12 +4,13 @@
     import { onDestroy, onMount } from 'svelte';
 
     import { buttonVariants } from '$lib/components/ui/button/button.svelte';
+    import { Button } from '$lib/components/ui/button/index.js';
     import * as Card from '$lib/components/ui/card/index.js';
     import * as Empty from '$lib/components/ui/empty/index.js';
 
     import type { BlurIntensity } from '$lib/blurProcessor.js';
     import { formatElapsed } from '$lib/titles.js';
-    import { cn } from '$lib/utils.js';
+    import { cn, srcObject } from '$lib/utils.js';
 
     import ControlBar from './ControlBar.svelte';
 
@@ -17,6 +18,8 @@
         onstop: () => void;
         onstreamended?: () => void;
         screenStream?: MediaStream | null;
+        /** The composited frame being encoded; without one, the stop card shows instead. */
+        previewStream?: MediaStream | null;
         micMuted?: boolean;
         camEnabled?: boolean;
         blurOn?: boolean;
@@ -28,6 +31,7 @@
         onstop,
         onstreamended = () => {},
         screenStream = null,
+        previewStream = null,
         micMuted = $bindable(false),
         camEnabled = $bindable(true),
         blurOn = $bindable(false),
@@ -67,43 +71,60 @@
 
 <div class="flex h-full flex-col bg-black/20">
     <div class="relative flex flex-1 items-center justify-center overflow-hidden">
-        <Card.Root
-            role="button"
-            tabindex={0}
-            onclick={stop}
-            onkeydown={(e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault();
-                    stop();
-                }
-            }}
-            class={cn(
-                'max-w-xl flex-1 cursor-pointer items-center justify-center border-0 ring-2 ring-foreground/25 ring-offset-4 ring-offset-transparent transition-colors hover:ring-destructive focus-visible:ring-destructive focus-visible:outline-none'
-            )}
-        >
-            <Empty.Root>
-                <Empty.Media>
-                    <Tv size={128} class="text-muted-foreground" />
-                </Empty.Media>
-                <Empty.Header>
-                    <Empty.Title>Recording in progress</Empty.Title>
-                    <Empty.Description>
-                        Your screen and webcam are being captured. Click below when you're done.
-                    </Empty.Description>
-                </Empty.Header>
-                <Empty.Content>
-                    <div
-                        class={cn(
-                            buttonVariants({ variant: 'destructive', size: 'lg' }),
-                            'pointer-events-none'
-                        )}
-                    >
-                        <Square class="mr-1 size-4 fill-current" />
-                        Stop Recording
-                    </div>
-                </Empty.Content>
-            </Empty.Root>
-        </Card.Root>
+        {#if previewStream}
+            <div class="flex size-full flex-col items-center gap-4 p-4 pt-14">
+                <video
+                    {@attach srcObject(previewStream)}
+                    autoplay
+                    muted
+                    playsinline
+                    aria-label="Live recording preview"
+                    class="min-h-0 w-full flex-1 object-contain"
+                ></video>
+                <Button variant="destructive" size="lg" onclick={stop}>
+                    <Square class="mr-1 size-4 fill-current" />
+                    Stop Recording
+                </Button>
+            </div>
+        {:else}
+            <Card.Root
+                role="button"
+                tabindex={0}
+                onclick={stop}
+                onkeydown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        stop();
+                    }
+                }}
+                class={cn(
+                    'max-w-xl flex-1 cursor-pointer items-center justify-center border-0 ring-2 ring-foreground/25 ring-offset-4 ring-offset-transparent transition-colors hover:ring-destructive focus-visible:ring-destructive focus-visible:outline-none'
+                )}
+            >
+                <Empty.Root>
+                    <Empty.Media>
+                        <Tv size={128} class="text-muted-foreground" />
+                    </Empty.Media>
+                    <Empty.Header>
+                        <Empty.Title>Recording in progress</Empty.Title>
+                        <Empty.Description>
+                            Your screen and webcam are being captured. Click below when you're done.
+                        </Empty.Description>
+                    </Empty.Header>
+                    <Empty.Content>
+                        <div
+                            class={cn(
+                                buttonVariants({ variant: 'destructive', size: 'lg' }),
+                                'pointer-events-none'
+                            )}
+                        >
+                            <Square class="mr-1 size-4 fill-current" />
+                            Stop Recording
+                        </div>
+                    </Empty.Content>
+                </Empty.Root>
+            </Card.Root>
+        {/if}
 
         <div
             class="absolute top-4 left-4 flex items-center gap-2 rounded-full bg-black/70 px-3 py-1.5 text-sm text-white backdrop-blur-sm"

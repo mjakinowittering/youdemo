@@ -1,17 +1,20 @@
 <script lang="ts">
-    export type BubblePosition = 'tl' | 'tr' | 'bl' | 'br' | 'tc' | 'rc' | 'bc' | 'lc';
+    import LoaderCircle from '@lucide/svelte/icons/loader-circle';
 
-    const ALL_POSITIONS: BubblePosition[] = ['tl', 'tr', 'bl', 'br', 'tc', 'rc', 'bc', 'lc'];
-
-    // Bubble geometry as a fraction of frame height, kept identical to recorder.ts
-    // so the preview matches the composited recording at any resolution.
-    const BUBBLE_FRAC = 0.18;
-    const PAD_FRAC = 0.025;
+    import {
+        BUBBLE_FRAC,
+        BUBBLE_POSITIONS,
+        bubbleCoords,
+        type BubblePosition
+    } from '$lib/bubbleGeometry.js';
+    import { srcObject } from '$lib/utils.js';
 
     interface Props {
         position?: BubblePosition;
         stream?: MediaStream | null;
         processedStream?: MediaStream | null;
+        /** Blur is being set up — dims the raw preview under a spinner. */
+        loading?: boolean;
         /** Screen frame aspect ratio (width / height). 0 → fill container. */
         screenAspect?: number;
     }
@@ -20,6 +23,7 @@
         position = $bindable('tr'),
         stream = null,
         processedStream = null,
+        loading = false,
         screenAspect = 0
     }: Props = $props();
 
@@ -49,37 +53,13 @@
     });
 
     let BUBBLE = $derived(frame.h * BUBBLE_FRAC);
-    let PAD = $derived(frame.h * PAD_FRAC);
 
     function coords(pos: BubblePosition): { x: number; y: number } {
-        const left = frame.x + PAD;
-        const right = frame.x + frame.w - BUBBLE - PAD;
-        const top = frame.y + PAD;
-        const bottom = frame.y + frame.h - BUBBLE - PAD;
-        const cx = frame.x + frame.w / 2 - BUBBLE / 2;
-        const cy = frame.y + frame.h / 2 - BUBBLE / 2;
-        switch (pos) {
-            case 'tl':
-                return { x: left, y: top };
-            case 'tr':
-                return { x: right, y: top };
-            case 'bl':
-                return { x: left, y: bottom };
-            case 'br':
-                return { x: right, y: bottom };
-            case 'tc':
-                return { x: cx, y: top };
-            case 'rc':
-                return { x: right, y: cy };
-            case 'bc':
-                return { x: cx, y: bottom };
-            case 'lc':
-                return { x: left, y: cy };
-        }
+        return bubbleCoords(pos, frame);
     }
 
     function nearest(left: number, top: number): BubblePosition {
-        return ALL_POSITIONS.reduce<BubblePosition>((best, pos) => {
+        return BUBBLE_POSITIONS.reduce<BubblePosition>((best, pos) => {
             const { x, y } = coords(pos);
             const { x: bx, y: by } = coords(best);
             return Math.hypot(left - x, top - y) < Math.hypot(left - bx, top - by) ? pos : best;
@@ -89,15 +69,6 @@
     let snapTarget = $derived(dragging ? nearest(dragLeft, dragTop) : position);
     let bx = $derived(dragging ? dragLeft : coords(position).x);
     let by = $derived(dragging ? dragTop : coords(position).y);
-
-    function setSrcObject(s: MediaStream | null) {
-        return (node: HTMLVideoElement) => {
-            node.srcObject = s;
-            return () => {
-                node.srcObject = null;
-            };
-        };
-    }
 
     function attachContainer(node: HTMLDivElement) {
         containerEl = node;
@@ -146,7 +117,7 @@
 
 <div class="pointer-events-none absolute inset-0" {@attach attachContainer}>
     {#if dragging}
-        {#each ALL_POSITIONS.filter((p) => p !== snapTarget) as pos (pos)}
+        {#each BUBBLE_POSITIONS.filter((p) => p !== snapTarget) as pos (pos)}
             {@const c = coords(pos)}
             <div
                 class="absolute rounded-full border-2 border-white/40 bg-white/10"
@@ -167,7 +138,7 @@
         >
             {#if processedStream ?? stream}
                 <video
-                    {@attach setSrcObject(processedStream ?? stream)}
+                    {@attach srcObject(processedStream ?? stream)}
                     autoplay
                     muted
                     playsinline
@@ -176,6 +147,15 @@
             {:else}
                 <div class="flex size-full items-center justify-center bg-muted">
                     <span class="text-xs text-muted-foreground">No cam</span>
+                </div>
+            {/if}
+            {#if loading}
+                <div
+                    role="status"
+                    class="absolute inset-0 flex items-center justify-center bg-black/50"
+                >
+                    <LoaderCircle class="size-8 animate-spin text-white" aria-hidden="true" />
+                    <span class="sr-only">Loading background blur…</span>
                 </div>
             {/if}
         </div>

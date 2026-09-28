@@ -1,288 +1,252 @@
-import fixWebmDuration from 'fix-webm-duration';
+import {
+    ALL_FORMATS,
+    BlobSource,
+    BufferTarget,
+    EncodedAudioPacketSource,
+    EncodedPacketSink,
+    EncodedVideoPacketSource,
+    Input,
+    Output,
+    VideoSample,
+    VideoSampleSink,
+    VideoSampleSource,
+    WebMOutputFormat,
+    type EncodedPacket,
+    type InputAudioTrack,
+    type InputVideoTrack
+} from 'mediabunny';
 
-function pickMimeType(): string {
-    const types = ['video/webm;codecs=vp9,opus', 'video/webm;codecs=vp8,opus', 'video/webm'];
-    return types.find((t) => MediaRecorder.isTypeSupported(t)) ?? 'video/webm';
+import { SAMPLE_INTERVAL } from '$lib/editorMath.js';
+import { VIDEO_BITS_PER_SECOND } from '$lib/recorder.js';
+import {
+    cutPlan,
+    joinPlan,
+    needsNormalising,
+    type PacketMeta,
+    type Placement,
+    type RemuxPlan,
+    type TrackPackets
+} from '$lib/remuxPlan.js';
+import type { DeletedRange } from '$lib/types.js';
+
+/*
+ * Export by copying packets. Joins and cuts copy the recorded video and audio
+ * packets byte for byte into a new WebM (Mediabunny demux/mux, pure
+ * TypeScript) — no decoding, no re-encoding and no real-time replay, so nothing
+ * can drop frames or lose quality, and the output gets a real duration and a
+ * seek index. The recorder keys every editor cell, which is what makes cuts
+ * copyable. Takes that can't be copied are re-encoded once, first, through the
+ * browser's own WebCodecs encoder (see `normalise`). History and the ffmpeg
+ * rule: the `video-export` skill.
+ */
+
+interface Source {
+    video: InputVideoTrack;
+    audio: InputAudioTrack | null;
+    packets: TrackPackets;
+    /** Equal for two sources exactly when their packets can share one file. */
+    config: string;
 }
 
-function mediaEvent(el: HTMLMediaElement, name: string): Promise<void> {
-    return new Promise((resolve) => el.addEventListener(name, () => resolve(), { once: true }));
+async function metadata(track: InputVideoTrack | InputAudioTrack): Promise<PacketMeta[]> {
+    const out: PacketMeta[] = [];
+    const sink = new EncodedPacketSink(track);
+    for await (const p of sink.packets(undefined, undefined, { metadataOnly: true })) {
+        out.push({ ts: p.timestamp, dur: p.duration, key: p.type === 'key' });
+    }
+    return out;
+}
+
+async function open(blob: Blob): Promise<Source> {
+    const input = new Input({ source: new BlobSource(blob), formats: ALL_FORMATS });
+    const video = await input.getPrimaryVideoTrack();
+    if (!video) throw new Error('Recording has no video track');
+    const audio = await input.getPrimaryAudioTrack();
+    const v = await video.getDecoderConfig();
+    const a = audio ? await audio.getDecoderConfig() : null;
+    return {
+        video,
+        audio,
+        packets: { video: await metadata(video), audio: audio ? await metadata(audio) : [] },
+        config: JSON.stringify([
+            v?.codec,
+            v?.codedWidth,
+            v?.codedHeight,
+            a?.codec,
+            a?.sampleRate,
+            a?.numberOfChannels
+        ])
+    };
 }
 
 /**
- * Keep a MediaStreamAudioDestinationNode's audio track alive with continuous
- * silence. A source with no audio (e.g. a screen recording with no mic and no
- * tab audio) leaves the destination input-less, which feeds MediaRecorder an
- * Opus track with zero packets — Chromium then rejects the resulting WebM with
- * "The element has no supported sources". A started silent source guarantees the
- * track always carries samples. Inaudible: the destination never reaches the speakers.
+ * Re-encode one take at `width` × `height` (letterboxed), keying every cell,
+ * with its audio copied. Decodes every frame, redraws it on an opaque canvas
+ * and encodes it through the browser's own WebCodecs encoder — as fast as the
+ * machine allows, not in real time. (Mediabunny's `Conversion` would be
+ * shorter, but it drops one frame in six of the recorder's output.)
  */
-function keepAudioAlive(ctx: AudioContext, dest: MediaStreamAudioDestinationNode): void {
-    const silence = ctx.createConstantSource();
-    silence.offset.value = 0;
-    silence.connect(dest);
-    silence.start();
+async function reencode(source: Source, width: number, height: number): Promise<Blob> {
+    const target = new BufferTarget();
+    const output = new Output({ format: new WebMOutputFormat(), target });
+    const videoOut = new VideoSampleSource({
+        codec: 'vp9',
+        bitrate: VIDEO_BITS_PER_SECOND,
+        keyFrameInterval: SAMPLE_INTERVAL
+    });
+    output.addVideoTrack(videoOut);
+    const audioOut = source.audio ? new EncodedAudioPacketSource(source.audio.codec!) : null;
+    if (audioOut) output.addAudioTrack(audioOut);
+    await output.start();
+
+    // Audio first: it is small, so the muxer buffers it while video catches up.
+    if (source.audio && audioOut) {
+        let meta: EncodedAudioChunkMetadata | undefined = {
+            decoderConfig: (await source.audio.getDecoderConfig()) ?? undefined
+        };
+        for await (const packet of new EncodedPacketSink(source.audio).packets()) {
+            await audioOut.add(packet, meta);
+            meta = undefined;
+        }
+    }
+
+    const canvas = new OffscreenCanvas(width, height);
+    const ctx = canvas.getContext('2d', { alpha: false })!;
+    const scale = Math.min(width / source.video.displayWidth, height / source.video.displayHeight);
+    const w = source.video.displayWidth * scale;
+    const h = source.video.displayHeight * scale;
+    for await (const sample of new VideoSampleSink(source.video).samples()) {
+        ctx.fillStyle = '#000';
+        ctx.fillRect(0, 0, width, height);
+        sample.draw(ctx, (width - w) / 2, (height - h) / 2, w, h);
+        const frame = new VideoSample(canvas, {
+            timestamp: sample.timestamp,
+            duration: sample.duration
+        });
+        await videoOut.add(frame);
+        frame.close();
+        sample.close();
+    }
+    await output.finalize();
+    return new Blob([target.buffer!], { type: 'video/webm' });
 }
 
 /**
- * Join recorded WebM segments into ONE valid WebM by replaying them through a
- * canvas + MediaRecorder — i.e. the browser's native encoder.
- *
- * Why not ffmpeg.wasm: Chrome records the canvas as VP9 with an alpha plane
- * (`alpha_mode: 1`), and ffmpeg.wasm crashes ("memory access out of bounds")
- * trying to re-encode that. Re-recording through the same native pipeline that
- * already produces the segments sidesteps the whole problem. It runs in real
- * time (about as long as the combined recording).
+ * Re-encode every source once so they share the first one's size and key
+ * every cell — for takes of different screen sizes, or takes recorded before
+ * the recorder keyed every cell. Costs a generation of quality; can't drop
+ * frames.
  */
+async function normalise(sources: Source[]): Promise<Source[]> {
+    const { displayWidth, displayHeight } = sources[0].video;
+    const out: Source[] = [];
+    for (const source of sources)
+        out.push(await open(await reencode(source, displayWidth, displayHeight)));
+    return out;
+}
+
+/** Packets of one source's track that the plan keeps, restamped, in decode order. */
+async function* placed(
+    track: InputVideoTrack | InputAudioTrack,
+    placements: Placement[]
+): AsyncGenerator<EncodedPacket> {
+    const at = new Map(placements.map((p) => [p.index, p.ts]));
+    const last = placements.at(-1)?.index ?? -1;
+    let index = 0;
+    for await (const packet of new EncodedPacketSink(track).packets()) {
+        const ts = at.get(index);
+        if (ts !== undefined) yield packet.clone({ timestamp: ts });
+        if (++index > last) return;
+    }
+}
+
+/** Write the plan into one WebM, interleaving video and audio by time. */
+async function write(
+    sources: Source[],
+    plan: RemuxPlan,
+    onProgress?: (fraction: number) => void
+): Promise<Blob> {
+    const target = new BufferTarget();
+    const output = new Output({ format: new WebMOutputFormat(), target });
+    const first = sources[0];
+    const videoOut = new EncodedVideoPacketSource(first.video.codec!);
+    output.addVideoTrack(videoOut);
+    const audioOut =
+        first.audio && plan.audio.length ? new EncodedAudioPacketSource(first.audio.codec!) : null;
+    if (audioOut) output.addAudioTrack(audioOut);
+    await output.start();
+
+    const videoConfig = (await first.video.getDecoderConfig()) ?? undefined;
+    const audioConfig = (await first.audio?.getDecoderConfig()) ?? undefined;
+    const total = plan.video.length + plan.audio.length;
+    let written = 0;
+    let videoMeta = videoConfig && { decoderConfig: videoConfig };
+    let audioMeta = audioConfig && { decoderConfig: audioConfig };
+
+    for (let t = 0; t < sources.length; t++) {
+        const v = placed(
+            sources[t].video,
+            plan.video.filter((p) => p.take === t)
+        );
+        const audioTrack = sources[t].audio;
+        const a =
+            audioOut && audioTrack
+                ? placed(
+                      audioTrack,
+                      plan.audio.filter((p) => p.take === t)
+                  )
+                : null;
+        let nextV = await v.next();
+        let nextA = a ? await a.next() : null;
+        for (;;) {
+            const video = nextV.done ? null : nextV.value;
+            const audio = nextA && !nextA.done ? nextA.value : null;
+            if (!video && !audio) break;
+            if (audio && (!video || audio.timestamp < video.timestamp)) {
+                await audioOut!.add(audio, audioMeta);
+                audioMeta = undefined;
+                nextA = await a!.next();
+            } else if (video) {
+                await videoOut.add(video, videoMeta);
+                videoMeta = undefined;
+                nextV = await v.next();
+            }
+            onProgress?.(++written / total);
+        }
+    }
+    await output.finalize();
+    return new Blob([target.buffer!], { type: 'video/webm' });
+}
+
+/** Join recorded takes into one WebM, back to back. One take is returned as is. */
 export async function stitchSegments(
     blobs: Blob[],
     onProgress?: (fraction: number) => void
 ): Promise<Blob> {
     if (blobs.length <= 1) return blobs[0];
-
-    // Probe the first segment for the output frame size.
-    const probe = document.createElement('video');
-    probe.src = URL.createObjectURL(blobs[0]);
-    probe.muted = true;
-    await mediaEvent(probe, 'loadedmetadata');
-    const width = probe.videoWidth || 1280;
-    const height = probe.videoHeight || 720;
-    URL.revokeObjectURL(probe.src);
-
-    const canvas = document.createElement('canvas');
-    canvas.width = width;
-    canvas.height = height;
-    // alpha: false → opaque output (the source segments fully cover the frame).
-    const ctx = canvas.getContext('2d', { alpha: false })!;
-
-    const audioCtx = new AudioContext();
-    await audioCtx.resume().catch(() => {});
-    const dest = audioCtx.createMediaStreamDestination();
-    keepAudioAlive(audioCtx, dest);
-
-    const stream = canvas.captureStream(0);
-    const frameTrack = stream.getVideoTracks()[0] as CanvasCaptureMediaStreamTrack;
-    dest.stream.getAudioTracks().forEach((t) => stream.addTrack(t));
-
-    const recorder = new MediaRecorder(stream, {
-        mimeType: pickMimeType(),
-        videoBitsPerSecond: 8_000_000,
-        audioBitsPerSecond: 128_000
-    });
-    const chunks: BlobPart[] = [];
-    recorder.ondataavailable = (e) => {
-        if (e.data.size > 0) chunks.push(e.data);
-    };
-
-    const startMs = Date.now();
-    recorder.start(500);
-
-    for (let i = 0; i < blobs.length; i++) {
-        await playSegment(blobs[i], ctx, width, height, frameTrack, audioCtx, dest, (f) =>
-            onProgress?.((i + f) / blobs.length)
-        );
+    let sources = await Promise.all(blobs.map(open));
+    if (needsNormalising(sources.map((s) => ({ ...s.packets, config: s.config })))) {
+        sources = await normalise(sources);
     }
-
-    await new Promise<void>((resolve) => {
-        recorder.onstop = () => resolve();
-        recorder.stop();
-    });
-    const durationMs = Date.now() - startMs;
-    audioCtx.close();
-    frameTrack.stop();
-
-    const raw = new Blob(chunks, { type: 'video/webm' });
-    return fixWebmDuration(raw, durationMs);
-}
-
-async function playSegment(
-    blob: Blob,
-    ctx: CanvasRenderingContext2D,
-    width: number,
-    height: number,
-    frameTrack: CanvasCaptureMediaStreamTrack,
-    audioCtx: AudioContext,
-    dest: MediaStreamAudioDestinationNode,
-    onProgress: (fraction: number) => void
-): Promise<void> {
-    const video = document.createElement('video');
-    video.src = URL.createObjectURL(blob);
-    video.playsInline = true;
-    await mediaEvent(video, 'loadedmetadata');
-
-    // Route the segment's audio into the shared destination. createMediaElementSource
-    // reroutes the element's audio entirely into the graph (and we never connect it
-    // to the speakers), so nothing is audible while stitching runs.
-    let srcNode: MediaElementAudioSourceNode | null = null;
-    try {
-        srcNode = audioCtx.createMediaElementSource(video);
-        srcNode.connect(dest);
-    } catch {
-        /* segment has no audio track */
-    }
-
-    await video.play();
-
-    await new Promise<void>((resolve) => {
-        const id = setInterval(() => {
-            if (video.readyState >= 2) {
-                ctx.drawImage(video, 0, 0, width, height);
-                frameTrack.requestFrame();
-                if (video.duration) onProgress(Math.min(1, video.currentTime / video.duration));
-            }
-        }, 1000 / 30);
-        video.onended = () => {
-            clearInterval(id);
-            resolve();
-        };
-    });
-
-    srcNode?.disconnect();
-    video.pause();
-    URL.revokeObjectURL(video.src);
-}
-
-interface Range {
-    startTime: number;
-    endTime: number;
-}
-
-/** Invert deleted ranges into the kept ranges of a [0, duration] timeline. */
-function keptRanges(duration: number, deleted: Range[]): { start: number; end: number }[] {
-    const sorted = [...deleted].sort((a, b) => a.startTime - b.startTime);
-    const kept: { start: number; end: number }[] = [];
-    let cursor = 0;
-    for (const d of sorted) {
-        if (cursor < d.startTime) kept.push({ start: cursor, end: d.startTime });
-        cursor = Math.max(cursor, d.endTime);
-    }
-    if (cursor < duration) kept.push({ start: cursor, end: duration });
-    return kept;
-}
-
-function seekTo(video: HTMLVideoElement, time: number): Promise<void> {
-    return new Promise((resolve) => {
-        if (Math.abs(video.currentTime - time) < 0.05) {
-            resolve();
-            return;
-        }
-        const onSeeked = () => {
-            video.removeEventListener('seeked', onSeeked);
-            resolve();
-        };
-        video.addEventListener('seeked', onSeeked);
-        video.currentTime = time;
-    });
+    return write(sources, joinPlan(sources.map((s) => s.packets)), onProgress);
 }
 
 /**
- * Render an edited timeline (source minus deletedRanges) into ONE WebM by
- * replaying only the kept ranges through a canvas + MediaRecorder — the same
- * native pipeline as stitchSegments. Avoids ffmpeg entirely: the previous
- * ffmpeg `-c copy` trim+concat dropped all but the first kept range. Real-time
- * (plays the kept duration); cut precision is per-frame, better than `-c copy`.
+ * Drop `deletedRanges` from `source`, closing the gaps. Each kept stretch
+ * starts on the keyframe nearest its start — within ~0.1 s of the cut, as the
+ * recorder keys every 0.2 s cell. Everything deleted → `source` unchanged.
  */
 export async function renderEditedVideo(
     source: Blob,
-    deletedRanges: Range[],
+    deletedRanges: DeletedRange[],
     onProgress?: (fraction: number) => void
 ): Promise<Blob> {
     if (!deletedRanges || deletedRanges.length === 0) return source;
-
-    const video = document.createElement('video');
-    video.src = URL.createObjectURL(source);
-    video.playsInline = true;
-    await mediaEvent(video, 'loadedmetadata');
-    const width = video.videoWidth || 1280;
-    const height = video.videoHeight || 720;
-    const duration = Number.isFinite(video.duration) ? video.duration : 0;
-
-    const ranges = keptRanges(duration, deletedRanges);
-    if (ranges.length === 0) {
-        URL.revokeObjectURL(video.src);
-        return source; // everything deleted — fall back rather than emit empty
+    let opened = await open(source);
+    if (needsNormalising([{ ...opened.packets, config: opened.config }])) {
+        [opened] = await normalise([opened]);
     }
-    const totalKept = ranges.reduce((sum, r) => sum + (r.end - r.start), 0);
-
-    const canvas = document.createElement('canvas');
-    canvas.width = width;
-    canvas.height = height;
-    const ctx = canvas.getContext('2d', { alpha: false })!;
-
-    const audioCtx = new AudioContext();
-    await audioCtx.resume().catch(() => {});
-    const dest = audioCtx.createMediaStreamDestination();
-    keepAudioAlive(audioCtx, dest);
-    let srcNode: MediaElementAudioSourceNode | null = null;
-    try {
-        srcNode = audioCtx.createMediaElementSource(video);
-        srcNode.connect(dest);
-    } catch {
-        /* no audio track */
-    }
-
-    const stream = canvas.captureStream(0);
-    const frameTrack = stream.getVideoTracks()[0] as CanvasCaptureMediaStreamTrack;
-    dest.stream.getAudioTracks().forEach((t) => stream.addTrack(t));
-
-    const recorder = new MediaRecorder(stream, {
-        mimeType: pickMimeType(),
-        videoBitsPerSecond: 8_000_000,
-        audioBitsPerSecond: 128_000
-    });
-    const chunks: BlobPart[] = [];
-    recorder.ondataavailable = (e) => {
-        if (e.data.size > 0) chunks.push(e.data);
-    };
-
-    const startMs = Date.now();
-    recorder.start(500);
-
-    let renderedKept = 0;
-    for (const range of ranges) {
-        await playRange(video, range, ctx, width, height, frameTrack, (played) =>
-            onProgress?.(Math.min(1, (renderedKept + played) / totalKept))
-        );
-        renderedKept += range.end - range.start;
-    }
-
-    await new Promise<void>((resolve) => {
-        recorder.onstop = () => resolve();
-        recorder.stop();
-    });
-    const durationMs = Date.now() - startMs;
-    srcNode?.disconnect();
-    audioCtx.close();
-    frameTrack.stop();
-    URL.revokeObjectURL(video.src);
-
-    return fixWebmDuration(new Blob(chunks, { type: 'video/webm' }), durationMs);
-}
-
-async function playRange(
-    video: HTMLVideoElement,
-    range: { start: number; end: number },
-    ctx: CanvasRenderingContext2D,
-    width: number,
-    height: number,
-    frameTrack: CanvasCaptureMediaStreamTrack,
-    onProgress: (playedInRange: number) => void
-): Promise<void> {
-    await seekTo(video, range.start);
-    await video.play();
-    await new Promise<void>((resolve) => {
-        const id = setInterval(() => {
-            if (video.currentTime >= range.end || video.ended) {
-                clearInterval(id);
-                video.pause();
-                resolve();
-                return;
-            }
-            if (video.readyState >= 2) {
-                ctx.drawImage(video, 0, 0, width, height);
-                frameTrack.requestFrame();
-                onProgress(Math.max(0, video.currentTime - range.start));
-            }
-        }, 1000 / 30);
-    });
+    const plan = cutPlan(opened.packets, deletedRanges);
+    if (plan.video.length === 0) return source;
+    return write([opened], plan, onProgress);
 }

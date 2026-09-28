@@ -1,6 +1,6 @@
 ---
 name: testing
-description: How YouDemo is tested — the props-down/state-up design that makes it possible, Storybook CSF v5 story conventions, and the three Vitest projects (node unit, browser component, storybook) plus CI. Load when writing or changing a story, adding a unit test, running the test suite, or deciding where new logic should live so it can be tested.
+description: How YouDemo is tested — the props-down/state-up design that makes it possible, Storybook CSF v5 story conventions, the three Vitest projects (node unit, browser component, storybook), and the Playwright E2E suite with its export-quality checks. Load when writing or changing a story, adding a unit or E2E test, running the test suite, or deciding where new logic should live so it can be tested.
 ---
 
 # Testing
@@ -103,17 +103,40 @@ each one and fails on a render error.
 fails. Don't write bare "it doesn't throw" tests.
 
 Existing node specs: `tests/editorMath.spec.ts`, `tests/crashStore.spec.ts`,
-`tests/utils.spec.ts`, plus co-located `src/lib/titles.test.ts`. Pure modules go
-in `tests/`; component tests use the `.svelte.spec.ts` suffix so they land in the
+`tests/utils.spec.ts`, `tests/titles.spec.ts`, `tests/bubbleGeometry.spec.ts`.
+Pure modules go in `tests/`, importing their subject through `$lib/…`; component tests use the `.svelte.spec.ts` suffix so they land in the
 browser project.
+
+## E2E (Playwright)
+
+`npm run test:e2e` — `@playwright/test` specs in `e2e/`, one per area (first
+visit, setup, capture, editor, export, lifecycle). They drive the **production
+build under `/youdemo/`**, served like Pages by `npm run preview`
+(`scripts/serve-build.js`).
+One worker: recording is real time.
+
+- **No test hooks in the app.** Specs drive screens by role and visible text
+  through `App` in `e2e/fixtures/app.ts`: `recordTake`, `openEditor`, `cut`,
+  `exportAndDownload`, `readTakes` (the takes crash recovery saved to OPFS).
+- **Fake screen** (`e2e/fixtures/fakeDisplay.ts`) replaces `getDisplayMedia` with
+  a canvas stamping each frame with a **barcode of its capture time**, plus a
+  tone. `stopSharing()` mimics the browser's bar; `cancel` / `noMic` options.
+  Camera and mic are Chromium's fake devices.
+- **Export checks** (`e2e/lib/inspect.ts` + `checks.ts`): a bare page loads
+  Mediabunny, demuxes and decodes the download and the takes, and reports play
+  duration, frame gaps, frozen frames, which recorded moment each frame shows,
+  seek index, audio length and whether every video packet is byte-identical to
+  the takes (lossless).
+- The viewport is 4000px wide so the frame strip renders every cell; `cut()`
+  takes raw cell indices — cut later ranges first.
+- **Known gaps are `test.fail()`** with a comment naming the fix; remove the
+  marker when the fix lands (Playwright fails a `test.fail` that passes).
+- A hidden tab can't be reproduced: headless Chromium never hides a page and
+  Playwright disables background throttling. The slow-machine scenario uses CDP
+  `Emulation.setCPUThrottlingRate` during export instead.
 
 ## CI
 
-`.github/workflows/ci.yml` — `npm run lint`, `npm run check`, `npm test` — plus
-cached npm deps and a cached Playwright Chromium (installed without `--with-deps`;
-the runner image already has the libraries and apt stalls on optional CJK fonts).
-
-It triggers on **`pull_request` only, never `push`**, and the header comment in
-the file explains why in detail: it's a required status check, and dual triggers
-would let a cancelled concurrent run post a failing check onto the PR head. Read
-that comment before changing the triggers.
+Every PR runs `npm run lint`, `npm run check` and `npm test`, and the E2E suite
+as its own job. The workflow, its caching and its deliberate PR-only trigger are
+in `deployment`.

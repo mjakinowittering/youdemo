@@ -11,15 +11,19 @@
     import Recording from '$lib/components/Recorder/Recording.svelte';
     import Review from '$lib/components/Recorder/Review.svelte';
     import Setup from '$lib/components/Recorder/Setup.svelte';
-    import type { BubblePosition } from '$lib/components/Recorder/WebcamBubble.svelte';
     import { Progress } from '$lib/components/ui/progress/index.js';
     import WelcomeModal from '$lib/components/WelcomeModal.svelte';
 
     import { createBlurProcessor } from '$lib/blurProcessor.js';
     import type { BlurIntensity, BlurProcessor } from '$lib/blurProcessor.js';
+    import type { BubblePosition } from '$lib/bubbleGeometry.js';
     import * as crashStore from '$lib/crashStore.js';
     import { deviceStore } from '$lib/deviceStore.svelte.js';
-    import { start as recorderStart, stop as recorderStop } from '$lib/recorder.js';
+    import {
+        DISPLAY_MEDIA_OPTIONS,
+        start as recorderStart,
+        stop as recorderStop
+    } from '$lib/recorder.js';
     import { titleFor } from '$lib/titles.js';
     import type { AppState, DeletedRange } from '$lib/types.js';
     import { stitchSegments } from '$lib/videoStitcher.js';
@@ -52,6 +56,8 @@
     // Raw webcam stream — owned here so it outlives Setup and feeds the recorder /
     // blur processor across a resume, with deterministic teardown on full reset.
     let webcamStream = $state<MediaStream | null>(null);
+    // The recorder's composited canvas track, shown live on the Recording screen.
+    let previewStream = $state<MediaStream | null>(null);
     let segments = $state<Blob[]>([]);
     let editorVideoUrl = $state<string | null>(null);
     // Single combined source for the Editor + export. Built (stitched) from
@@ -86,6 +92,9 @@
     // reactively by the $effect below; `blurReady` lets startRecording await an
     // in-flight creation so blur is guaranteed present in the recorded output.
     let processedWebcamStream = $state<MediaStream | null>(null);
+    // True while a processor is being created, so Setup can show that blur is on
+    // its way rather than silently previewing the raw camera.
+    let blurLoading = $state(false);
     let blurProcessor: BlurProcessor | null = null;
     let blurReady: Promise<void> = Promise.resolve();
 
@@ -124,21 +133,27 @@
         const stream = webcamStream;
         if (!on || !stream) return;
         let cancelled = false;
+        blurLoading = true;
         blurReady = (async () => {
-            const p = await createBlurProcessor(
-                stream,
-                untrack(() => blurIntensity),
-                base
-            );
-            if (cancelled) {
-                p.destroy();
-                return;
+            try {
+                const p = await createBlurProcessor(
+                    stream,
+                    untrack(() => blurIntensity),
+                    base
+                );
+                if (cancelled) {
+                    p.destroy();
+                    return;
+                }
+                blurProcessor = p;
+                processedWebcamStream = p.outputStream;
+            } finally {
+                if (!cancelled) blurLoading = false;
             }
-            blurProcessor = p;
-            processedWebcamStream = p.outputStream;
         })();
         return () => {
             cancelled = true;
+            blurLoading = false;
             blurProcessor?.destroy();
             blurProcessor = null;
             processedWebcamStream = null;
@@ -222,7 +237,7 @@
         // Ensure any in-flight blur processor creation has finished so the
         // blurred stream is locked into the recording from the first frame.
         await blurReady;
-        await recorderStart({
+        previewStream = await recorderStart({
             screenStream: screenStream!,
             webcamStream,
             micDeviceId: deviceStore.micDeviceId,
@@ -237,6 +252,7 @@
 
     async function stopRecording() {
         const blob = await recorderStop();
+        previewStream = null;
         _totalElapsedSec += Math.round((Date.now() - sessionStartMs) / 1000);
         segments = [...segments, blob];
         // A new segment invalidates any previously stitched Editor source.
@@ -254,6 +270,7 @@
             screenStream.getTracks().forEach((t) => t.stop());
         }
         screenStream = null;
+        previewStream = null;
         // Keep micMuted / camEnabled / blurOn — these preferences are preserved
         // across a full reset (and reload). releaseCamera() nulls webcamStream,
         // which tears the blur processor down; it rebuilds on the next armCamera()
@@ -277,10 +294,7 @@
 
     async function handleResume() {
         try {
-            const newStream = await navigator.mediaDevices.getDisplayMedia({
-                video: true,
-                audio: true
-            });
+            const newStream = await navigator.mediaDevices.getDisplayMedia(DISPLAY_MEDIA_OPTIONS);
             if (screenStream) {
                 screenStream.getTracks().forEach((t) => t.stop());
             }
@@ -300,8 +314,8 @@
     async function goToEditor() {
         try {
             // Build (once) a single combined source so the Editor timeline, scrubbing
-            // and cuts span the whole recording. Multiple segments are joined natively
-            // via stitchSegments (real-time); the result is cached until segments change.
+            // and cuts span the whole recording. Multiple segments are joined losslessly
+            // via stitchSegments (a packet copy); the result is cached until segments change.
             if (!editorBlob) {
                 if (segments.length > 1) {
                     stitchProgress = 0;
@@ -388,6 +402,7 @@
             bind:blurOn
             bind:blurIntensity
             processedStream={processedWebcamStream}
+            {blurLoading}
             onstart={goToCountdown}
         />
     {:else if appState === 'countdown'}
@@ -395,6 +410,7 @@
     {:else if appState === 'recording'}
         <Recording
             {screenStream}
+            {previewStream}
             bind:micMuted
             bind:camEnabled
             bind:blurOn

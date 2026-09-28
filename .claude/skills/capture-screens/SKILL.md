@@ -24,8 +24,9 @@ the visible CTA. Details in `shadcn-ui`.
 - **Empty state** — `Clapperboard` icon at `size={128}`, title "No screen
   selected", description "Choose a screen and recording starts straight away",
   CTA "Start Recording" (indigo; reads "Requesting…" while the picker is open).
-- **Screen picker** — clicking the card calls `getDisplayMedia({ video: true,
-  audio: true })` and then `onstart()` immediately. **Recording auto-starts on any
+- **Screen picker** — clicking the card calls
+  `getDisplayMedia(DISPLAY_MEDIA_OPTIONS)` (`capture-pipeline`) and then
+  `onstart()` immediately. **Recording auto-starts on any
   surface** (tab, window or screen); there is no separate start step. A
   `NotAllowedError` (user cancelled) is silent; other failures set `pickError`.
 - **Stream ended** during setup → tracks stopped, `screenStream` nulled, back to
@@ -42,12 +43,9 @@ the bubble lines up with the composited frame (see `capture-pipeline`).
 
 ## WebcamBubble.svelte
 
-Type `BubblePosition` is exported from this file (not `types.ts`).
-
-- **Fixed size, no resize.** Diameter and padding are fractions of the *frame*
-  height: `BUBBLE_FRAC = 0.18`, `PAD_FRAC = 0.025`. The same constants are
-  duplicated in `recorder.ts` — **change both together** or preview and recording
-  drift apart.
+- **Fixed size, no resize.** Size, the eight positions and their coordinates all
+  come from `$lib/bubbleGeometry.ts`, shared with the recorder — see
+  `capture-pipeline`.
 - Positions against the **letterboxed video rect**, derived from `screenAspect`,
   not the raw container, because the composited frame has no letterbox bars.
   `screenAspect === 0` falls back to filling the container.
@@ -60,6 +58,9 @@ Type `BubblePosition` is exported from this file (not `types.ts`).
   centre-crop, matching the recorder). Falls back to a "No cam" placeholder.
 - Prefers `processedStream` (blurred) over the raw `stream` when present, so the
   preview shows exactly what gets recorded.
+- While `loading` (blur being set up), a `role="status"` overlay dims the raw
+  preview under a white `LoaderCircle` spinner, so the unblurred frame is never
+  mistaken for blur.
 - Visible in Setup only — hidden from countdown onwards.
 
 ## Countdown.svelte
@@ -81,9 +82,14 @@ Overlay (`absolute inset-0`), so its story shell needs `relative`.
 
 ## Recording.svelte
 
-- **Empty state** — `Tv` icon at `size={128}`, title "Recording in progress". The
-  whole card is the stop target; the CTA is a destructive "Stop Recording" with a
-  filled `Square` icon.
+- **Live preview** — `previewStream` is the recorder's composited canvas track
+  (`capture-pipeline`), so it shows exactly what is being encoded, bubble and blur
+  included. It fills the area (`object-contain`, `aria-label` "Live recording
+  preview") above a real destructive "Stop Recording" `Button` with a filled
+  `Square` icon; the video itself isn't clickable.
+- **Fallback** — with no `previewStream` (stories), the `Tv` empty state "Recording
+  in progress", where the whole card is the stop target. Both carry the "Stop
+  Recording" name, which E2E stops by.
 - **REC badge** — `absolute top-4 left-4`, black translucent pill: a
   `animate-rec-pulse` red dot, "REC", and `elapsed` formatted by `formatElapsed`
   from `titles.ts` (the same helper the document title uses).

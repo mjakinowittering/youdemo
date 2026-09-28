@@ -1,6 +1,6 @@
 ---
 name: deployment
-description: Building and shipping YouDemo to GitHub Pages — adapter-static config, the BASE_PATH/base-path rules, prerendering, the deploy workflow, static assets, and the meta/OpenGraph/Twitter Card tags in app.html. Load when changing the build, the workflow, asset paths, social preview tags, or debugging anything that works locally but 404s on Pages.
+description: Building and shipping YouDemo to GitHub Pages — adapter-static config, the BASE_PATH/base-path rules, prerendering, the deploy and CI workflows, static assets, and the meta/OpenGraph/Twitter Card tags in app.html. Load when changing the build, the workflow, asset paths, social preview tags, or debugging anything that works locally but 404s on Pages.
 ---
 
 # Build & deployment
@@ -42,7 +42,8 @@ thing to check for a "works in dev" asset bug.
 | `npm run dev`          | Vite dev server                                           |
 | `npm run build`        | → `build/`, then runs `postbuild`                         |
 | `npm run postbuild`    | `scripts/copy-mediapipe-wasm.js`                          |
-| `npm run preview`      | serve the built output                                    |
+| `npm run preview`      | serve `build/` like Pages (`scripts/serve-build.js`); set `BASE_PATH` to match the build |
+| `npm run test:e2e`     | build, then `preview` under `/youdemo/`, run Playwright   |
 | `npm run check`        | `svelte-kit sync` + `svelte-check`                        |
 | `npm run lint`         | `prettier --check .` + `eslint .`                         |
 | `npm run format`       | `prettier --write .` (also runs on every file write hook)  |
@@ -66,10 +67,17 @@ and served by a dev-only Vite middleware. Both paths are described in
 `npm run build` with `BASE_PATH` from `configure-pages` → upload → deploy.
 Concurrency group `pages` with `cancel-in-progress: false`.
 
-`.github/workflows/ci.yml` — PR-only lint/check/test. See `testing`; its trigger
-choice is deliberate and documented in the file.
+`.github/workflows/ci.yml` — on every PR, job `check` runs `npm run lint`,
+`npm run check`, `npm test`, and job `e2e` runs `npm run test:e2e` (report
+uploaded as an artifact on failure). Only `check` is a required status check
+until E2E proves stable in CI. It triggers on **`pull_request` only, never `push`**: it's a required status
+check, and dual triggers would let a cancelled concurrent run post a failing check
+onto the PR head. The header comment in the file explains in full — read it before
+changing the triggers.
 
-Both cache `~/.npm` keyed on `package-lock.json` and cache Playwright Chromium.
+Both cache `~/.npm` keyed on `package-lock.json` and cache Playwright Chromium
+(installed without `--with-deps`; the runner image already has the libraries and
+apt stalls on optional CJK fonts).
 
 ## meta / OpenGraph (`src/app.html`)
 

@@ -7,7 +7,7 @@
         "dev": "vite dev",
         "build": "vite build",
         "postbuild": "node scripts/copy-mediapipe-wasm.js",
-        "preview": "vite preview",
+        "preview": "node scripts/serve-build.js",
         "prepare": "svelte-kit sync || echo ''",
         "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
         "check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
@@ -15,6 +15,7 @@
         "format": "prettier --write .",
         "test:unit": "vitest",
         "test": "npm run test:unit -- --run",
+        "test:e2e": "playwright test",
         "storybook": "storybook dev -p 6006",
         "build-storybook": "storybook build"
     },
@@ -26,6 +27,7 @@
         "@ianvs/prettier-plugin-sort-imports": "^4.7.1",
         "@internationalized/date": "^3.12.1",
         "@lucide/svelte": "^1.17.0",
+        "@playwright/test": "^1.63.0",
         "@storybook/addon-a11y": "^10.4.6",
         "@storybook/addon-docs": "^10.4.6",
         "@storybook/addon-svelte-csf": "^5.1.2",
@@ -70,6 +72,7 @@
     "dependencies": {
         "@mediapipe/tasks-vision": "^0.10.35",
         "@sveltejs/adapter-static": "^3.0.10",
-        "fix-webm-duration": "^1.0.6"
+        "fix-webm-duration": "^1.0.6",
+        "mediabunny": "^1.60.0"
     }
 }

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { APP_NAME, formatElapsed, titleFor } from './titles.js';
+import { APP_NAME, formatElapsed, titleFor } from '$lib/titles.js';
 
 describe('formatElapsed', () => {
     it('pads to mm:ss', () => {

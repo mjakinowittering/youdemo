@@ -32,7 +32,7 @@
 
         (async () => {
             try {
-                // Everything runs natively (canvas + MediaRecorder) — no ffmpeg.
+                // Joins and cuts copy the recorded packets — lossless, no ffmpeg.
                 // 1. Combine segments if needed (the Editor normally passes a single
                 //    already-combined blob, so this is a safety net).
                 let source = segments[0];
@@ -44,7 +44,7 @@
                     if (cancelled) return;
                 }
 
-                // 2. Apply cuts by re-rendering only the kept ranges.
+                // 2. Apply cuts by copying only the kept ranges.
                 if (deletedRanges.length > 0) {
                     status = 'Applying edits…';
                     progress = 0;

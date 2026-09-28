@@ -36,20 +36,56 @@ Try [YouDemo](https://mjakinowittering.github.io/youdemo/) now!
 
 ---
 
-## Backlog
+## Todo
 
 Things that would make YouDemo even better — contributions welcome.
 
-- **Live Recording Preview** — show the composited video as it happens
-- **Undo deleted frames** — restore soft-deleted frames before export
-- **Blur loading indicator** — surface progress when the on-device segmentation
-  model and WASM runtime are downloading/initialising on first blur toggle, so
-  the brief delay before blur appears is clearly communicated
-- **Recording resolution cap** — option to cap the recording resolution (e.g.
-  1280×720) for smaller file sizes
-- **Quick trim** — trim-to-highlight shortcut for the most common editing
-  workflow
-- **Easter eggs** — there should definitely be easter eggs
+### Bugs
+
+#### Capture
+
+- [ ] **Handle blur failing to load** — if `createBlurProcessor` rejects (WASM
+      or model 404, no GPU or CPU delegate), the blur effect in `+page.svelte`
+      doesn't catch it: the loading overlay clears and Setup previews the raw
+      camera while the blur button still reads on. Then `startRecording`'s
+      `await blurReady` rethrows once the countdown ends, and the global
+      unhandled-rejection handler swaps in the `ErrorScreen`, so the take never
+      starts. Catch it in the effect, turn `blurOn` off and tell the user blur
+      isn't available. Because blur is a privacy control, the fix must never
+      record an unblurred background while the button says blur is on
+
+#### Editor
+
+- [ ] **Keep cuts on Back to Editor** — Done's "Back to Editor" remounts
+      `Editor.svelte`, which owns `deletedRanges`, so every cut is lost and the
+      full recording comes back. Lift the cuts into `+page.svelte` (it already
+      holds `exportDeletedRanges`) and pass them down. The E2E test "cuts
+      shorten the final duration and survive a round trip to Done" is marked
+      `test.fail()` until then
+- [ ] **Fix `effectiveToRawTime` at a cut boundary** — in `editorMath.ts`, a
+      kept time that lands exactly on the start of a deleted span maps to that
+      span's start rather than its end (the `remaining <= keptDuration` check),
+      so effective time 0 with the opening seconds cut returns 0. Harmless in
+      the app today because `resolveSeekTarget` snaps it forward, but the
+      function is wrong on its own; add the edge case to
+      `tests/editorMath.spec.ts`
+
+### Features
+
+#### Capture
+
+- [ ] **Recording resolution cap** — option to cap the recording resolution
+      (e.g. 1280×720) for smaller file sizes
+
+#### Editor
+
+- [ ] **Undo deleted frames** — restore soft-deleted frames before export
+- [ ] **Quick trim** — trim-to-highlight shortcut for the most common editing
+      workflow
+
+#### Fun
+
+- [ ] **Easter eggs** — there should definitely be easter eggs
 
 ---
 
@@ -122,7 +158,7 @@ npm run dev
 # Build for production
 npm run build
 
-# Preview the production build locally
+# Preview the production build locally (run `npm run build` first)
 npm run preview
 
 # Run tests
@@ -135,18 +171,22 @@ npm run format
 
 ### Deployment
 
-The app is built as a fully static site using `@sveltejs/adapter-static` and can
-be deployed to GitHub Pages or any static host.
+The app is built as a fully static site using `@sveltejs/adapter-static`.
+
+Every push to `master` deploys to GitHub Pages through
+`.github/workflows/build-and-deploy.yml`: it type-checks, tests, builds with
+`BASE_PATH` set to the Pages sub-path, and publishes `/build`. It can also be
+run by hand from the Actions tab. In the repo's Pages settings, set the source
+to **GitHub Actions**.
+
+To host it anywhere else, build it and serve the `/build` directory:
 
 ```bash
-# Build the static site
 npm run build
-
-# The output is in /build — deploy this directory
 ```
 
-For GitHub Pages, push the contents of `/build` to your `gh-pages` branch, or
-configure Pages to serve from `/build` on `main`.
+Set `BASE_PATH` (e.g. `BASE_PATH=/youdemo`) when the site won't be served from
+the domain root.
 
 ---
 
@@ -156,8 +196,10 @@ configure Pages to serve from `/build` on `main`.
 - [TypeScript](https://www.typescriptlang.org/)
 - [Tailwind CSS v4](https://tailwindcss.com/)
 - [shadcn-svelte](https://www.shadcn-svelte.com/)
-- **Canvas + `MediaRecorder`** — recording, plus combining clips and trimming,
-  are all done natively in the browser (no server, no WASM transcoder)
+- **Canvas + `MediaRecorder`** — recording, natively in the browser
+- [Mediabunny](https://mediabunny.dev) — combining clips and trimming by copying
+  the recorded video, so exports lose no quality and take seconds (no server, no
+  WASM transcoder)
 - [MediaPipe Tasks Vision](https://ai.google.dev/edge/mediapipe/solutions/vision/image_segmenter)
   — on-device selfie segmentation for background blur
 - [@lucide/svelte](https://lucide.dev/) — icons

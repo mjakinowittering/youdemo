@@ -40,7 +40,17 @@ compositing + encode is the main cause of renderer crashes ("white screen") mid
 recording.
 
 **Bitrates:** `videoBitsPerSecond: 5_000_000`, `audioBitsPerSecond: 128_000`.
-(The stitcher uses 8 Mbps — see `video-export`.)
+`VIDEO_BITS_PER_SECOND` is exported: export's re-encode fallback reuses it.
+
+**A keyframe on every editor cell** — `videoKeyFrameIntervalCount` is one less
+than `KEYFRAME_EVERY`, which is `SAMPLE_INTERVAL × FRAME_RATE` (6 frames = 0.2 s).
+Export cuts by copying packets, and a copied stretch must start on a keyframe;
+Chrome's default is one keyframe at the start, which would make every cut snap
+to 0 or force a re-encode. Chrome counts the frames *between* keyframes (5 gives
+a key every 6th frame), and a duration (`videoKeyFrameIntervalDuration: 200`)
+rounds up to 7-frame groups. The option isn't in TypeScript's DOM typings yet,
+hence the intersection type. The E2E export suite checks the spacing. See
+`video-export`.
 
 **Codec probe** — first supported wins:
 
@@ -57,8 +67,6 @@ const types = [
 `[fix-webm-duration] Duration section is missing` console line is benign — the
 library logs it, then inserts a correct Duration. Without this the blob has no
 duration header and the Editor can't seek it.
-
-**No debug logging in hot paths** — nothing per-frame or per-export.
 
 ## Audio graph
 
@@ -90,17 +98,24 @@ leaves a partial-coverage seam at the cardinal points — visible as straight
 The webcam frame is **centre-cropped to a square** before drawing, matching the
 preview's `object-cover`, so faces aren't stretched.
 
-Geometry constants are duplicated in this file and in
-`Recorder/WebcamBubble.svelte`:
+**Geometry lives in `src/lib/bubbleGeometry.ts`**, shared with the Setup preview
+(`WebcamBubble.svelte`) so the two cannot drift: `BubblePosition`,
+`BUBBLE_POSITIONS`, `BUBBLE_FRAC` (0.18, diameter) and `PAD_FRAC` (0.025, corner
+padding), and `bubbleCoords(pos, frame)`. Sizes are fractions of frame *height* so
+preview and recording agree at any resolution. The recorder passes the whole canvas
+as the frame; the preview passes its letterboxed rect. Covered by
+`tests/bubbleGeometry.spec.ts`.
 
-```ts
-const BUBBLE_FRAC = 0.18;  // diameter as a fraction of frame height
-const PAD_FRAC = 0.025;    // corner padding, same basis
-```
+## Live preview and the picker
 
-**Change both together.** They're fractions of frame *height* precisely so the
-Setup preview and the composited recording agree at any resolution. `bubbleCoords`
-here mirrors `coords()` there for the eight positions — see `capture-screens`.
+`start()` resolves with a **video-only** `MediaStream` holding the canvas capture
+track itself — not a clone, and no audio, so the preview can't echo. `+page.svelte`
+keeps it as `previewStream` for the Recording screen; it ends with the recorder.
+
+`DISPLAY_MEDIA_OPTIONS` is the one screen-picker request (Setup and Resume):
+`selfBrowserSurface: 'exclude'` keeps the YouDemo tab out of the picker so the
+preview isn't recorded inside itself. A whole-screen share with YouDemo visible
+still mirrors — accepted.
 
 ## Stream ownership & teardown
 
@@ -115,8 +130,3 @@ here mirrors `coords()` there for the eight positions — see `capture-screens`.
 - When `processedWebcamStream` (blurred) is present it is drawn in preference to
   the raw stream, so what the user previewed is what gets recorded. See
   `background-blur`.
-
-## Note
-
-`BubblePosition` is declared in both `recorder.ts` and `WebcamBubble.svelte`.
-Neither imports the other's copy; keep them identical if the set ever changes.

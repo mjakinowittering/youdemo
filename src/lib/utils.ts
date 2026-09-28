@@ -5,6 +5,16 @@ export function cn(...inputs: ClassValue[]) {
     return twMerge(clsx(inputs));
 }
 
+/** `{@attach}` factory: plays a MediaStream in a `<video>`, detaching it on teardown. */
+export function srcObject(stream: MediaStream | null): (node: HTMLVideoElement) => () => void {
+    return (node) => {
+        node.srcObject = stream;
+        return () => {
+            node.srcObject = null;
+        };
+    };
+}
+
 const pad = (value: number) => String(value).padStart(2, '0');
 
 /** Download filename for an export: `youdemo-YYYY-MM-DD-HHMMSS.webm`, in local time. */

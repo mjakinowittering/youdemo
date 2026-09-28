@@ -1,6 +1,7 @@
 import fixWebmDuration from 'fix-webm-duration';
 
-export type BubblePosition = 'tl' | 'tr' | 'bl' | 'br' | 'tc' | 'rc' | 'bc' | 'lc';
+import { BUBBLE_FRAC, bubbleCoords, type BubblePosition } from '$lib/bubbleGeometry.js';
+import { FRAME_RATE, SAMPLE_INTERVAL } from '$lib/editorMath.js';
 
 export interface RecorderOptions {
     screenStream: MediaStream;
@@ -16,18 +17,27 @@ export interface RecorderOptions {
 
 // ─── constants ────────────────────────────────────────────────────────────────
 
-// Bubble geometry is expressed as a fraction of frame height so the preview
-// (WebcamBubble.svelte) and the composited recording stay in sync regardless of
-// resolution. These fractions MUST match the ones in WebcamBubble.svelte.
-const BUBBLE_FRAC = 0.18;
-const PAD_FRAC = 0.025;
-
 // Cap the composited canvas so software VP9 encoding stays within a sane CPU
 // budget — uncapped 1440p/4K compositing + encode is the main cause of renderer
 // crashes ("white screen") during recording.
 const MAX_DIM = 1920;
-const VIDEO_BITS_PER_SECOND = 5_000_000;
+/** Also the export fallback's re-encode bitrate (`videoStitcher.ts`). */
+export const VIDEO_BITS_PER_SECOND = 5_000_000;
 const AUDIO_BITS_PER_SECOND = 128_000;
+
+/**
+ * The screen picker request, shared by Setup and Resume. Excluding YouDemo's own
+ * tab stops the live preview being recorded inside itself. Not yet in
+ * TypeScript's DOM typings; Chromium supports it.
+ */
+export const DISPLAY_MEDIA_OPTIONS: DisplayMediaStreamOptions & { selfBrowserSurface: 'exclude' } =
+    { video: true, audio: true, selfBrowserSurface: 'exclude' };
+// A keyframe on every editor cell (6 frames = 0.2 s), so export can cut by
+// copying packets: a copied stretch must start on a keyframe. Chrome's default
+// is a single keyframe at the start. A count, not a duration — 200 ms rounds up
+// to 7-frame groups — and Chrome counts the frames *between* keyframes, hence
+// the − 1 below.
+const KEYFRAME_EVERY = Math.round(SAMPLE_INTERVAL * FRAME_RATE);
 
 // ─── singleton state ──────────────────────────────────────────────────────────
 
@@ -55,34 +65,6 @@ let _bubbleCtx: CanvasRenderingContext2D | null = null;
 let _bubbleMask: CanvasGradient | null = null;
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
-
-function bubbleMetrics(h: number): { bubble: number; pad: number } {
-    return { bubble: h * BUBBLE_FRAC, pad: h * PAD_FRAC };
-}
-
-function bubbleCoords(pos: BubblePosition, w: number, h: number): { x: number; y: number } {
-    const { bubble, pad } = bubbleMetrics(h);
-    const cx = w / 2 - bubble / 2;
-    const cy = h / 2 - bubble / 2;
-    switch (pos) {
-        case 'tl':
-            return { x: pad, y: pad };
-        case 'tr':
-            return { x: w - bubble - pad, y: pad };
-        case 'bl':
-            return { x: pad, y: h - bubble - pad };
-        case 'br':
-            return { x: w - bubble - pad, y: h - bubble - pad };
-        case 'tc':
-            return { x: cx, y: pad };
-        case 'rc':
-            return { x: w - bubble - pad, y: cy };
-        case 'bc':
-            return { x: cx, y: h - bubble - pad };
-        case 'lc':
-            return { x: pad, y: cy };
-    }
-}
 
 function getSupportedMimeType(): string {
     const types = [
@@ -128,7 +110,7 @@ function drawFrame(): void {
         _bubbleMask
     ) {
         const d = _bubbleCanvas.width;
-        const { x, y } = bubbleCoords(_bubblePos, w, h);
+        const { x, y } = bubbleCoords(_bubblePos, { x: 0, y: 0, w, h });
         const ix = Math.round(x);
         const iy = Math.round(y);
 
@@ -192,7 +174,11 @@ function cleanup(): void {
 
 // ─── public API ───────────────────────────────────────────────────────────────
 
-export async function start(options: RecorderOptions): Promise<void> {
+/**
+ * Starts recording. Resolves with a video-only stream of the composited canvas —
+ * the very track being encoded — for the Recording screen's live preview.
+ */
+export async function start(options: RecorderOptions): Promise<MediaStream> {
     const { screenStream, webcamStream, micDeviceId, bubblePosition, micMuted, camEnabled } =
         options;
     _camEnabled = camEnabled;
@@ -294,18 +280,22 @@ export async function start(options: RecorderOptions): Promise<void> {
     _canvasCaptureTrack = canvasStream.getVideoTracks()[0] as CanvasCaptureMediaStreamTrack;
     _destination.stream.getAudioTracks().forEach((t) => canvasStream.addTrack(t));
 
-    _recorder = new MediaRecorder(canvasStream, {
+    // Not yet in TypeScript's DOM typings; Chromium supports it.
+    const mediaOptions: MediaRecorderOptions & { videoKeyFrameIntervalCount: number } = {
         mimeType: getSupportedMimeType(),
         videoBitsPerSecond: VIDEO_BITS_PER_SECOND,
-        audioBitsPerSecond: AUDIO_BITS_PER_SECOND
-    });
+        audioBitsPerSecond: AUDIO_BITS_PER_SECOND,
+        videoKeyFrameIntervalCount: KEYFRAME_EVERY - 1
+    };
+    _recorder = new MediaRecorder(canvasStream, mediaOptions);
     _recorder.ondataavailable = (e) => {
         if (e.data.size > 0) _chunks.push(e.data);
     };
 
-    _intervalId = setInterval(drawFrame, 1000 / 30);
+    _intervalId = setInterval(drawFrame, 1000 / FRAME_RATE);
     _recorder.start(500);
     _recordingStartTime = Date.now();
+    return new MediaStream([_canvasCaptureTrack]);
 }
 
 export function stop(): Promise<Blob> {
