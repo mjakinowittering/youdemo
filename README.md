@@ -70,6 +70,17 @@ Things that would make YouDemo even better — contributions welcome.
       function is wrong on its own; add the edge case to
       `tests/editorMath.spec.ts`
 
+#### Docs
+
+- [ ] **Fix the README's WebM export bullet** — `## Features` still says
+      combining and trimming are rendered natively in the browser with "canvas +
+      `MediaRecorder`", but `videoStitcher.ts` (`stitchSegments`,
+      `renderEditedVideo`) now copies the recorded packets into a new WebM with
+      Mediabunny — no real-time replay, no quality loss — and only re-encodes a
+      take that can't be copied, once, through WebCodecs. `## Tech Stack`
+      already describes it correctly; reword the Features bullet to match,
+      without suggesting a canvas replay or a WASM transcoder
+
 ### Features
 
 #### Capture
@@ -82,6 +93,16 @@ Things that would make YouDemo even better — contributions welcome.
 - [ ] **Undo deleted frames** — restore soft-deleted frames before export
 - [ ] **Quick trim** — trim-to-highlight shortcut for the most common editing
       workflow
+- [ ] **Graduate the frame strip in seconds** — `FrameStrip.svelte` labels the
+      strip from `computeTimestampLabels` in `editorMath.ts`, which spreads
+      about eight labels across the whole recording (`visibleCells.length / 8`),
+      so the gap grows with its length: a 10-minute take gets a label every 75
+      seconds, some 31,000px apart, with nothing in between. Add a labelled tick
+      every second (every five cells at the 0.2s `SAMPLE_INTERVAL`), in
+      effective time so the scale stays continuous across cuts, and render only
+      the ticks inside the strip's virtual window (`posStart`..`posEnd`), as the
+      cells already are. Unit-test the tick maths in `tests/editorMath.spec.ts`.
+      A scale only — zooming the strip is out of scope
 
 #### Fun
 
