@@ -47,6 +47,8 @@
         failure?: { reason: string; details: string } | null;
         /** The video (or a stand-in) inside its frame. */
         video: Snippet;
+        /** The video's width ÷ height; null keeps the drawn 533:300. */
+        videoAspect?: number | null;
 
         paused: boolean;
         time: string;
@@ -102,6 +104,7 @@
         exportedFile = null,
         failure = null,
         video,
+        videoAspect = null,
         paused,
         time,
         percent,
@@ -180,7 +183,10 @@
             </div>
         {/if}
         <!-- Stays mounted while a card covers it, so playback keeps its place -->
-        <VideoFrame class={joining || exporting || phase === 'failed' ? 'hidden' : ''}>
+        <VideoFrame
+            class={joining || exporting || phase === 'failed' ? 'hidden' : ''}
+            aspect={videoAspect}
+        >
             {@render video()}
         </VideoFrame>
     </section>

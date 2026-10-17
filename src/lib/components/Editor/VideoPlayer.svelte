@@ -12,6 +12,9 @@
         paused?: boolean;
         currentTime?: number;
         duration?: number;
+        /** The recording's size in pixels; 0 until its metadata loads. */
+        videoWidth?: number;
+        videoHeight?: number;
     }
 
     let {
@@ -19,7 +22,9 @@
         deletedRanges = [],
         paused = $bindable(true),
         currentTime = $bindable(0),
-        duration = $bindable(0)
+        duration = $bindable(0),
+        videoWidth = $bindable(0),
+        videoHeight = $bindable(0)
     }: Props = $props();
 
     let videoEl = $state<HTMLVideoElement | undefined>(undefined);
@@ -98,6 +103,8 @@
         bind:paused
         bind:currentTime
         bind:duration
+        bind:videoWidth
+        bind:videoHeight
         class="size-full object-contain"
     ></video>
     {#if showPlayIcon || showPauseIcon}

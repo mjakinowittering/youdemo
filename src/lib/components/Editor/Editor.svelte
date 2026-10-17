@@ -70,6 +70,9 @@
     let paused = $state(true);
     let currentTime = $state(0);
     let duration = $state(0);
+    let videoWidth = $state(0);
+    let videoHeight = $state(0);
+    const videoAspect = $derived(videoWidth && videoHeight ? videoWidth / videoHeight : null);
 
     // Edit state
     let trimming = $state(false);
@@ -269,6 +272,7 @@
         ? { reason: exportFailureReason(exportError), details: errorDetails(exportError) }
         : null}
     {paused}
+    {videoAspect}
     time="{formatTime(keptTime)} / {formatTime(kept)}"
     percent={kept > 0 ? Math.min(100, (100 * keptTime) / kept) : 0}
     {trimming}
@@ -330,6 +334,8 @@
                 bind:paused
                 bind:currentTime
                 bind:duration
+                bind:videoWidth
+                bind:videoHeight
             />
         {/if}
     {/snippet}
