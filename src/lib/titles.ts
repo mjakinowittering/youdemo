@@ -57,7 +57,8 @@ export function titleFor(state: AppState, ctx: TitleContext = {}): string {
         case 'setup':
             return suffixed('Ready to record');
         case 'countdown':
-            return suffixed(`${count}…`);
+            // The number leads, so it survives a truncated tab
+            return suffixed(`${count}`);
         case 'recording':
             return suffixed(`● REC ${formatElapsed(elapsed)}`);
         case 'review':

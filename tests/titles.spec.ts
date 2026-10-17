@@ -23,9 +23,11 @@ describe('titleFor', () => {
         expect(titleFor('editor')).toBe(`Editing | ${APP_NAME}`);
     });
 
-    it('counts down', () => {
-        expect(titleFor('countdown', { count: 3 })).toBe(`3… | ${APP_NAME}`);
-        expect(titleFor('countdown', { count: 0 })).toBe(`0… | ${APP_NAME}`);
+    it('leads the countdown with the number, so a narrow tab still shows it', () => {
+        expect(titleFor('countdown', { count: 3 })).toBe(`3 | ${APP_NAME}`);
+        expect(titleFor('countdown', { count: 2 })).toBe(`2 | ${APP_NAME}`);
+        expect(titleFor('countdown', { count: 1 })).toBe(`1 | ${APP_NAME}`);
+        expect(titleFor('countdown', { count: 0 })).toBe(`0 | ${APP_NAME}`);
     });
 
     it('ticks the recording timer', () => {

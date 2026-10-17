@@ -194,8 +194,11 @@ Remove `Processing.svelte`, `Done.svelte` and the stitching screen in
 
 Keep one owner (`titles.ts`). Replace the stitching, processing and done titles
 with: joining "Joining takes… 64% | YouDemo", exporting "Exporting… 64% |
-YouDemo", exported "Exported | YouDemo". Countdown, recording, review and
-editing titles stay as they are.
+YouDemo", exported "Exported | YouDemo". The countdown leads with the number, so
+it survives a truncated tab and shows from the shared tab: "3 | YouDemo", "2 |
+YouDemo", "1 | YouDemo", then a brief "0 | YouDemo" until recording starts. It
+follows the time elapsed, not a count of ticks, so it stays right while YouDemo
+is a background tab. Recording, review and editing titles stay as they are.
 
 ## Out of scope
 

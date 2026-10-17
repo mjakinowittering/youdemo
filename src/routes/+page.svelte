@@ -13,6 +13,7 @@
     import { createBlurProcessor } from '$lib/blurProcessor.js';
     import type { BlurIntensity, BlurProcessor } from '$lib/blurProcessor.js';
     import type { BubblePosition } from '$lib/bubbleGeometry.js';
+    import { COUNTDOWN_FROM, startCountdown } from '$lib/countdown.js';
     import * as crashStore from '$lib/crashStore.js';
     import { deviceStore } from '$lib/deviceStore.svelte.js';
     import { currentCuts, emptyHistory, type CutHistory } from '$lib/editorMath.js';
@@ -50,9 +51,10 @@
     // Live values behind the dynamic titles. The countdown and recording ticks are
     // owned here (not in the screens), so the screens render a given moment from
     // props and the title has a single owner.
-    let countdownValue = $state(3);
+    let countdownValue = $state(COUNTDOWN_FROM);
     let recordingElapsed = $state(0);
     let tick: ReturnType<typeof setInterval> | undefined;
+    let stopCountdown: (() => void) | undefined;
 
     // ── shares, camera and takes ─────────────────────────────────────────────────
     // The screen share outlives a take, so Record take N can reuse it. It ends when
@@ -333,26 +335,23 @@
 
     // 3, 2, 1 a second each with a beep, then a brief 0 before recording starts
     function goToCountdown() {
-        clearInterval(tick);
-        countdownValue = 3;
+        stopCountdown?.();
         appState = 'countdown';
-        beep();
-        tick = setInterval(() => {
-            countdownValue -= 1;
-            beep();
-            if (countdownValue === 0) {
-                clearInterval(tick);
-                tick = setTimeout(() => {
-                    releaseBeep();
-                    void startRecording();
-                }, 300);
+        stopCountdown = startCountdown({
+            oncount: (count) => {
+                countdownValue = count;
+                beep();
+            },
+            ondone: () => {
+                releaseBeep();
+                void startRecording();
             }
-        }, 1000);
+        });
     }
 
     /** Back to where the take was started from: Setup, or Review if takes exist. */
     function cancelCountdown() {
-        clearInterval(tick);
+        stopCountdown?.();
         releaseBeep();
         if (sharePickedForTake) stopShare();
         sharePickedForTake = false;
@@ -423,6 +422,7 @@
 
     function resetToSetup() {
         clearInterval(tick);
+        stopCountdown?.();
         releaseBeep();
         stopShare();
         previewStream = null;
@@ -438,7 +438,7 @@
         exportError = null;
         editorPhase = 'ready';
         editorProgress = 0;
-        countdownValue = 3;
+        countdownValue = COUNTDOWN_FROM;
         recordingElapsed = 0;
         discardOpen = false;
         crashStore.clear();
