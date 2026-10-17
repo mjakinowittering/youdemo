@@ -45,7 +45,7 @@
 
 <div class="flex min-h-0 flex-1 flex-col">
     <section data-section="stage" class="relative flex min-h-0 flex-1 bg-yd-sand">
-        <div class="flex flex-1 flex-col items-center justify-center gap-[18px] p-6">
+        <div class="flex flex-1 flex-col items-center justify-center gap-4.5 p-6">
             <div class="flex w-205 max-w-full items-center gap-3.5">
                 <Pill variant="rec"
                     >REC<span class="tracking-normal">{formatElapsed(elapsed)}</span></Pill
@@ -58,8 +58,8 @@
             </div>
             <div
                 class={cn(
-                    'aspect-[820/461] max-w-full overflow-hidden rounded-control border-[1.5px] border-solid border-yd-ink bg-yd-card',
-                    aspect && aspect < 820 / 461 ? 'h-[461px]' : 'w-205',
+                    'aspect-820/461 max-w-full overflow-hidden rounded-control border-[1.5px] border-solid border-yd-ink bg-yd-card',
+                    aspect && aspect < 820 / 461 ? 'h-115.25' : 'w-205',
                     // The shape is the video's inside the outline, so no sliver of card shows
                     aspect && 'box-content'
                 )}
@@ -78,7 +78,7 @@
                     ></video>
                 {:else}
                     <!-- Sized as the frame drawn, outline and all -->
-                    <div class="h-[461px] w-205 bg-yd-rule" data-compare-mask></div>
+                    <div class="h-115.25 w-205 bg-yd-rule" data-compare-mask></div>
                 {/if}
             </div>
             <Button variant="danger" size="lg" onclick={onstop}>

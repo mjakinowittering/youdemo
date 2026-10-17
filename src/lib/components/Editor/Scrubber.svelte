@@ -49,7 +49,7 @@
     >
         <Icon icon={paused ? PlayIcon : PauseIcon} />
     </Button>
-    <span class="min-w-[110px] text-small font-semibold text-yd-ink">{time}</span>
+    <span class="min-w-27.5 text-small font-semibold text-yd-ink">{time}</span>
     <Slider
         type="single"
         value={onStep}
@@ -58,6 +58,6 @@
         {disabled}
         aria-label="Seek"
         onValueChange={onseek}
-        class="m-0.5 h-3 flex-1 rounded-full border-[1.5px] border-solid border-yd-ink bg-yd-card **:data-[slot=slider-range]:bg-yd-accent *:data-[slot=slider-thumb]:size-[22px] *:data-[slot=slider-thumb]:border-2 *:data-[slot=slider-thumb]:border-solid *:data-[slot=slider-thumb]:border-yd-ink *:data-[slot=slider-thumb]:bg-yd-card *:data-[slot=slider-thumb]:shadow-offset-press *:data-[slot=slider-thumb]:ring-0 *:data-[slot=slider-thumb]:transition-none *:data-[slot=slider-thumb]:disabled:opacity-100 *:data-[slot=slider-track]:h-full *:data-[slot=slider-track]:bg-transparent data-disabled:opacity-100"
+        class="m-0.5 h-3 flex-1 rounded-full border-[1.5px] border-solid border-yd-ink bg-yd-card **:data-[slot=slider-range]:bg-yd-accent *:data-[slot=slider-thumb]:size-5.5 *:data-[slot=slider-thumb]:border-2 *:data-[slot=slider-thumb]:border-solid *:data-[slot=slider-thumb]:border-yd-ink *:data-[slot=slider-thumb]:bg-yd-card *:data-[slot=slider-thumb]:shadow-offset-press *:data-[slot=slider-thumb]:ring-0 *:data-[slot=slider-thumb]:transition-none *:data-[slot=slider-thumb]:disabled:opacity-100 *:data-[slot=slider-track]:h-full *:data-[slot=slider-track]:bg-transparent data-disabled:opacity-100"
     />
 </div>

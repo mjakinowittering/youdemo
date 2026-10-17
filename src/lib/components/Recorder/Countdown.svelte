@@ -37,7 +37,7 @@
         role="timer"
         class="flex min-h-0 flex-1 flex-col items-center justify-center gap-5 bg-yd-sand"
     >
-        <div class="relative grid size-[200px] place-items-center">
+        <div class="relative grid size-50 place-items-center">
             <svg
                 width="200"
                 height="200"

@@ -70,7 +70,7 @@
 <div class="flex min-h-0 flex-1 flex-col">
     <section data-section="stage" class="relative flex min-h-0 flex-1 bg-yd-sand">
         {#if firstVisit}
-            <div class="flex w-115 shrink-0 flex-col gap-[22px] px-10 pt-10 pb-8">
+            <div class="flex w-115 shrink-0 flex-col gap-5.5 px-10 pt-10 pb-8">
                 <Pill class="self-start">First time here</Pill>
                 <h1 class="text-display text-balance">Record your screen, trim it, export it</h1>
                 <p class="text-lead text-yd-muted">
@@ -88,7 +88,7 @@
                 {@render choose()}
             </div>
         {:else}
-            <div class="flex w-115 shrink-0 flex-col justify-center gap-[18px] p-10">
+            <div class="flex w-115 shrink-0 flex-col justify-center gap-4.5 p-10">
                 <h1 class="text-display text-balance">Ready when you are</h1>
                 <p class="text-lead text-yd-muted">
                     Check your mic, camera and blur below, then choose what to share.

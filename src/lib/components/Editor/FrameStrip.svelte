@@ -48,18 +48,18 @@
 <!-- The row of frames and cut markers. It doesn't clip itself: the Editor puts it
      in an overflow-hidden band, and pans it by `offset`. -->
 <div
-    class={cn('flex w-max gap-[3px]', className)}
+    class={cn('flex w-max gap-0.75', className)}
     style:transform={offset ? `translateX(${-offset}px)` : undefined}
     {@attach wheel}
 >
     {#if leading}<div class="shrink-0" style="width: {leading}px"></div>{/if}
     {#each items as item (item.kind === 'cut' ? `cut-${item.cut}` : item.cell)}
         {#if item.kind === 'cut'}
-            <div class="relative mx-1 w-[3px] shrink-0 rounded-[2px] bg-yd-danger">
+            <div class="relative mx-1 w-0.75 shrink-0 rounded-xs bg-yd-danger">
                 <Button
                     variant="ghost"
                     size="icon-sm"
-                    class="absolute top-[-22px] left-1/2 -translate-x-1/2"
+                    class="absolute -top-5.5 left-1/2 -translate-x-1/2"
                     {disabled}
                     aria-label="Restore cut, {item.seconds} seconds"
                     onclick={() => onrestore(item.cut)}
@@ -89,7 +89,7 @@
                     <img
                         src={item.thumb}
                         alt=""
-                        class="absolute top-0 left-0 h-[61px] w-[77px] object-cover"
+                        class="absolute top-0 left-0 h-15.25 w-19.25 object-cover"
                         data-compare-mask
                     />
                 {/if}

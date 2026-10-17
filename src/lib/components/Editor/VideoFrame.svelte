@@ -21,7 +21,7 @@
      larger on a taller window -->
 <div
     class={cn(
-        'relative aspect-[533/300] h-[calc(100%-166px)] max-w-[calc(100%-48px)] overflow-hidden rounded-control border-[1.5px] border-solid border-yd-ink bg-yd-card shadow-bubble',
+        'relative aspect-533/300 h-[calc(100%-166px)] max-w-[calc(100%-48px)] overflow-hidden rounded-control border-[1.5px] border-solid border-yd-ink bg-yd-card shadow-bubble',
         className
     )}
     style={aspect ? `aspect-ratio: ${aspect}` : undefined}

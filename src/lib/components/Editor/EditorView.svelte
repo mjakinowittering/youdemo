@@ -197,20 +197,19 @@
                 <Button variant="ghost" size="icon" disabled aria-label="Play">
                     <Icon icon={PlayIcon} />
                 </Button>
-                <span class="min-w-[110px] text-small font-semibold text-yd-ink">--:-- / --:--</span
-                >
+                <span class="min-w-27.5 text-small font-semibold text-yd-ink">--:-- / --:--</span>
                 <SkeletonBlock class="h-3 flex-1 rounded-full" />
             </div>
             <div class="flex items-center gap-3.5 px-6 py-3">
-                <SkeletonBlock class="h-11 w-[110px]" />
+                <SkeletonBlock class="h-11 w-27.5" />
                 <SkeletonBlock class="size-11" />
                 <SkeletonBlock class="size-11" />
                 <span class="flex-1"></span>
-                <SkeletonBlock class="h-11 w-[150px]" />
+                <SkeletonBlock class="h-11 w-37.5" />
             </div>
             <div class="px-6"><SkeletonBlock class="h-8" /></div>
             <div class="overflow-hidden" bind:clientWidth={stripWidth}>
-                <div class="flex gap-[3px] pt-[30px] pl-6">
+                <div class="flex gap-0.75 pt-7.5 pl-6">
                     {#each { length: skeletonCells } as _, i (i)}
                         <SkeletonBlock
                             class="h-16 w-20 rounded-frame border-[1.5px] border-solid border-yd-rule"
@@ -255,7 +254,7 @@
             </div>
             <div class="overflow-hidden" bind:clientWidth={stripWidth}>
                 <FrameStrip
-                    class="pt-[30px] pl-6"
+                    class="pt-7.5 pl-6"
                     items={strip}
                     leading={stripLeading}
                     offset={stripOffset}
