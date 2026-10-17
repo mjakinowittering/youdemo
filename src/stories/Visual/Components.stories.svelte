@@ -212,7 +212,7 @@
 <Story name="AlertDialog">
     {#snippet template()}
         <Sheet>
-            <div class="relative h-90 w-full transform-gpu overflow-hidden rounded-notice">
+            <div class="relative h-90 w-full overflow-hidden rounded-notice">
                 <ConfirmDialog
                     open
                     title="Export your video?"

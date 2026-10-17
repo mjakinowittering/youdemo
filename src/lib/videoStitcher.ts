@@ -250,3 +250,13 @@ export async function renderEditedVideo(
     if (plan.video.length === 0) return source;
     return write([opened], plan, onProgress);
 }
+
+/** A take's length in seconds, read from its WebM (crash recovery has no clock). */
+export async function takeDuration(blob: Blob): Promise<number> {
+    const input = new Input({ source: new BlobSource(blob), formats: ALL_FORMATS });
+    try {
+        return await input.computeDuration();
+    } finally {
+        input.dispose();
+    }
+}

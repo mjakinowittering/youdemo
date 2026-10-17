@@ -33,20 +33,23 @@
     }: Props = $props();
 </script>
 
-<!-- Rendered in place rather than portalled: it covers the viewport either way,
-     and a transformed frame (a visual story) can contain it. -->
+<!-- Rendered in place, absolutely over the app shell (which is positioned), like
+     the drawn scrim. bits' `contain: layout` is lifted, as containment paints the
+     panel on its own pixel grid, a pixel off the design's. -->
 <AlertDialog.Root bind:open>
     <AlertDialog.Portal disabled>
-        <AlertDialog.Overlay class="bg-yd-scrim supports-backdrop-filter:backdrop-blur-none" />
+        <AlertDialog.Overlay
+            class="absolute z-50 bg-yd-scrim supports-backdrop-filter:backdrop-blur-none"
+        />
         <!-- Centred by a full-screen grid, as drawn: a dialog taller than its frame
              starts at the top rather than off it -->
         <AlertDialogPrimitive.Content>
             {#snippet child({ props })}
-                <div class="fixed inset-0 z-50 grid place-items-center">
+                <div class="absolute inset-0 z-50 grid place-items-center">
                     <div
                         {...props}
                         data-section="dialog"
-                        class="flex w-120 max-w-[calc(100%-48px)] flex-col gap-[18px] rounded-panel border-[1.5px] border-solid border-yd-ink bg-yd-card p-7 text-yd-ink shadow-panel outline-none"
+                        class="flex w-120 max-w-[calc(100%-48px)] flex-col gap-[18px] rounded-panel border-[1.5px] border-solid border-yd-ink bg-yd-card p-7 text-yd-ink shadow-panel contain-none! outline-none"
                     >
                         <AlertDialogPrimitive.Title level={2} class="text-dialog"
                             >{title}</AlertDialogPrimitive.Title

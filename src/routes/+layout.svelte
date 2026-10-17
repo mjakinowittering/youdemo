@@ -1,7 +1,7 @@
 <script lang="ts">
     import './layout.css';
 
-    import AppHeader from '$lib/components/AppHeader.svelte';
+    import AppShell from '$lib/components/AppShell.svelte';
     import * as Tooltip from '$lib/components/ui/tooltip/index.js';
 
     import favicon from '$lib/assets/favicon.svg';
@@ -14,11 +14,7 @@
 </svelte:head>
 
 <Tooltip.Provider>
-    <div class="flex h-screen flex-col">
-        <AppHeader />
-
-        <main class="flex-1 overflow-auto">
-            {@render children()}
-        </main>
-    </div>
+    <AppShell class="h-screen">
+        {@render children()}
+    </AppShell>
 </Tooltip.Provider>

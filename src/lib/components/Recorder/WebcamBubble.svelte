@@ -3,6 +3,7 @@
         BUBBLE_POSITIONS,
         previewBubble,
         previewSpot,
+        previewSpotStyle,
         SLOT_INSET,
         SLOT_SHRINK,
         type BubblePosition,
@@ -125,17 +126,24 @@
      shows the dashed slots and it snaps to the nearest on release. -->
 <div class="pointer-events-none absolute inset-0" {@attach measure}>
     {#each shownSlots as pos (pos)}
-        {@const s = previewSpot(pos, frame, slotSize, slotSize, bubbleInset + SLOT_INSET)}
         <div
             class="absolute rounded-full border-2 border-dashed border-yd-ink bg-yd-card/60"
-            style="left: {s.x}px; top: {s.y}px; width: {slotSize}px; height: {slotSize}px"
+            style="{previewSpotStyle(
+                pos,
+                frame,
+                slotSize,
+                slotSize,
+                bubbleInset + SLOT_INSET
+            )}; width: {slotSize}px; height: {slotSize}px"
         ></div>
     {/each}
 
     <div
         class="pointer-events-auto absolute cursor-grab touch-none active:cursor-grabbing"
         class:invisible={!frame.innerW || !groupW}
-        style="left: {at.x}px; top: {at.y}px"
+        style={dragging
+            ? `left: ${dragX}px; top: ${dragY}px`
+            : previewSpotStyle(position, frame, groupW, groupH, bubbleInset)}
         bind:offsetWidth={groupW}
         bind:offsetHeight={groupH}
         role="none"

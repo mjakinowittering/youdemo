@@ -113,8 +113,10 @@ focused on open. Board: `alert-dialog`.
 **Timeline**: overview bar, frames (current, marked, skeleton), cut marker with
 round restore button, labels. Board: `timeline`.
 
-**EditorToolbar**: Trim toggle, Undo + Redo, then either zoom (label, out, in)
-or, while trimming, the hint and Remove N s. Board: `editor-toolbar`.
+**EditorToolbar**: a 14px-gap row: Trim toggle, Undo + Redo (an 8px group), then
+either zoom (label, out, in, as one 8px group pushed right) or, while trimming,
+the hint and Remove N s. The component board and the Editor screens draw the
+same markup. Board: `editor-toolbar`.
 
 **WebcamBubble**: circle, 2px ink outline, `4px 4px 0` ink shadow; dashed ink
 slots while dragging; "Drag to move" pill. Board: `webcam-bubble`.

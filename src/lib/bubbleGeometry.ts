@@ -54,6 +54,18 @@ export interface FrameSize {
     outerH: number;
 }
 
+// Which edge or centre each spot sits against: [vertical, horizontal]
+const ANCHORS: Record<BubblePosition, ['t' | 'c' | 'b', 'l' | 'c' | 'r']> = {
+    tl: ['t', 'l'],
+    tc: ['t', 'c'],
+    tr: ['t', 'r'],
+    lc: ['c', 'l'],
+    rc: ['c', 'r'],
+    bl: ['b', 'l'],
+    bc: ['b', 'c'],
+    br: ['b', 'r']
+};
+
 /**
  * Top-left of a `w`×`h` box at `pos` in a preview frame, `inset` from its inner
  * edges. Centred spots are centred on the frame's outer box, as the design draws
@@ -66,19 +78,28 @@ export function previewSpot(
     h: number,
     inset: number
 ): { x: number; y: number } {
+    const [v, hz] = ANCHORS[pos];
     const xs = { l: inset, c: (frame.outerW - w) / 2, r: frame.innerW - w - inset };
     const ys = { t: inset, c: (frame.outerH - h) / 2, b: frame.innerH - h - inset };
-    const [y, x] = {
-        tl: ['t', 'l'],
-        tc: ['t', 'c'],
-        tr: ['t', 'r'],
-        lc: ['c', 'l'],
-        rc: ['c', 'r'],
-        bl: ['b', 'l'],
-        bc: ['b', 'c'],
-        br: ['b', 'r']
-    }[pos] as ['t' | 'c' | 'b', 'l' | 'c' | 'r'];
-    return { x: xs[x], y: ys[y] };
+    return { x: xs[hz], y: ys[v] };
+}
+
+/**
+ * {@link previewSpot} as CSS. Spots on the right and bottom are anchored to those
+ * edges, as the design draws them, so they don't depend on a measured size.
+ */
+export function previewSpotStyle(
+    pos: BubblePosition,
+    frame: FrameSize,
+    w: number,
+    h: number,
+    inset: number
+): string {
+    const [v, hz] = ANCHORS[pos];
+    const { x, y } = previewSpot(pos, frame, w, h, inset);
+    const across = hz === 'r' ? `right: ${inset}px` : `left: ${x}px`;
+    const down = v === 'b' ? `bottom: ${inset}px` : `top: ${y}px`;
+    return `${across}; ${down}`;
 }
 
 /**

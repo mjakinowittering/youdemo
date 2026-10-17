@@ -10,6 +10,12 @@ export interface DeletedRange {
     endTime: number;
 }
 
+/** One recorded take: its WebM and how long it runs, in seconds. */
+export interface Take {
+    blob: Blob;
+    duration: number;
+}
+
 /**
  * Every step of the user journey. Owned as `$state` by `+page.svelte`, which
  * renders the matching screen; `titles.ts` maps each one to a document title.

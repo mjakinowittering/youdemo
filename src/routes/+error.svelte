@@ -12,7 +12,7 @@
 </svelte:head>
 
 <div class="flex h-full flex-col items-center justify-center gap-4 bg-yd-sand p-6 text-center">
-    <h1 class="text-screen text-yd-ink">{page.status}</h1>
+    <h1 class="text-screen text-balance text-yd-ink">{page.status}</h1>
     <p class="text-lead text-yd-muted">
         {page.status === 404
             ? `Oops! Page not found. Sorry about that...`

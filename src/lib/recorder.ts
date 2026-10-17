@@ -2,6 +2,7 @@ import fixWebmDuration from 'fix-webm-duration';
 
 import { BUBBLE_FRAC, bubbleCoords, type BubblePosition } from '$lib/bubbleGeometry.js';
 import { FRAME_RATE, SAMPLE_INTERVAL } from '$lib/editorMath.js';
+import type { Take } from '$lib/types.js';
 
 export interface RecorderOptions {
     screenStream: MediaStream;
@@ -54,7 +55,6 @@ let _destination: MediaStreamAudioDestinationNode | null = null;
 let _camEnabled = false;
 let _bubblePos: BubblePosition = 'tr';
 let _recordingStartTime = 0;
-let _screenStream: MediaStream | null = null;
 let _userStream: MediaStream | null = null;
 let _canvasCaptureTrack: CanvasCaptureMediaStreamTrack | null = null;
 // Offscreen canvas the webcam bubble is masked on before being blitted to the
@@ -140,13 +140,9 @@ function drawFrame(): void {
 }
 
 function cleanup(): void {
-    // The screen stream is owned by the recorder; the raw webcam stream is owned
-    // upstream (+page) and is intentionally NOT stopped here so it survives a
-    // resume. Only the mic stream acquired below belongs to the recorder.
-    if (_screenStream) {
-        _screenStream.getTracks().forEach((t) => t.stop());
-        _screenStream = null;
-    }
+    // The screen share and the raw webcam stream are owned upstream (+page) and
+    // are intentionally NOT stopped here: both outlive a take, so the next take
+    // can reuse them. Only the mic stream acquired below belongs to the recorder.
     if (_screenVideo) {
         _screenVideo.srcObject = null;
         _screenVideo = null;
@@ -186,7 +182,6 @@ export async function start(options: RecorderOptions): Promise<MediaStream> {
     _chunks = [];
 
     // Screen video for drawImage
-    _screenStream = screenStream;
     _screenVideo = document.createElement('video');
     _screenVideo.srcObject = screenStream;
     _screenVideo.muted = true;
@@ -298,21 +293,17 @@ export async function start(options: RecorderOptions): Promise<MediaStream> {
     return new MediaStream([_canvasCaptureTrack]);
 }
 
-export function stop(): Promise<Blob> {
+/** Stops recording and resolves with the take: its WebM and duration. */
+export function stop(): Promise<Take> {
     const durationMs = Date.now() - _recordingStartTime;
     return new Promise((resolve) => {
         if (!_recorder) {
-            resolve(new Blob([], { type: 'video/webm' }));
+            resolve({ blob: new Blob([], { type: 'video/webm' }), duration: 0 });
             return;
         }
         if (_intervalId !== null) {
             clearInterval(_intervalId);
             _intervalId = null;
-        }
-        // Stop the screen stream immediately to release the browser sharing indicator.
-        if (_screenStream) {
-            _screenStream.getTracks().forEach((t) => t.stop());
-            _screenStream = null;
         }
         if (_userStream) {
             _userStream.getTracks().forEach((t) => t.stop());
@@ -322,7 +313,7 @@ export function stop(): Promise<Blob> {
             const blob = new Blob(_chunks, { type: 'video/webm' });
             const fixedBlob = await fixWebmDuration(blob, durationMs);
             cleanup();
-            resolve(fixedBlob);
+            resolve({ blob: fixedBlob, duration: durationMs / 1000 });
         };
         if (_recorder.state !== 'inactive') _recorder.stop();
         else _recorder.onstop(new Event('stop'));
