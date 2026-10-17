@@ -16,7 +16,13 @@
     import { COUNTDOWN_FROM, startCountdown } from '$lib/countdown.js';
     import * as crashStore from '$lib/crashStore.js';
     import { deviceStore } from '$lib/deviceStore.svelte.js';
-    import { currentCuts, emptyHistory, type CutHistory } from '$lib/editorMath.js';
+    import {
+        currentCuts,
+        emptyHistory,
+        exportedFileShown,
+        type CutHistory,
+        type ExportedFile
+    } from '$lib/editorMath.js';
     import { errorDetails, errorReason } from '$lib/errors.js';
     import {
         DISPLAY_MEDIA_OPTIONS,
@@ -84,7 +90,7 @@
     // The cuts, with undo and redo. Owned here so they survive Back to review.
     let cutHistory = $state<CutHistory>(emptyHistory());
     // The file just exported, for the Exported notice, and why an export failed
-    let exportedFile = $state<string | null>(null);
+    let exported = $state<ExportedFile | null>(null);
     let exportError = $state<unknown>(null);
 
     // The document title for the current moment of the journey — the only place a
@@ -96,7 +102,7 @@
             elapsed: recordingElapsed,
             phase: editorPhase,
             progress: editorProgress,
-            exported: exportedFile !== null
+            exported: exportedFileShown(exported, cutHistory) !== null
         })
     );
 
@@ -406,8 +412,10 @@
         const take = await recorderStop();
         previewStream = null;
         takes = [...takes, take];
-        // A new take invalidates any previously stitched Editor source.
+        // A new take invalidates any previously stitched Editor source, and the
+        // file last exported no longer matches it.
         editorBlob = null;
+        exported = null;
         // Persist this take to OPFS (one file per take) so a crash/reload can
         // recover the whole recording, not just the last take.
         crashStore.saveSegment(takes.length - 1, take.blob);
@@ -436,7 +444,7 @@
         if (editorVideoUrl) URL.revokeObjectURL(editorVideoUrl);
         editorVideoUrl = null;
         cutHistory = emptyHistory();
-        exportedFile = null;
+        exported = null;
         exportError = null;
         editorPhase = 'ready';
         resetProgress();
@@ -462,7 +470,6 @@
     async function goToEditor() {
         // Editing doesn't need the share; the camera is released by its effect
         stopShare();
-        exportedFile = null;
         // The Editor mounts at once; several takes are joined first, losslessly
         // (a packet copy), and the result is cached until the takes change.
         appState = 'editor';
@@ -498,12 +505,12 @@
     // recording clear it.
     async function exportVideo(filename: string) {
         if (!editorBlob) return;
-        exportedFile = null;
+        exported = null;
         const cuts = currentCuts(cutHistory);
         // No cuts: the joined recording is the file, so there is nothing to show
         if (cuts.length === 0) {
             downloadBlob(editorBlob, filename);
-            exportedFile = filename;
+            exported = { name: filename, edits: cutHistory.edits };
             editorPhase = 'ready';
             return;
         }
@@ -512,7 +519,7 @@
         try {
             const blob = await renderEditedVideo(editorBlob, cuts, reportProgress);
             downloadBlob(blob, filename);
-            exportedFile = filename;
+            exported = { name: filename, edits: cutHistory.edits };
             editorPhase = 'ready';
         } catch (err) {
             exportError = err;
@@ -588,7 +595,7 @@
         progress={editorProgress}
         takeCount={takes.length}
         bind:history={cutHistory}
-        bind:exportedFile
+        bind:exported
         {exportError}
         onback={backToReview}
         onexport={exportVideo}

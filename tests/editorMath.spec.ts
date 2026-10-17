@@ -15,6 +15,7 @@ import {
     effectiveToRawTime,
     emptyHistory,
     entriesInView,
+    exportedFileShown,
     formatTime,
     frameAt,
     overviewGeometry,
@@ -221,6 +222,45 @@ describe('cut history', () => {
         const restored = restoreCut(cut, 0);
         expect(currentCuts(restored)).toEqual([b]);
         expect(currentCuts(undo(restored))).toEqual([a, b]);
+    });
+});
+
+describe('exportedFileShown', () => {
+    const a = { startTime: 1, endTime: 2 };
+    const b = { startTime: 5, endTime: 6 };
+    const name = 'youdemo-2026-10-17-215000.webm';
+    const exportedAt = (h: ReturnType<typeof emptyHistory>) => ({ name, edits: h.edits });
+
+    it('names the file while the edit is the one exported', () => {
+        const h = addCut(emptyHistory(), a);
+        expect(exportedFileShown(exportedAt(h), h)).toBe(name);
+    });
+
+    it('closes once dismissed', () => {
+        expect(exportedFileShown(null, emptyHistory())).toBeNull();
+    });
+
+    it('closes on a cut', () => {
+        const h = addCut(emptyHistory(), a);
+        expect(exportedFileShown(exportedAt(h), addCut(h, b))).toBeNull();
+    });
+
+    it('closes on Undo, Redo and restoring a cut', () => {
+        const h = addCut(addCut(emptyHistory(), a), b);
+        const back = undo(h);
+        expect(exportedFileShown(exportedAt(h), back)).toBeNull();
+        expect(exportedFileShown(exportedAt(h), restoreCut(h, 0))).toBeNull();
+        expect(exportedFileShown(exportedAt(back), redo(back))).toBeNull();
+    });
+
+    it('stays closed when Undo then Redo returns to the exported cuts', () => {
+        const h = addCut(emptyHistory(), a);
+        expect(exportedFileShown(exportedAt(h), redo(undo(h)))).toBeNull();
+    });
+
+    it('stays open when Undo or Redo has nothing to step to', () => {
+        const h = emptyHistory();
+        expect(exportedFileShown(exportedAt(h), redo(undo(h)))).toBe(name);
     });
 });
 

@@ -12,6 +12,7 @@
         currentCuts,
         effectiveToRawTime,
         entriesInView,
+        exportedFileShown,
         formatTime,
         frameAt,
         overviewGeometry,
@@ -25,6 +26,7 @@
         ZOOM_LEVELS,
         zoomLabel,
         type CutHistory,
+        type ExportedFile,
         type StripEntry,
         type StripItem
     } from '$lib/editorMath.js';
@@ -45,8 +47,8 @@
         takeCount: number;
         /** The cuts, with undo and redo; owned by +page.svelte so they survive Back. */
         history: CutHistory;
-        /** The file just saved, for the Exported notice. */
-        exportedFile?: string | null;
+        /** The file just saved, for the Exported notice; null once dismissed. */
+        exported?: ExportedFile | null;
         exportError?: unknown;
         onback: () => void;
         /** Confirmed: export to this file name. */
@@ -62,7 +64,7 @@
         progress = 0,
         takeCount,
         history = $bindable(),
-        exportedFile = $bindable(null),
+        exported = $bindable(null),
         exportError = null,
         onback,
         onexport,
@@ -95,6 +97,8 @@
     const PAD = 24;
 
     let cuts = $derived(currentCuts(history));
+    // The Exported notice stays until it's dismissed or the edit changes
+    let exportedFile = $derived(exportedFileShown(exported, history));
     let interval = $derived<number>(ZOOM_LEVELS[zoom]);
     let kept = $derived(computeEffectiveDuration(duration, cuts));
     let keptTime = $derived(computeEffectiveCurrentTime(currentTime, cuts));
@@ -331,7 +335,7 @@
     onrestore={(cut) => {
         if (!locked) history = restoreCut(history, cut);
     }}
-    ondismissexported={() => (exportedFile = null)}
+    ondismissexported={() => (exported = null)}
     onretry={() => onexport(filename)}
     onconfirmexport={() => onexport(filename)}
     onconfirmdiscard={ondiscard}

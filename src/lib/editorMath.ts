@@ -161,15 +161,17 @@ export function zoomLabel(interval: number): string {
 
 /**
  * Every state the cuts have been in, and which is current: cutting and
- * restoring push a state, Undo and Redo move between them.
+ * restoring push a state, Undo and Redo move between them. `edits` counts every
+ * change, so unlike `index` a position in the history is never returned to.
  */
 export interface CutHistory {
     stack: DeletedRange[][];
     index: number;
+    edits: number;
 }
 
 export function emptyHistory(): CutHistory {
-    return { stack: [[]], index: 0 };
+    return { stack: [[]], index: 0, edits: 0 };
 }
 
 export function currentCuts(history: CutHistory): DeletedRange[] {
@@ -185,18 +187,23 @@ export function canRedo(history: CutHistory): boolean {
 }
 
 export function undo(history: CutHistory): CutHistory {
-    return canUndo(history) ? { ...history, index: history.index - 1 } : history;
+    return canUndo(history)
+        ? { ...history, index: history.index - 1, edits: history.edits + 1 }
+        : history;
 }
 
 export function redo(history: CutHistory): CutHistory {
-    return canRedo(history) ? { ...history, index: history.index + 1 } : history;
+    return canRedo(history)
+        ? { ...history, index: history.index + 1, edits: history.edits + 1 }
+        : history;
 }
 
 /** A new state of the cuts; anything that could have been redone is dropped. */
 function push(history: CutHistory, cuts: DeletedRange[]): CutHistory {
     return {
         stack: [...history.stack.slice(0, history.index + 1), cuts],
-        index: history.index + 1
+        index: history.index + 1,
+        edits: history.edits + 1
     };
 }
 
@@ -229,6 +236,23 @@ export function restoreCut(history: CutHistory, index: number): CutHistory {
         history,
         currentCuts(history).filter((_, i) => i !== index)
     );
+}
+
+/** The file just exported, and the history's `edits` when it was. */
+export interface ExportedFile {
+    name: string;
+    edits: number;
+}
+
+/**
+ * The file the Exported notice names, while the edit on screen is still the
+ * one exported; null once a cut, restore, Undo or Redo has changed it.
+ */
+export function exportedFileShown(
+    exported: ExportedFile | null,
+    history: CutHistory
+): string | null {
+    return exported && exported.edits === history.edits ? exported.name : null;
 }
 
 // ── the frame strip ──────────────────────────────────────────────────────────

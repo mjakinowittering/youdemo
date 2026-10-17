@@ -64,8 +64,11 @@ and progress down, so a story can render any phase.
   packet copy, `stitchSegments`) and cached until the takes change —
   invalidated in `stopRecording()` and `resetToSetup()` only.
 - **Exporting**: `renderEditedVideo(editorBlob, cuts)`, then `downloadBlob`
-  with the name fixed when the Export dialog opened; `exportedFile` shows the
-  Exported notice. **The crash store is not cleared on export.**
+  with the name fixed when the Export dialog opened. `exported` keeps the file
+  name and the history's `edits` at that moment; the Exported notice and its
+  title show while `exportedFileShown()` matches — until dismissed, the edit
+  changes or a new take is recorded. **The crash store is not cleared on
+  export.**
 - **Failed**: `exportError` feeds the export-failed card (Try again, Copy error).
 
 The cuts live here as a `CutHistory` (`editorMath.ts`), bound down, so they
