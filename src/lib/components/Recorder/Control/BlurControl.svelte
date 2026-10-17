@@ -1,8 +1,7 @@
 <script lang="ts">
-    import ChevronDown from '@lucide/svelte/icons/chevron-down';
-    import CircleUserRound from '@lucide/svelte/icons/circle-user-round';
-    import UserRound from '@lucide/svelte/icons/user-round';
+    import { ArrowDown01Icon, BlurIcon, UserIcon } from '@hugeicons/core-free-icons';
 
+    import Icon from '$lib/components/Icon.svelte';
     import { buttonVariants, type ButtonVariant } from '$lib/components/ui/button/button.svelte';
     import { Button } from '$lib/components/ui/button/index.js';
     import * as DropdownMenu from '$lib/components/ui/dropdown-menu/index.js';
@@ -27,9 +26,7 @@
 
     let blurDisabled = $derived(disabled || !camEnabled);
 
-    let variant = $derived<ButtonVariant>(
-        !camEnabled ? 'destructive' : blurOn ? 'success' : 'outline'
-    );
+    let variant = $derived<ButtonVariant>(!camEnabled ? 'danger-ghost' : 'ghost');
 
     let tooltipText = $derived(
         !blurOn
@@ -55,9 +52,9 @@
                     aria-label={blurOn ? 'Disable background blur' : 'Enable background blur'}
                 >
                     {#if blurOn && camEnabled}
-                        <CircleUserRound />
+                        <Icon icon={BlurIcon} />
                     {:else}
-                        <UserRound />
+                        <Icon icon={UserIcon} />
                     {/if}
                 </Button>
                 <DropdownMenu.Root>
@@ -66,7 +63,7 @@
                         disabled={blurDisabled}
                         aria-label="Select blur intensity"
                     >
-                        <ChevronDown class="size-3" />
+                        <Icon icon={ArrowDown01Icon} class="size-3" />
                     </DropdownMenu.Trigger>
                     <DropdownMenu.Content>
                         <DropdownMenu.RadioGroup

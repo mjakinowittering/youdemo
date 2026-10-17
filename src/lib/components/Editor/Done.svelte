@@ -1,7 +1,8 @@
 <script lang="ts">
-    import CircleCheck from '@lucide/svelte/icons/circle-check';
+    import { CheckmarkCircle02Icon } from '@hugeicons/core-free-icons';
     import { onMount } from 'svelte';
 
+    import Icon from '$lib/components/Icon.svelte';
     import { Button } from '$lib/components/ui/button/index.js';
     import * as Card from '$lib/components/ui/card/index.js';
     import * as Empty from '$lib/components/ui/empty/index.js';
@@ -33,7 +34,7 @@
     >
         <Empty.Root>
             <Empty.Media>
-                <CircleCheck size={128} class="text-muted-foreground" />
+                <Icon icon={CheckmarkCircle02Icon} size={128} class="text-muted-foreground" />
             </Empty.Media>
             <Empty.Header>
                 <Empty.Title>Download started</Empty.Title>

@@ -1,8 +1,8 @@
 <script lang="ts">
-    import Clapperboard from '@lucide/svelte/icons/clapperboard';
-    import Film from '@lucide/svelte/icons/film';
-    import Trash2 from '@lucide/svelte/icons/trash-2';
+    import { Delete02Icon, ScissorIcon, VideoReplayIcon } from '@hugeicons/core-free-icons';
+    import type { IconSvgElement } from '@hugeicons/svelte';
 
+    import Icon from '$lib/components/Icon.svelte';
     import { buttonVariants, type ButtonVariant } from '$lib/components/ui/button/button.svelte';
     import * as Card from '$lib/components/ui/card/index.js';
 
@@ -36,14 +36,14 @@
      footer button is purely visual (pointer-events-none). This avoids the
      stretched-overlay/stacking issues of a clickable child inside the card. -->
 {#snippet actionCard(
-    Icon: typeof Clapperboard,
+    glyph: IconSvgElement,
     title: string,
     description: string,
     label: string,
     variant: ButtonVariant,
     onclick: () => void
 )}
-    {@const destructive = variant === 'destructive'}
+    {@const destructive = variant === 'danger-ghost'}
     <Card.Root
         role="button"
         tabindex={0}
@@ -62,7 +62,10 @@
         )}
     >
         <Card.Header>
-            <Icon class={cn('mb-2 size-8', destructive ? 'text-destructive' : 'text-indigo-500')} />
+            <Icon
+                icon={glyph}
+                class={cn('mb-2 size-8', destructive ? 'text-destructive' : 'text-indigo-500')}
+            />
             <Card.Title>{title}</Card.Title>
             <Card.Description>{description}</Card.Description>
         </Card.Header>
@@ -83,7 +86,7 @@
     <div class="flex flex-1 items-center justify-center overflow-auto p-6">
         <div class="flex w-full max-w-3xl flex-col gap-4 sm:flex-row">
             {@render actionCard(
-                Clapperboard,
+                ScissorIcon,
                 'Resume recording',
                 'Continue capturing another segment',
                 'Continue',
@@ -91,7 +94,7 @@
                 onresume
             )}
             {@render actionCard(
-                Film,
+                VideoReplayIcon,
                 'Edit recording',
                 'Trim and export your recording',
                 'Continue',
@@ -99,11 +102,11 @@
                 onedit
             )}
             {@render actionCard(
-                Trash2,
+                Delete02Icon,
                 'Discard recording',
                 'Delete this recording and start over',
                 'Discard',
-                'destructive',
+                'danger-ghost',
                 ondiscard
             )}
         </div>

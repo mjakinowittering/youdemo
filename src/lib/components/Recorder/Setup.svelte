@@ -1,7 +1,8 @@
 <script lang="ts">
-    import Clapperboard from '@lucide/svelte/icons/clapperboard';
+    import { ScissorIcon } from '@hugeicons/core-free-icons';
     import { untrack } from 'svelte';
 
+    import Icon from '$lib/components/Icon.svelte';
     import { buttonVariants } from '$lib/components/ui/button/button.svelte';
     import * as Card from '$lib/components/ui/card/index.js';
     import * as Empty from '$lib/components/ui/empty/index.js';
@@ -143,7 +144,7 @@
             >
                 <Empty.Root>
                     <Empty.Media>
-                        <Clapperboard size={128} class="text-muted-foreground" />
+                        <Icon icon={ScissorIcon} size={128} class="text-muted-foreground" />
                     </Empty.Media>
                     <Empty.Header>
                         <Empty.Title>No screen selected</Empty.Title>

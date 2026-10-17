@@ -1,7 +1,7 @@
 <script lang="ts">
-    import Scissors from '@lucide/svelte/icons/scissors';
-    import Trash2 from '@lucide/svelte/icons/trash-2';
+    import { Delete02Icon, ScissorIcon } from '@hugeicons/core-free-icons';
 
+    import Icon from '$lib/components/Icon.svelte';
     import { Button } from '$lib/components/ui/button/index.js';
 
     import { formatTime } from '$lib/editorMath.js';
@@ -30,12 +30,12 @@
         onclick={() => ontogglecut?.()}
         class={editMode ? 'border-indigo-500 bg-indigo-500 text-white hover:bg-indigo-600' : ''}
     >
-        <Scissors class="mr-1 size-4" />
+        <Icon icon={ScissorIcon} class="mr-1 size-4" />
         {editMode ? 'Selecting…' : 'Cut'}
     </Button>
     {#if canDelete}
-        <Button variant="destructive" size="lg" onclick={() => ondelete?.()}>
-            <Trash2 class="mr-1 size-4" />
+        <Button variant="danger" size="lg" onclick={() => ondelete?.()}>
+            <Icon icon={Delete02Icon} class="mr-1 size-4" />
             Delete
         </Button>
     {/if}

@@ -1,11 +1,13 @@
 <script lang="ts">
-    import Download from '@lucide/svelte/icons/download';
-    import Monitor from '@lucide/svelte/icons/monitor';
-    import MonitorPlay from '@lucide/svelte/icons/monitor-play';
-    import Scissors from '@lucide/svelte/icons/scissors';
+    import {
+        ComputerScreenShareIcon,
+        Download04Icon,
+        ScissorIcon
+    } from '@hugeicons/core-free-icons';
     import { onMount } from 'svelte';
     import type { ComponentProps } from 'svelte';
 
+    import Icon from '$lib/components/Icon.svelte';
     import { Button } from '$lib/components/ui/button/index.js';
     import * as Dialog from '$lib/components/ui/dialog/index.js';
     import { Separator } from '$lib/components/ui/separator/index.js';
@@ -45,7 +47,7 @@
 >
     <Dialog.Content class="max-w-md" showCloseButton={false} {...contentProps}>
         <div class="flex flex-col items-center gap-4 text-center">
-            <MonitorPlay class="text-indigo-500" size={52} />
+            <Icon icon={ComputerScreenShareIcon} class="text-indigo-500" size={52} />
             <Dialog.Title class="text-xl font-semibold">Welcome to YouDemo</Dialog.Title>
             <Dialog.Description>
                 YouDemo lets you record your screen with a webcam overlay, trim the footage, and
@@ -57,17 +59,17 @@
 
         <ul class="flex flex-col gap-3">
             <li class="flex items-center gap-3">
-                <Monitor class="shrink-0 text-indigo-500" size={18} />
+                <Icon icon={ComputerScreenShareIcon} class="shrink-0 text-indigo-500" size={18} />
                 <span class="text-sm"
                     >Record your screen with a webcam overlay and background blur</span
                 >
             </li>
             <li class="flex items-center gap-3">
-                <Scissors class="shrink-0 text-indigo-500" size={18} />
+                <Icon icon={ScissorIcon} class="shrink-0 text-indigo-500" size={18} />
                 <span class="text-sm">Trim the footage right in the browser</span>
             </li>
             <li class="flex items-center gap-3">
-                <Download class="shrink-0 text-indigo-500" size={18} />
+                <Icon icon={Download04Icon} class="shrink-0 text-indigo-500" size={18} />
                 <span class="text-sm">Download it — no sign-up, nothing uploaded</span>
             </li>
         </ul>

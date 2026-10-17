@@ -1,9 +1,8 @@
 <script lang="ts">
-    import ChevronDown from '@lucide/svelte/icons/chevron-down';
-    import Mic from '@lucide/svelte/icons/mic';
-    import MicOff from '@lucide/svelte/icons/mic-off';
+    import { ArrowDown01Icon, Mic01Icon, MicOff01Icon } from '@hugeicons/core-free-icons';
     import { onMount } from 'svelte';
 
+    import Icon from '$lib/components/Icon.svelte';
     import { buttonVariants } from '$lib/components/ui/button/button.svelte';
     import { Button } from '$lib/components/ui/button/index.js';
     import * as DropdownMenu from '$lib/components/ui/dropdown-menu/index.js';
@@ -41,7 +40,7 @@
         {#snippet child({ props })}
             <div {...props} class="flex">
                 <Button
-                    variant={micMuted ? 'destructive' : 'outline'}
+                    variant={micMuted ? 'danger-ghost' : 'outline'}
                     size="lg"
                     class="rounded-r-none border-r-0"
                     {disabled}
@@ -49,16 +48,16 @@
                     aria-label={micMuted ? 'Unmute microphone' : 'Mute microphone'}
                 >
                     {#if micMuted}
-                        <MicOff class="size-4" />
+                        <Icon icon={MicOff01Icon} class="size-4" />
                     {:else}
-                        <Mic class="size-4" />
+                        <Icon icon={Mic01Icon} class="size-4" />
                     {/if}
                 </Button>
                 <DropdownMenu.Root>
                     <DropdownMenu.Trigger
                         class={cn(
                             buttonVariants({
-                                variant: micMuted ? 'destructive' : 'outline',
+                                variant: micMuted ? 'danger-ghost' : 'outline',
                                 size: 'lg'
                             }),
                             'rounded-l-none px-2'
@@ -66,7 +65,7 @@
                         {disabled}
                         aria-label="Select microphone"
                     >
-                        <ChevronDown class="size-3" />
+                        <Icon icon={ArrowDown01Icon} class="size-3" />
                     </DropdownMenu.Trigger>
                     <DropdownMenu.Content class="w-sm">
                         <DropdownMenu.RadioGroup

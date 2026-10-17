@@ -1,9 +1,39 @@
 import { clsx, type ClassValue } from 'clsx';
-import { twMerge } from 'tailwind-merge';
+import { extendTailwindMerge } from 'tailwind-merge';
+import { createTV } from 'tailwind-variants';
+
+// The design's own type, shadow and radius utilities (layout.css), so merging
+// reads `text-button` as a size, not a colour that cancels `text-yd-ink`.
+const twMergeConfig = {
+    extend: {
+        theme: {
+            text: [
+                'display',
+                'screen',
+                'dialog',
+                'row',
+                'lead',
+                'body',
+                'button',
+                'small',
+                'meta',
+                'pill',
+                'wordmark'
+            ],
+            shadow: ['offset', 'offset-sm', 'offset-press', 'panel', 'bubble'],
+            radius: ['frame', 'control', 'notice', 'card', 'panel']
+        }
+    }
+};
+
+const twMerge = extendTailwindMerge(twMergeConfig);
 
 export function cn(...inputs: ClassValue[]) {
     return twMerge(clsx(inputs));
 }
+
+/** `tailwind-variants` with the same merge rules as {@link cn}. */
+export const tv = createTV({ twMergeConfig });
 
 /** `{@attach}` factory: plays a MediaStream in a `<video>`, detaching it on teardown. */
 export function srcObject(stream: MediaStream | null): (node: HTMLVideoElement) => () => void {

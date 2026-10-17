@@ -1,8 +1,8 @@
 <script lang="ts">
-    import Film from '@lucide/svelte/icons/film';
-    import TriangleAlert from '@lucide/svelte/icons/triangle-alert';
+    import { Alert02Icon, VideoReplayIcon } from '@hugeicons/core-free-icons';
     import { onMount } from 'svelte';
 
+    import Icon from '$lib/components/Icon.svelte';
     import * as Card from '$lib/components/ui/card/index.js';
     import * as Empty from '$lib/components/ui/empty/index.js';
     import { Progress } from '$lib/components/ui/progress/index.js';
@@ -77,7 +77,7 @@
         <Empty.Root>
             {#if errorMessage}
                 <Empty.Media>
-                    <TriangleAlert size={128} class="text-destructive" />
+                    <Icon icon={Alert02Icon} size={128} class="text-destructive" />
                 </Empty.Media>
                 <Empty.Header>
                     <Empty.Title>Export failed</Empty.Title>
@@ -87,7 +87,7 @@
                 </Empty.Header>
             {:else}
                 <Empty.Media>
-                    <Film size={128} class="text-muted-foreground" />
+                    <Icon icon={VideoReplayIcon} size={128} class="text-muted-foreground" />
                 </Empty.Media>
                 <Empty.Header>
                     <Empty.Title>{status}</Empty.Title>

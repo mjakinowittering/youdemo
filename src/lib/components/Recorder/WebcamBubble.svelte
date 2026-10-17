@@ -1,5 +1,7 @@
 <script lang="ts">
-    import LoaderCircle from '@lucide/svelte/icons/loader-circle';
+    import { Loading03Icon } from '@hugeicons/core-free-icons';
+
+    import Icon from '$lib/components/Icon.svelte';
 
     import {
         BUBBLE_FRAC,
@@ -154,7 +156,7 @@
                     role="status"
                     class="absolute inset-0 flex items-center justify-center bg-black/50"
                 >
-                    <LoaderCircle class="size-8 animate-spin text-white" aria-hidden="true" />
+                    <Icon icon={Loading03Icon} class="size-8 animate-spin text-white" />
                     <span class="sr-only">Loading background blur…</span>
                 </div>
             {/if}

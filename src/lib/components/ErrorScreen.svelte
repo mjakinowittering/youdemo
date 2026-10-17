@@ -1,8 +1,7 @@
 <script lang="ts">
-    import Copy from '@lucide/svelte/icons/copy';
-    import RefreshCw from '@lucide/svelte/icons/refresh-cw';
-    import Skull from '@lucide/svelte/icons/skull';
+    import { Alert02Icon, Copy01Icon, RefreshIcon } from '@hugeicons/core-free-icons';
 
+    import Icon from '$lib/components/Icon.svelte';
     import { Button } from '$lib/components/ui/button/index.js';
     import * as Card from '$lib/components/ui/card/index.js';
     import * as Empty from '$lib/components/ui/empty/index.js';
@@ -20,7 +19,7 @@
     >
         <Empty.Root>
             <Empty.Media>
-                <Skull size={128} class="text-destructive" />
+                <Icon icon={Alert02Icon} size={128} class="text-destructive" />
             </Empty.Media>
             <Empty.Header>
                 <Empty.Title>Something went wrong</Empty.Title>
@@ -33,10 +32,10 @@
                 {/if}
                 <div class="flex gap-3">
                     <Button variant="outline" onclick={copyError} size="lg">
-                        <Copy class="mr-2 size-4" /> Copy error
+                        <Icon icon={Copy01Icon} class="mr-2 size-4" /> Copy error
                     </Button>
                     <Button onclick={() => window.location.reload()} size="lg">
-                        <RefreshCw class="mr-2 size-4" /> Reload YouDemo
+                        <Icon icon={RefreshIcon} class="mr-2 size-4" /> Reload YouDemo
                     </Button>
                 </div>
             </Empty.Content>

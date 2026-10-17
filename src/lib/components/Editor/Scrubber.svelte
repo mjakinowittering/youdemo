@@ -1,7 +1,7 @@
 <script lang="ts">
-    import Pause from '@lucide/svelte/icons/pause';
-    import Play from '@lucide/svelte/icons/play';
+    import { PauseIcon, PlayIcon } from '@hugeicons/core-free-icons';
 
+    import Icon from '$lib/components/Icon.svelte';
     import { Button } from '$lib/components/ui/button/index.js';
 
     import { formatTime, FRAME_RATE } from '$lib/editorMath.js';
@@ -26,11 +26,11 @@
 </script>
 
 <div class="flex items-center gap-3 border-t px-4 py-2">
-    <Button variant="ghost" size="icon-lg" onclick={() => ontoggleplay?.()}>
+    <Button variant="ghost" size="icon" onclick={() => ontoggleplay?.()}>
         {#if paused}
-            <Play class="size-4" />
+            <Icon icon={PlayIcon} class="size-4" />
         {:else}
-            <Pause class="size-4" />
+            <Icon icon={PauseIcon} class="size-4" />
         {/if}
     </Button>
     <span class="min-w-22.5 font-mono text-sm text-muted-foreground tabular-nums">

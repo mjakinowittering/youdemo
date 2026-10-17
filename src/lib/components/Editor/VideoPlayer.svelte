@@ -1,6 +1,7 @@
 <script lang="ts">
-    import Pause from '@lucide/svelte/icons/pause';
-    import Play from '@lucide/svelte/icons/play';
+    import { PauseIcon, PlayIcon } from '@hugeicons/core-free-icons';
+
+    import Icon from '$lib/components/Icon.svelte';
 
     import { resolveSeekTarget } from '$lib/editorMath.js';
     import type { DeletedRange } from '$lib/types.js';
@@ -104,9 +105,9 @@
                 <div class="pointer-events-none absolute inset-0 flex items-center justify-center">
                     <div class="animate-ping-once text-indigo-500">
                         {#if showPlayIcon}
-                            <Play size={96} fill="currentColor" />
+                            <Icon icon={PlayIcon} size={96} />
                         {:else}
-                            <Pause size={96} fill="currentColor" />
+                            <Icon icon={PauseIcon} size={96} />
                         {/if}
                     </div>
                 </div>

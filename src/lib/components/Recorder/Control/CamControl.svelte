@@ -1,9 +1,8 @@
 <script lang="ts">
-    import ChevronDown from '@lucide/svelte/icons/chevron-down';
-    import Video from '@lucide/svelte/icons/video';
-    import VideoOff from '@lucide/svelte/icons/video-off';
+    import { ArrowDown01Icon, Video01Icon, VideoOffIcon } from '@hugeicons/core-free-icons';
     import { onMount } from 'svelte';
 
+    import Icon from '$lib/components/Icon.svelte';
     import { buttonVariants } from '$lib/components/ui/button/button.svelte';
     import { Button } from '$lib/components/ui/button/index.js';
     import * as DropdownMenu from '$lib/components/ui/dropdown-menu/index.js';
@@ -40,7 +39,7 @@
         {#snippet child({ props })}
             <div {...props} class="flex">
                 <Button
-                    variant={!camEnabled ? 'destructive' : 'outline'}
+                    variant={!camEnabled ? 'danger-ghost' : 'outline'}
                     size="lg"
                     class="rounded-r-none border-r-0"
                     {disabled}
@@ -48,16 +47,16 @@
                     aria-label={camEnabled ? 'Disable camera' : 'Enable camera'}
                 >
                     {#if !camEnabled}
-                        <VideoOff class="size-4" />
+                        <Icon icon={VideoOffIcon} class="size-4" />
                     {:else}
-                        <Video class="size-4" />
+                        <Icon icon={Video01Icon} class="size-4" />
                     {/if}
                 </Button>
                 <DropdownMenu.Root>
                     <DropdownMenu.Trigger
                         class={cn(
                             buttonVariants({
-                                variant: !camEnabled ? 'destructive' : 'outline',
+                                variant: !camEnabled ? 'danger-ghost' : 'outline',
                                 size: 'lg'
                             }),
                             'rounded-l-none px-2'
@@ -65,7 +64,7 @@
                         {disabled}
                         aria-label="Select camera"
                     >
-                        <ChevronDown class="size-3" />
+                        <Icon icon={ArrowDown01Icon} class="size-3" />
                     </DropdownMenu.Trigger>
                     <DropdownMenu.Content class="w-sm">
                         <DropdownMenu.RadioGroup

@@ -1,8 +1,8 @@
 <script lang="ts">
-    import Square from '@lucide/svelte/icons/square';
-    import Tv from '@lucide/svelte/icons/tv';
+    import { ComputerScreenShareIcon, StopIcon } from '@hugeicons/core-free-icons';
     import { onDestroy, onMount } from 'svelte';
 
+    import Icon from '$lib/components/Icon.svelte';
     import { buttonVariants } from '$lib/components/ui/button/button.svelte';
     import { Button } from '$lib/components/ui/button/index.js';
     import * as Card from '$lib/components/ui/card/index.js';
@@ -81,8 +81,8 @@
                     aria-label="Live recording preview"
                     class="min-h-0 w-full flex-1 object-contain"
                 ></video>
-                <Button variant="destructive" size="lg" onclick={stop}>
-                    <Square class="mr-1 size-4 fill-current" />
+                <Button variant="danger" size="lg" onclick={stop}>
+                    <Icon icon={StopIcon} class="mr-1 size-4 fill-current" />
                     Stop Recording
                 </Button>
             </div>
@@ -103,7 +103,11 @@
             >
                 <Empty.Root>
                     <Empty.Media>
-                        <Tv size={128} class="text-muted-foreground" />
+                        <Icon
+                            icon={ComputerScreenShareIcon}
+                            size={128}
+                            class="text-muted-foreground"
+                        />
                     </Empty.Media>
                     <Empty.Header>
                         <Empty.Title>Recording in progress</Empty.Title>
@@ -114,11 +118,11 @@
                     <Empty.Content>
                         <div
                             class={cn(
-                                buttonVariants({ variant: 'destructive', size: 'lg' }),
+                                buttonVariants({ variant: 'danger', size: 'lg' }),
                                 'pointer-events-none'
                             )}
                         >
-                            <Square class="mr-1 size-4 fill-current" />
+                            <Icon icon={StopIcon} class="mr-1 size-4 fill-current" />
                             Stop Recording
                         </div>
                     </Empty.Content>

@@ -1,9 +1,8 @@
 <script lang="ts">
-    import CircleCheck from '@lucide/svelte/icons/circle-check';
-    import CircleX from '@lucide/svelte/icons/circle-x';
-    import TriangleAlert from '@lucide/svelte/icons/triangle-alert';
+    import { Alert02Icon, Cancel01Icon, CheckmarkCircle02Icon } from '@hugeicons/core-free-icons';
     import { onMount } from 'svelte';
 
+    import Icon from '$lib/components/Icon.svelte';
     import { Button } from '$lib/components/ui/button/index.js';
     import * as Card from '$lib/components/ui/card/index.js';
     import * as Empty from '$lib/components/ui/empty/index.js';
@@ -49,7 +48,7 @@
             {#if !criticalPass}
                 <Empty.Root>
                     <Empty.Media>
-                        <CircleX size={64} class="text-destructive" />
+                        <Icon icon={Cancel01Icon} size={64} class="text-destructive" />
                     </Empty.Media>
                     <Empty.Header>
                         <Empty.Title>Browser not supported</Empty.Title>
@@ -62,7 +61,7 @@
             {:else}
                 <Empty.Root>
                     <Empty.Media>
-                        <TriangleAlert size={64} class="text-amber-500" />
+                        <Icon icon={Alert02Icon} size={64} class="text-amber-500" />
                     </Empty.Media>
                     <Empty.Header>
                         <Empty.Title>Limited support</Empty.Title>
@@ -87,11 +86,14 @@
                 {#each checks as check (check.label)}
                     <li class="flex items-center gap-3 px-4 py-3">
                         {#if check.ok}
-                            <CircleCheck class="size-8 shrink-0 text-indigo-500" />
+                            <Icon
+                                icon={CheckmarkCircle02Icon}
+                                class="size-8 shrink-0 text-indigo-500"
+                            />
                         {:else if check.critical}
-                            <CircleX class="size-8 shrink-0 text-destructive" />
+                            <Icon icon={Cancel01Icon} class="size-8 shrink-0 text-destructive" />
                         {:else}
-                            <TriangleAlert class="size-8 shrink-0 text-amber-500" />
+                            <Icon icon={Alert02Icon} class="size-8 shrink-0 text-amber-500" />
                         {/if}
                         <span class="text-sm">{check.label}</span>
                         {#if !check.critical}

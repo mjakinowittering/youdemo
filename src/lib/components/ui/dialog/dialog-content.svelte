@@ -1,8 +1,9 @@
 <script lang="ts">
-    import XIcon from '@lucide/svelte/icons/x';
+    import { Cancel01Icon } from '@hugeicons/core-free-icons';
     import { Dialog as DialogPrimitive } from 'bits-ui';
     import type { ComponentProps, Snippet } from 'svelte';
 
+    import Icon from '$lib/components/Icon.svelte';
     import { Button } from '$lib/components/ui/button/index.js';
 
     import { cn, type WithoutChildrenOrChild } from '$lib/utils.js';
@@ -45,7 +46,7 @@
                         size="icon-sm"
                         {...props}
                     >
-                        <XIcon />
+                        <Icon icon={Cancel01Icon} />
                         <span class="sr-only">Close</span>
                     </Button>
                 {/snippet}
