@@ -7,7 +7,7 @@
 
     import type { BlurIntensity } from '$lib/blurProcessor.js';
     import { formatElapsed } from '$lib/titles.js';
-    import { srcObject } from '$lib/utils.js';
+    import { cn, srcObject } from '$lib/utils.js';
 
     import DockBand from './DockBand.svelte';
 
@@ -35,6 +35,12 @@
         blurOn = false,
         blurIntensity = 'default'
     }: Props = $props();
+
+    // The frame takes the recording's shape once known, so a window share isn't
+    // letterboxed: as wide as drawn (820), or as tall (461) for a narrower one
+    let videoWidth = $state(0);
+    let videoHeight = $state(0);
+    const aspect = $derived(videoWidth && videoHeight ? videoWidth / videoHeight : null);
 </script>
 
 <div class="flex min-h-0 flex-1 flex-col">
@@ -51,7 +57,13 @@
                 </span>
             </div>
             <div
-                class="aspect-[820/461] w-205 max-w-full overflow-hidden rounded-control border-[1.5px] border-solid border-yd-ink bg-yd-card"
+                class={cn(
+                    'aspect-[820/461] max-w-full overflow-hidden rounded-control border-[1.5px] border-solid border-yd-ink bg-yd-card',
+                    aspect && aspect < 820 / 461 ? 'h-[461px]' : 'w-205',
+                    // The shape is the video's inside the outline, so no sliver of card shows
+                    aspect && 'box-content'
+                )}
+                style={aspect ? `aspect-ratio: ${aspect}` : undefined}
             >
                 {#if previewStream}
                     <video
@@ -59,8 +71,10 @@
                         autoplay
                         muted
                         playsinline
+                        bind:videoWidth
+                        bind:videoHeight
                         aria-label="Live recording preview"
-                        class="size-full object-contain"
+                        class="size-full object-cover"
                     ></video>
                 {:else}
                     <!-- Sized as the frame drawn, outline and all -->
