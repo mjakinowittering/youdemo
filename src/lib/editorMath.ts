@@ -41,7 +41,10 @@ export function formatTime(s: number): string {
     return `${m}:${sec}`;
 }
 
-/** Total kept duration = raw duration minus the sum of deleted spans. */
+/**
+ * Total kept duration = raw duration minus the sum of deleted spans, each counted
+ * only within the recording (a cut of the last frame can run past its end).
+ */
 export function computeEffectiveDuration(
     videoDuration: number,
     deletedRanges: DeletedRange[]
@@ -49,7 +52,12 @@ export function computeEffectiveDuration(
     return Math.max(
         0,
         videoDuration -
-            deletedRanges.reduce((sum, r) => sum + Math.max(0, r.endTime - r.startTime), 0)
+            deletedRanges.reduce(
+                (sum, r) =>
+                    sum +
+                    Math.max(0, Math.min(r.endTime, videoDuration) - Math.max(0, r.startTime)),
+                0
+            )
     );
 }
 

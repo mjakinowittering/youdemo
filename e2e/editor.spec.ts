@@ -55,6 +55,25 @@ test('Play plays the recording in real time, ended by the browser bar', async ({
     ).toBeLessThan(3);
 });
 
+test('with the end cut, playback stops where the cut starts and Play starts over', async ({
+    app
+}) => {
+    const { page } = app;
+    await app.recordTake(3);
+    await app.openEditor();
+    const n = await app.cells.count();
+    await app.cut(n - 5, n - 1);
+    const video = page.getByLabel('Toggle play/pause').locator('video');
+    await app.button('Play', true).click();
+    await expect
+        .poll(() => video.evaluate((v: HTMLVideoElement) => v.paused), { timeout: 6000 })
+        .toBe(true);
+    const stop = await video.evaluate((v: HTMLVideoElement) => v.currentTime);
+    expect(stop).toBeCloseTo((n - 5) * SAMPLE_INTERVAL, 1);
+    await app.button('Play', true).click();
+    await expect.poll(() => video.evaluate((v: HTMLVideoElement) => v.currentTime)).toBeLessThan(1);
+});
+
 test('a cut can be undone, redone and restored', async ({ app }) => {
     await app.recordTake(3);
     await app.openEditor();

@@ -178,7 +178,11 @@
 
     function remove() {
         if (selected.size === 0) return;
-        history = addCut(history, selectionToRange(selected, interval));
+        // A cut taking the last frame runs to the end: that frame's cell can stop
+        // short of it, or run past it
+        const range = selectionToRange(selected, interval);
+        const toEnd = range.endTime > duration - interval;
+        history = addCut(history, { ...range, endTime: toEnd ? duration : range.endTime });
         clearSelection();
         seekTo(currentTime);
     }
@@ -266,7 +270,7 @@
         : null}
     {paused}
     time="{formatTime(keptTime)} / {formatTime(kept)}"
-    percent={kept > 0 ? (100 * keptTime) / kept : 0}
+    percent={kept > 0 ? Math.min(100, (100 * keptTime) / kept) : 0}
     {trimming}
     canUndo={canUndo(history)}
     canRedo={canRedo(history)}
@@ -290,7 +294,11 @@
     ]}
     {discardBody}
     {onback}
-    ontoggleplay={() => (paused = !paused)}
+    ontoggleplay={() => {
+        // At the end of what's kept, Play starts again from the beginning
+        if (paused && kept - keptTime < 0.1) seekTo(0);
+        paused = !paused;
+    }}
     onseek={(percent) => seekTo(effectiveToRawTime((percent / 100) * kept, cuts, duration))}
     ontoggletrim={() => {
         trimming = !trimming;

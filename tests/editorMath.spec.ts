@@ -44,6 +44,13 @@ describe('formatTime', () => {
 });
 
 describe('computeEffectiveDuration', () => {
+    it('counts a cut only within the recording', () => {
+        // The last frame's cell ends at 3.2 s in a 3.115 s recording
+        expect(computeEffectiveDuration(3.115, [{ startTime: 2.2, endTime: 3.2 }])).toBeCloseTo(
+            2.2
+        );
+    });
+
     it('returns the full duration when nothing is deleted', () => {
         expect(computeEffectiveDuration(10, [])).toBe(10);
     });
