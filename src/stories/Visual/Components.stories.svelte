@@ -130,13 +130,13 @@
         <Sheet>
             <div class="flex w-160 flex-col gap-3">
                 <div class="flex items-center gap-3.5">
-                    <SkeletonBlock class="h-11 w-[110px]" />
+                    <SkeletonBlock class="h-11 w-27.5" />
                     <SkeletonBlock class="size-11" />
                     <SkeletonBlock class="size-11" />
                     <span class="flex-1"></span>
-                    <SkeletonBlock class="h-11 w-[150px]" />
+                    <SkeletonBlock class="h-11 w-37.5" />
                 </div>
-                <div class="flex gap-[3px]">
+                <div class="flex gap-0.75">
                     {#each { length: 7 } as _, i (i)}
                         <SkeletonBlock
                             class="h-16 w-20 rounded-frame border-[1.5px] border-solid border-yd-rule"
@@ -244,7 +244,7 @@
                     onpan={() => {}}
                 />
                 <FrameStrip
-                    class="pt-[30px]"
+                    class="pt-7.5"
                     items={fixtureStrip([
                         'frame',
                         'frame',

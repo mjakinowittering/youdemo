@@ -189,7 +189,7 @@
 
 {#snippet video()}
     <!-- Stands in for the video, sized as drawn -->
-    <div class="absolute top-0 left-0 h-75 w-[533px] bg-yd-rule" data-compare-mask></div>
+    <div class="absolute top-0 left-0 h-75 w-133.25 bg-yd-rule" data-compare-mask></div>
 {/snippet}
 
 <Story name="Editor joining takes">
