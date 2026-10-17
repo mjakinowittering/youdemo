@@ -1,6 +1,12 @@
 <script lang="ts">
+    import { ViewIcon } from '@hugeicons/core-free-icons';
+
+    import Icon from '$lib/components/Icon.svelte';
+    import Pill from '$lib/components/Pill.svelte';
+
     import {
         BUBBLE_POSITIONS,
+        nextSpot,
         previewBubble,
         previewSpot,
         previewSpotStyle,
@@ -25,6 +31,10 @@
         slots?: 'always' | 'dragging';
         /** Which empty slots to draw; every other spot by default. */
         slotPositions?: BubblePosition[];
+        /** The framing check: on hover or focus the bubble grows to this diameter. */
+        enlargedSize?: number;
+        /** Shows the framing check without hovering, for stories. */
+        enlarged?: boolean;
     }
 
     let {
@@ -35,7 +45,9 @@
         inset,
         hint = false,
         slots = 'dragging',
-        slotPositions
+        slotPositions,
+        enlargedSize,
+        enlarged = false
     }: Props = $props();
 
     // Measured: this overlay fills the frame's padding box; its parent is the frame.
@@ -54,7 +66,16 @@
     let dragY = $state(0);
     let grabX = 0;
     let grabY = 0;
+    // A press without a move is a click: the bubble stays where it was
+    let moved = false;
     let overlay: HTMLDivElement | undefined;
+
+    let hovered = $state(false);
+    let focused = $state(false);
+    // Back to scale while dragging, so where it lands is where it records
+    let grown = $derived(
+        enlargedSize !== undefined && (enlarged || hovered || focused) && !dragging
+    );
 
     function spot(pos: BubblePosition) {
         return previewSpot(pos, frame, groupW, groupH, bubbleInset);
@@ -74,10 +95,22 @@
     let target = $derived(dragging ? nearest(dragX, dragY) : position);
     let at = $derived(dragging ? { x: dragX, y: dragY } : spot(position));
     let shownSlots = $derived(
-        slots === 'always' || dragging
+        !grown && (slots === 'always' || dragging)
             ? (slotPositions ?? BUBBLE_POSITIONS.filter((p) => p !== target))
             : []
     );
+
+    // The framing pill sits 8px off the side facing the middle, level with the outer edge
+    const pillPlaces: Record<BubblePosition, string> = {
+        tl: 'top-full mt-2 left-0',
+        tc: 'top-full mt-2 left-1/2 -translate-x-1/2',
+        tr: 'top-full mt-2 right-0',
+        lc: 'top-full mt-2 left-0',
+        rc: 'top-full mt-2 right-0',
+        bl: 'bottom-full mb-2 left-0',
+        bc: 'bottom-full mb-2 left-1/2 -translate-x-1/2',
+        br: 'bottom-full mb-2 right-0'
+    };
 
     function measure(node: HTMLDivElement) {
         overlay = node;
@@ -99,26 +132,46 @@
     function onpointerdown(e: PointerEvent) {
         if (!overlay) return;
         const rect = overlay.getBoundingClientRect();
-        grabX = e.clientX - rect.left - at.x;
-        grabY = e.clientY - rect.top - at.y;
-        dragX = at.x;
-        dragY = at.y;
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+        // An enlarged bubble shrinks back to scale centred under the pointer
+        const w = grown ? bubbleSize : groupW;
+        const h = grown ? bubbleSize : groupH;
+        [grabX, grabY] = grown ? [w / 2, h / 2] : [x - at.x, y - at.y];
+        dragX = Math.max(0, Math.min(frame.innerW - w, x - grabX));
+        dragY = Math.max(0, Math.min(frame.innerH - h, y - grabY));
         dragging = true;
+        moved = false;
         (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
         e.preventDefault();
     }
 
     function onpointermove(e: PointerEvent) {
         if (!dragging || !overlay) return;
+        moved = true;
         const rect = overlay.getBoundingClientRect();
         dragX = Math.max(0, Math.min(frame.innerW - groupW, e.clientX - rect.left - grabX));
         dragY = Math.max(0, Math.min(frame.innerH - groupH, e.clientY - rect.top - grabY));
     }
 
-    function onpointerup() {
-        if (!dragging) return;
-        position = target;
+    function onpointerup(e: PointerEvent) {
+        if (!dragging || !overlay) return;
+        if (moved) position = target;
         dragging = false;
+        if (!moved) return;
+        // Grow again only if the pointer is still over the bubble where it landed
+        const rect = overlay.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+        const s = spot(position);
+        hovered = x >= s.x && x <= s.x + groupW && y >= s.y && y <= s.y + groupH;
+    }
+
+    function onkeydown(e: KeyboardEvent) {
+        const next = nextSpot(position, e.key);
+        if (!next) return;
+        e.preventDefault();
+        position = next;
     }
 </script>
 
@@ -131,8 +184,6 @@
             style="{previewSpotStyle(
                 pos,
                 frame,
-                slotSize,
-                slotSize,
                 bubbleInset + SLOT_INSET
             )}; width: {slotSize}px; height: {slotSize}px"
         ></div>
@@ -140,18 +191,37 @@
 
     <div
         class="pointer-events-auto absolute cursor-grab touch-none active:cursor-grabbing"
+        class:rounded-full={!hint}
         class:invisible={!frame.innerW || !groupW}
         style={dragging
             ? `left: ${dragX}px; top: ${dragY}px`
-            : previewSpotStyle(position, frame, groupW, groupH, bubbleInset)}
+            : previewSpotStyle(position, frame, bubbleInset)}
         bind:offsetWidth={groupW}
         bind:offsetHeight={groupH}
-        role="none"
+        role="button"
+        aria-roledescription="draggable"
+        tabindex="0"
+        aria-label="Camera preview. Drag or use the arrow keys to move."
         {onpointerdown}
         {onpointermove}
         {onpointerup}
         onpointercancel={onpointerup}
+        onpointerenter={() => (hovered = true)}
+        onpointerleave={() => (hovered = false)}
+        onfocus={() => (focused = true)}
+        onblur={() => (focused = false)}
+        {onkeydown}
     >
-        <WebcamBubbleFace size={bubbleSize} {stream} {loading} {hint} />
+        <WebcamBubbleFace
+            size={grown && enlargedSize ? enlargedSize : bubbleSize}
+            {stream}
+            {loading}
+            {hint}
+        />
+        {#if grown}
+            <div class="pointer-events-none absolute {pillPlaces[position]}">
+                <Pill><Icon icon={ViewIcon} size={14} />Check your framing</Pill>
+            </div>
+        {/if}
     </div>
 </div>

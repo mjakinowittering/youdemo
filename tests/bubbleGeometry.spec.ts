@@ -4,9 +4,11 @@ import {
     BUBBLE_FRAC,
     BUBBLE_POSITIONS,
     bubbleCoords,
+    nextSpot,
     PAD_FRAC,
     previewBubble,
     previewSpot,
+    previewSpotStyle,
     SLOT_INSET,
     SLOT_SHRINK,
     type BubblePosition
@@ -75,5 +77,35 @@ describe('previewSpot', () => {
 
     it('puts the bubble at its corner, inset from the inner edges', () => {
         expect(previewSpot('tr', review, 70, 70, 6)).toEqual({ x: 541, y: 6 });
+    });
+});
+
+describe('previewSpotStyle', () => {
+    it.each<[BubblePosition, string]>([
+        ['tl', 'left: 6px; top: 6px; translate: 0 0'],
+        ['tc', 'left: 310px; top: 6px; translate: -50% 0'],
+        ['rc', 'right: 6px; top: 174px; translate: 0 -50%'],
+        ['br', 'right: 6px; bottom: 6px; translate: 0 0']
+    ])('anchors %s to its own edge so it grows towards the middle', (pos, css) => {
+        expect(previewSpotStyle(pos, review, 6)).toBe(css);
+    });
+});
+
+describe('nextSpot', () => {
+    it.each<[BubblePosition, string, BubblePosition]>([
+        ['tl', 'ArrowRight', 'tc'],
+        ['tc', 'ArrowRight', 'tr'],
+        ['tl', 'ArrowDown', 'lc'],
+        ['tc', 'ArrowDown', 'bc'],
+        ['lc', 'ArrowRight', 'rc'],
+        ['br', 'ArrowUp', 'rc'],
+        ['tr', 'ArrowRight', 'tr'],
+        ['bl', 'ArrowDown', 'bl']
+    ])('moves %s with %s to %s', (pos, key, next) => {
+        expect(nextSpot(pos, key)).toBe(next);
+    });
+
+    it('ignores other keys', () => {
+        expect(nextSpot('tl', 'Enter')).toBeNull();
     });
 });

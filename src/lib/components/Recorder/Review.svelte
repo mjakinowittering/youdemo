@@ -35,6 +35,8 @@
         blurLoading?: boolean;
         /** The discard confirmation is open. */
         discardOpen?: boolean;
+        /** The bubble's framing check is showing, without hovering (stories). */
+        bubbleEnlarged?: boolean;
         /** Record take N: straight to the countdown with a live share, else the picker first. */
         onrecord: () => void;
         /** Change (or Choose) what the next take shares. */
@@ -56,6 +58,7 @@
         cameraStream = null,
         blurLoading = false,
         discardOpen = $bindable(false),
+        bubbleEnlarged = false,
         onrecord,
         onchangeshare,
         onedit,
@@ -118,6 +121,8 @@
                                 stream={cameraStream}
                                 loading={blurLoading}
                                 slots="always"
+                                enlargedSize={160}
+                                enlarged={bubbleEnlarged}
                             />
                         {/if}
                     </div>

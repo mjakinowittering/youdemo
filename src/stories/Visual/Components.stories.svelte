@@ -306,7 +306,12 @@
                     slotPositions={['tl', 'tc', 'bl', 'br']}
                 />
             </div>
-            <WebcamBubbleFace size={112} hint />
+            <div
+                class="relative h-50 w-105 rounded-control border-[1.5px] border-yd-ink bg-yd-card"
+            >
+                <WebcamBubble position="tr" size={64} inset={6} enlargedSize={146} enlarged />
+            </div>
+            <WebcamBubbleFace size={224} hint />
         </Sheet>
     {/snippet}
 </Story>

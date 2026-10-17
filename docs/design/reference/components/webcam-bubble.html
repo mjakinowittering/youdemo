@@ -717,12 +717,87 @@
                     </div>
                 </div>
             </div>
-            <div style="display: flex; flex-direction: column; align-items: center; gap: 8px">
-                <div class="bubble" style="width: 112px; height: 112px">
+            <div
+                style="
+                    position: relative;
+                    width: 420px;
+                    height: 200px;
+                    border: 1.5px solid var(--ink);
+                    border-radius: 10px;
+                    background: var(--card);
+                "
+            >
+                <div
+                    class="bubble"
+                    style="width: 146px; height: 146px; position: absolute; right: 6px; top: 6px"
+                >
                     <div
                         style="
-                            width: 108px;
-                            height: 108px;
+                            width: 142px;
+                            height: 142px;
+                            position: relative;
+                            background: #cfcac2;
+                            overflow: hidden;
+                        "
+                        data-compare-mask
+                    >
+                        <div
+                            style="
+                                position: absolute;
+                                left: 50%;
+                                top: 22%;
+                                width: 36%;
+                                height: 36%;
+                                margin-left: -18%;
+                                border-radius: 9999px;
+                                background: #6f6a72;
+                            "
+                        ></div>
+                        <div
+                            style="
+                                position: absolute;
+                                left: 50%;
+                                top: 63%;
+                                width: 74%;
+                                height: 62%;
+                                margin-left: -37%;
+                                border-radius: 45% 45% 0 0;
+                                background: #3b3842;
+                            "
+                        ></div>
+                    </div>
+                </div>
+                <div style="position: absolute; right: 6px; top: 160px">
+                    <span class="pill"
+                        ><svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            width="14"
+                            height="14"
+                            class="i"
+                            aria-hidden="true"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                        >
+                            <path
+                                d="M21.544 11.045C21.848 11.4713 22 11.6845 22 12C22 12.3155 21.848 12.5287 21.544 12.955C20.1779 14.8706 16.6892 19 12 19C7.31078 19 3.8221 14.8706 2.45604 12.955C2.15201 12.5287 2 12.3155 2 12C2 11.6845 2.15201 11.4713 2.45604 11.045C3.8221 9.12944 7.31078 5 12 5C16.6892 5 20.1779 9.12944 21.544 11.045Z"
+                                stroke="currentColor"
+                                stroke-width="1.5"
+                            ></path>
+                            <path
+                                d="M15 12C15 10.3431 13.6569 9 12 9C10.3431 9 9 10.3431 9 12C9 13.6569 10.3431 15 12 15C13.6569 15 15 13.6569 15 12Z"
+                                stroke="currentColor"
+                                stroke-width="1.5"
+                            ></path></svg
+                        >Check your framing</span
+                    >
+                </div>
+            </div>
+            <div style="display: flex; flex-direction: column; align-items: center; gap: 8px">
+                <div class="bubble" style="width: 224px; height: 224px">
+                    <div
+                        style="
+                            width: 220px;
+                            height: 220px;
                             position: relative;
                             background: #cfcac2;
                             overflow: hidden;

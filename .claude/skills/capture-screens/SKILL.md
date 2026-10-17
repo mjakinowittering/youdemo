@@ -18,7 +18,8 @@ behaviour is `docs/design/specs/journey.md` sections 3–6.
   Then **Choose what to share** (primary, large), which calls `onchoose`; the
   picker and countdown follow in `+page.svelte`. `pickError` shows under it.
 - Right: the dashed preview area with `SharePlaceholder` and the live
-  `WebcamBubble` (112px, 18px inset, "Drag to move" pill).
+  `WebcamBubble` (224px, 18px inset, "Drag to move" pill). Big to check
+  framing, not to scale; the recording is unchanged.
 - Dock live.
 
 ## Countdown
@@ -72,13 +73,18 @@ board draws it. `aria-label`s name the action ("Mute microphone",
 ink outline, `shadow-bubble`, optional "Drag to move" pill).
 
 - Eight spots from `previewSpot` / `previewSpotStyle` in `bubbleGeometry.ts`:
-  edges `inset` from the frame's inner box, centres on its outer box; right and
-  bottom spots anchor with CSS `right`/`bottom`.
+  edges `inset` from the frame's inner box, centres on its outer box. Each spot
+  anchors to its own edge (CSS `right`/`bottom` for those sides) or centres with
+  a `translate`, so a size change grows the bubble towards the middle.
 - The dashed slots are the bubble `SLOT_SHRINK` (8px) smaller and `SLOT_INSET`
   (2px) further in. Shown always on Review, while dragging on Setup.
 - Size and inset follow the frame (`previewBubble`: the recorded bubble's
-  `BUBBLE_FRAC`/`PAD_FRAC`, 8px larger) unless given, as Setup gives 112/18.
+  `BUBBLE_FRAC`/`PAD_FRAC`, 8px larger) unless given, as Setup gives 224/18.
 - Drag with pointer capture, snap to the nearest spot on release; sets
-  `bubblePosition` for the next take.
+  `bubblePosition` for the next take. A press without a move leaves it put.
+  Focusable; the arrow keys step it one spot (`nextSpot`).
+- **Framing check** (Review, `enlargedSize={160}`): hover or focus grows it,
+  hides the slots and shows the "Check your framing" pill; a drag shrinks it
+  back to scale. `enlarged` forces it on for stories.
 - With no stream (stories) the face is a masked placeholder; `loading` dims it
   under a spinner while blur starts.

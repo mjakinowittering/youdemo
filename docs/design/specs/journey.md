@@ -51,8 +51,11 @@ undefined (unit test the helper).
 - First visit (no `ydWelcomed`): `screens/setup-first-visit`. Returning:
   `screens/setup-returning`. Set `ydWelcomed` the first time a take starts.
 - Left column: copy and "Choose what to share". Right: the dashed preview area
-  with the live webcam bubble, draggable to the eight positions (same geometry
-  as now), with a "Drag to move" pill under it.
+  with the live webcam bubble at **224px**, draggable to the eight positions
+  (same geometry as now), with a "Drag to move" pill under it. The bubble is big
+  so you can check you're in frame; it isn't to scale. The recording still draws
+  it at 18% of the video's height (`BUBBLE_FRAC = 0.18`, unchanged). The circle
+  crops the same centre square at any size, so what you see is what's recorded.
 - The capture dock sits in its own band below (mic, camera, blur), live.
 - "Choose what to share" opens the browser's picker; recording then starts after
   the countdown, as in V1.
@@ -63,6 +66,9 @@ undefined (unit test the helper).
   "Recording starts in 3", the hint, and **Cancel** (new).
 - Cancel stops the stream just picked and goes back to where you came from:
   Setup, or Review if takes exist.
+- Chrome moves focus to a shared tab or window as soon as it's picked (the
+  default focus behaviour), so the countdown mostly runs while you're on the
+  shared tab. Leave it that way (Decisions 5).
 - The dock is locked (dashed) with the note "Mic, camera and blur can change
   between takes".
 
@@ -87,7 +93,16 @@ with the take listed.
 - Left: a preview of the shared screen (live if the share is still running,
   otherwise the last frame of the last take) with the camera bubble live on it,
   draggable to the eight dashed spots; this sets `bubblePosition` for the next
-  take.
+  take. Here the bubble is to scale (18% of the frame's height).
+- **Framing check** (`screens/review-framing-check`): on hover or keyboard focus
+  the bubble grows in place to 160px, towards the centre of the frame (anchored
+  at its own corner or edge), and a "Check your framing" pill appears 8px away
+  on the side facing the centre, aligned to the bubble's outer edge. The dashed
+  spots hide while it's enlarged. It snaps back to scale when a drag starts and
+  grows again when the drag ends if the pointer is still over it. 150ms
+  ease-out; under reduced motion it swaps size without animating. The bubble is
+  focusable (`tabindex="0"`) with an aria-label such as "Camera preview. Drag or
+  use the arrow keys to move."
 - Under the preview, the share row: "Next take shares **<label>**" and
   **Change**. The label is the display track's `label`. Change opens the picker
   and replaces the stream.
@@ -228,3 +243,9 @@ Settled with Matthew on 17 October 2026:
    cells). Editor.svelte works them out from editorMath in the app, and the
    stories pass the board's numbers as they are. The boards are not changed.
    editorMath's behaviour is covered by unit tests, not by the screen stories.
+5. **Focus on pick: let Chrome switch straight away.** A web page can't switch
+   tabs at zero. `CaptureController.setFocusBehavior()` decides only at the
+   moment of picking (switch now, or stay on YouDemo), and switching later needs
+   the WebExtensions Tabs API, which means a companion extension. So keep the
+   current behaviour: don't call `setFocusBehavior`, Chrome switches on pick,
+   and recording starts at zero.

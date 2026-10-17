@@ -151,6 +151,24 @@
     {/snippet}
 </Story>
 
+<Story name="Review framing check">
+    {#snippet template()}
+        <ScreenFrame>
+            <Review
+                {takes}
+                shareLabel="Quarterly planning"
+                micMuted
+                blurOn
+                bubbleEnlarged
+                onrecord={noop}
+                onchangeshare={noop}
+                onedit={noop}
+                ondiscard={noop}
+            />
+        </ScreenFrame>
+    {/snippet}
+</Story>
+
 <Story name="Review discard dialog">
     {#snippet template()}
         <ScreenFrame>

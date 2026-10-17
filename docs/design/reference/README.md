@@ -22,25 +22,26 @@ render it, and (for screens) the sections that are compared separately.
 Light theme only. Desktop boards are 1280 wide; the Editor boards are 960 tall
 so the whole timeline fits.
 
-| Board                           | Size     | Story (`Visual/Screens`) | What it is                                                       |
-| ------------------------------- | -------- | ------------------------ | ---------------------------------------------------------------- |
-| `screens/phone-not-supported`   | 390×844  | Phone not supported      | Blocking browser check on a phone: why, and share the link       |
-| `screens/limited-support`       | 1280×800 | Limited support          | Non-blocking browser check, each capability in words             |
-| `screens/setup-first-visit`     | 1280×800 | Setup first visit        | Setup with the welcome folded in (no dialog)                     |
-| `screens/setup-returning`       | 1280×800 | Setup returning          | Setup once `ydWelcomed` is set                                   |
-| `screens/countdown`             | 1280×800 | Countdown                | 3-second countdown, cancellable                                  |
-| `screens/recording`             | 1280×800 | Recording                | Live preview, REC timer, Stop, dock locked                       |
-| `screens/review`                | 1280×800 | Review                   | Between takes: takes list, next share, live dock, movable bubble |
-| `screens/review-discard-dialog` | 1280×800 | Review discard dialog    | Discard confirmation over Review                                 |
-| `screens/editor-joining`        | 1280×960 | Editor joining takes     | Editor opening while takes are joined: skeletons + progress      |
-| `screens/editor`                | 1280×960 | Editor                   | Editor ready: breadcrumb, video, timeline, footer                |
-| `screens/editor-trimming`       | 1280×960 | Editor trimming          | Trim mode: frames marked, Remove, footer swapped                 |
-| `screens/editor-export-dialog`  | 1280×960 | Editor export dialog     | Export confirmation                                              |
-| `screens/editor-exporting`      | 1280×960 | Editor exporting         | Export progress in the stage, editing locked                     |
-| `screens/editor-exported`       | 1280×960 | Editor exported          | Saved notice; editing unlocked                                   |
-| `screens/editor-discard-dialog` | 1280×960 | Editor discard dialog    | Discard confirmation over the Editor                             |
-| `screens/editor-export-failed`  | 1280×960 | Editor export failed     | Failure card with Try again                                      |
-| `screens/error`                 | 1280×800 | Error                    | Unexpected error, with "Your recording is safe"                  |
+| Board                           | Size     | Story (`Visual/Screens`) | What it is                                                                   |
+| ------------------------------- | -------- | ------------------------ | ---------------------------------------------------------------------------- |
+| `screens/phone-not-supported`   | 390×844  | Phone not supported      | Blocking browser check on a phone: why, and share the link                   |
+| `screens/limited-support`       | 1280×800 | Limited support          | Non-blocking browser check, each capability in words                         |
+| `screens/setup-first-visit`     | 1280×800 | Setup first visit        | Setup with the welcome folded in (no dialog)                                 |
+| `screens/setup-returning`       | 1280×800 | Setup returning          | Setup once `ydWelcomed` is set                                               |
+| `screens/countdown`             | 1280×800 | Countdown                | 3-second countdown, cancellable                                              |
+| `screens/recording`             | 1280×800 | Recording                | Live preview, REC timer, Stop, dock locked                                   |
+| `screens/review`                | 1280×800 | Review                   | Between takes: takes list, next share, live dock, movable bubble             |
+| `screens/review-discard-dialog` | 1280×800 | Review discard dialog    | Discard confirmation over Review                                             |
+| `screens/review-framing-check`  | 1280×800 | Review framing check     | Review with the bubble enlarged to check framing (`enlarged` prop, no hover) |
+| `screens/editor-joining`        | 1280×960 | Editor joining takes     | Editor opening while takes are joined: skeletons + progress                  |
+| `screens/editor`                | 1280×960 | Editor                   | Editor ready: breadcrumb, video, timeline, footer                            |
+| `screens/editor-trimming`       | 1280×960 | Editor trimming          | Trim mode: frames marked, Remove, footer swapped                             |
+| `screens/editor-export-dialog`  | 1280×960 | Editor export dialog     | Export confirmation                                                          |
+| `screens/editor-exporting`      | 1280×960 | Editor exporting         | Export progress in the stage, editing locked                                 |
+| `screens/editor-exported`       | 1280×960 | Editor exported          | Saved notice; editing unlocked                                               |
+| `screens/editor-discard-dialog` | 1280×960 | Editor discard dialog    | Discard confirmation over the Editor                                         |
+| `screens/editor-export-failed`  | 1280×960 | Editor export failed     | Failure card with Try again                                                  |
+| `screens/error`                 | 1280×800 | Error                    | Unexpected error, with "Your recording is safe"                              |
 
 ## Components
 
@@ -91,8 +92,8 @@ of the board: copy it from the `.html`.
 - **Still frames.** The script turns off animation and transition, uses
   `prefers-reduced-motion: reduce` and waits for fonts. Every story must render
   its final state without user input: open dialogs, progress at 64%, the trim
-  selection, the exported notice and so on are props or story args, never
-  clicks.
+  selection, the exported notice, the enlarged bubble and so on are props or
+  story args, never clicks or hovers.
 - **Same data.** Stories use the boards' content, as display values even where
   they don't add up (see journey.md, Decisions 4): 2 takes (00:42, 00:36), 01:18
   in total, playhead 00:16, one earlier cut of 1.4 s, three frames marked (0.6

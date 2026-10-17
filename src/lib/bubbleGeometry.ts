@@ -85,21 +85,55 @@ export function previewSpot(
 }
 
 /**
- * {@link previewSpot} as CSS. Spots on the right and bottom are anchored to those
- * edges, as the design draws them, so they don't depend on a measured size.
+ * {@link previewSpot} as CSS. Each spot is anchored to its own edge, or centred
+ * with a translate, so it doesn't depend on a measured size: a box that changes
+ * size grows from its spot towards the middle of the frame.
  */
-export function previewSpotStyle(
-    pos: BubblePosition,
-    frame: FrameSize,
-    w: number,
-    h: number,
-    inset: number
-): string {
+export function previewSpotStyle(pos: BubblePosition, frame: FrameSize, inset: number): string {
     const [v, hz] = ANCHORS[pos];
-    const { x, y } = previewSpot(pos, frame, w, h, inset);
-    const across = hz === 'r' ? `right: ${inset}px` : `left: ${x}px`;
-    const down = v === 'b' ? `bottom: ${inset}px` : `top: ${y}px`;
-    return `${across}; ${down}`;
+    const across = {
+        l: `left: ${inset}px`,
+        c: `left: ${frame.outerW / 2}px`,
+        r: `right: ${inset}px`
+    };
+    const down = { t: `top: ${inset}px`, c: `top: ${frame.outerH / 2}px`, b: `bottom: ${inset}px` };
+    const shift = `translate: ${hz === 'c' ? '-50%' : '0'} ${v === 'c' ? '-50%' : '0'}`;
+    return `${across[hz]}; ${down[v]}; ${shift}`;
+}
+
+// Each spot's column and row in the 3×3 grid around the frame; the middle is empty
+const GRID: Record<BubblePosition, [number, number]> = {
+    tl: [0, 0],
+    tc: [1, 0],
+    tr: [2, 0],
+    lc: [0, 1],
+    rc: [2, 1],
+    bl: [0, 2],
+    bc: [1, 2],
+    br: [2, 2]
+};
+
+const STEPS: Record<string, [number, number]> = {
+    ArrowLeft: [-1, 0],
+    ArrowRight: [1, 0],
+    ArrowUp: [0, -1],
+    ArrowDown: [0, 1]
+};
+
+/**
+ * The spot an arrow key moves the bubble to: one step across the grid, over the
+ * empty middle to the far side, staying put at an edge. Null for any other key.
+ */
+export function nextSpot(pos: BubblePosition, key: string): BubblePosition | null {
+    const step = STEPS[key];
+    if (!step) return null;
+    let [col, row] = GRID[pos];
+    do {
+        col += step[0];
+        row += step[1];
+    } while (col === 1 && row === 1);
+    if (col < 0 || col > 2 || row < 0 || row > 2) return pos;
+    return BUBBLE_POSITIONS.find((p) => GRID[p][0] === col && GRID[p][1] === row) ?? pos;
 }
 
 /**

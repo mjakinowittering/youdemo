@@ -46,7 +46,7 @@ Stage is a row:
   button, and the small "Recording starts three seconds after you choose."
 - **Preview area** fills the rest: margin 32 32 32 0, 1.5px dashed `ink`, radius
   16, centred placeholder (40px share icon, row "Your screen will show here",
-  small "A tab, a window or your whole screen"). The WebcamBubble (112) sits 18
+  small "A tab, a window or your whole screen"). The WebcamBubble (224) sits 18
   from the top and right, with the "Drag to move" pill 8 below.
 
 Dock below: Mic, Camera, Blur on.
@@ -64,7 +64,7 @@ Stage centres a column, padding 24, gap 18: a row the width of the preview
 the take"; the preview frame 820×461; Stop recording (danger, large). Dock
 locked, with the note.
 
-## review / review-discard-dialog
+## review / review-discard-dialog / review-framing-check
 
 Stage centres a column, gap 24:
 
@@ -83,7 +83,9 @@ Stage centres a column, gap 24:
       (large primary, full width, 56 tall) level with the share row.
 
 Dock live: Muted, Camera, Blur on. The dialog board adds the scrim and the
-Discard dialog.
+Discard dialog. The framing check board has no dashed slots, the bubble at 160
+(right 6, top 6) and the "Check your framing" pill (with `ViewIcon`)
+right-aligned with it, top 174.
 
 ## Editor (all editor-* boards)
 

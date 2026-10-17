@@ -60,6 +60,7 @@ screens land; leave them unless nothing imports them.
 | Send the link                                      | `Share08Icon`                                      |
 | Phone → computer                                   | `SmartphoneIcon`, `ArrowRight01Icon`, `LaptopIcon` |
 | Drag to move                                       | `Move01Icon`                                       |
+| Check your framing                                 | `ViewIcon`                                         |
 | New recording                                      | `PlusSignIcon`                                     |
 | Take rows                                          | `VideoReplayIcon`                                  |
 | Menu tick, Done trimming                           | `Tick02Icon`                                       |
@@ -119,7 +120,10 @@ the hint and Remove N s. The component board and the Editor screens draw the
 same markup. Board: `editor-toolbar`.
 
 **WebcamBubble**: circle, 2px ink outline, `4px 4px 0` ink shadow; dashed ink
-slots while dragging; "Drag to move" pill. Board: `webcam-bubble`.
+slots while dragging; "Drag to move" pill. Takes `size` and `enlarged` props.
+Setup uses 224; Review uses the to-scale size, and `enlarged` (hover or focus)
+grows it to 160 with the "Check your framing" pill. Board: `webcam-bubble`: to
+scale with slots, enlarged, and the Setup size.
 
 **DropdownMenu**: card panel, ink outline, radius 14, `0 4px 0` shadow, 44px
 rows, chosen row `accent-tint` with a tick. Board: `dropdown-menu`.

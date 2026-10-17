@@ -91,6 +91,17 @@
             "sections": ["header", "stage", "dock", "dialog"]
         },
         {
+            "name": "review-framing-check",
+            "label": "Review \u00b7 framing check",
+            "width": 1280,
+            "height": 800,
+            "story": {
+                "title": "Visual/Screens",
+                "name": "Review framing check"
+            },
+            "sections": ["header", "stage", "dock"]
+        },
+        {
             "name": "editor-joining",
             "label": "Editor \u00b7 joining takes",
             "width": 1280,

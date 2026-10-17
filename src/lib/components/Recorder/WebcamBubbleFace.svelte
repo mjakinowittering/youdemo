@@ -22,7 +22,7 @@
 <!-- The camera in a circle: 2px ink outline and a hard 4px 4px shadow -->
 <div class="flex flex-col items-center gap-2">
     <div
-        class="relative shrink-0 overflow-hidden rounded-full border-2 border-solid border-yd-ink bg-yd-card shadow-bubble"
+        class="relative shrink-0 overflow-hidden rounded-full border-2 border-solid border-yd-ink bg-yd-card shadow-bubble transition-[width,height] duration-150 ease-out motion-reduce:transition-none"
         style="width: {size}px; height: {size}px"
     >
         {#if stream}

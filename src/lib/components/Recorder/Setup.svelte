@@ -110,7 +110,7 @@
                     bind:position={bubblePosition}
                     stream={cameraStream}
                     loading={blurLoading}
-                    size={112}
+                    size={224}
                     inset={18}
                     hint
                 />
