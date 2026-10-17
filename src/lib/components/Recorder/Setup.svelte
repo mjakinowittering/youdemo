@@ -13,7 +13,7 @@
     import { DISPLAY_MEDIA_OPTIONS } from '$lib/recorder.js';
     import { cn, srcObject } from '$lib/utils.js';
 
-    import ControlBar from './ControlBar.svelte';
+    import DockBand from './DockBand.svelte';
     import WebcamBubble from './WebcamBubble.svelte';
 
     interface Props {
@@ -44,7 +44,6 @@
 
     let pickError = $state('');
     let picking = $state(false);
-    let screenAspect = $state(0);
 
     async function pickScreen() {
         try {
@@ -73,7 +72,6 @@
         const handleEnded = () => {
             stream.getTracks().forEach((t) => t.stop());
             screenStream = null;
-            screenAspect = 0;
         };
         track.addEventListener('ended', handleEnded);
         return () => track.removeEventListener('ended', handleEnded);
@@ -121,10 +119,6 @@
                 autoplay
                 muted
                 playsinline
-                onloadedmetadata={(e) => {
-                    const v = e.currentTarget;
-                    if (v.videoHeight) screenAspect = v.videoWidth / v.videoHeight;
-                }}
                 class="size-full object-contain"
             ></video>
         {:else}
@@ -172,13 +166,11 @@
         {#if camEnabled}
             <WebcamBubble
                 bind:position={bubblePosition}
-                stream={webcamStream}
-                {processedStream}
+                stream={processedStream ?? webcamStream}
                 loading={blurLoading}
-                {screenAspect}
             />
         {/if}
     </div>
 
-    <ControlBar bind:micMuted bind:camEnabled bind:blurOn bind:blurIntensity disabled={false} />
+    <DockBand bind:micMuted bind:camEnabled bind:blurOn bind:blurIntensity />
 </div>

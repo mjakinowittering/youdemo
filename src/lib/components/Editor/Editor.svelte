@@ -11,6 +11,7 @@
         computeEffectiveDuration,
         computeVisibleCells,
         effectiveToRawTime,
+        formatTime,
         resolveSeekTarget,
         SAMPLE_INTERVAL,
         selectionToRange
@@ -43,7 +44,6 @@
     let editMode = $state(false);
     let anchorCell = $state<number | null>(null);
     let selectedCells = $state(new Set<number>());
-    let collapsingCells = $state(new Set<number>());
 
     // Derived timeline math (all pure — see editorMath.ts).
     let cellCount = $derived(computeCellCount(videoDuration));
@@ -81,14 +81,10 @@
     async function deleteSelectedCells() {
         if (selectedCells.size === 0) return;
 
-        collapsingCells = new Set(selectedCells);
-        await new Promise<void>((resolve) => setTimeout(resolve, 250));
-
         deletedRanges = [...deletedRanges, selectionToRange(selectedCells)];
 
         selectedCells = new Set();
         anchorCell = null;
-        collapsingCells = new Set();
         editMode = false;
     }
 
@@ -149,31 +145,50 @@
 
     <Scrubber
         {paused}
-        {effectiveCurrentTime}
-        {effectiveDuration}
+        time="{formatTime(effectiveCurrentTime)} / {formatTime(effectiveDuration)}"
+        percent={effectiveDuration > 0 ? (100 * effectiveCurrentTime) / effectiveDuration : 0}
         ontoggleplay={() => (paused = !paused)}
-        onseek={(effectiveTarget) =>
-            seekTo(effectiveToRawTime(effectiveTarget, deletedRanges, videoDuration))}
+        onseek={(percent) =>
+            seekTo(
+                effectiveToRawTime(
+                    (percent / 100) * effectiveDuration,
+                    deletedRanges,
+                    videoDuration
+                )
+            )}
     />
 
     <EditorToolbar
-        {editMode}
-        {canDelete}
-        {effectiveDuration}
-        ontogglecut={toggleEditMode}
-        ondelete={deleteSelectedCells}
+        trimming={editMode}
+        canUndo={false}
+        canRedo={false}
+        zoomLabel="0.2 s a frame"
+        canZoomIn={false}
+        canZoomOut={false}
+        selection={canDelete ? `${(selectedCells.size * SAMPLE_INTERVAL).toFixed(1)} s` : ''}
+        ontoggletrim={toggleEditMode}
+        onundo={() => {}}
+        onredo={() => {}}
+        onzoomin={() => {}}
+        onzoomout={() => {}}
+        onremove={deleteSelectedCells}
     />
 
     {#if videoDuration > 0}
-        <FrameStrip
-            {visibleCells}
-            {thumbnails}
-            {currentCell}
-            {selectedCells}
-            {collapsingCells}
-            {paused}
-            oncellclick={handleCellClick}
-        />
+        <div class="overflow-hidden">
+            <FrameStrip
+                class="pt-[30px] pl-6"
+                items={visibleCells.map((cell) => ({
+                    kind: 'frame' as const,
+                    cell,
+                    thumb: thumbnails.get(cell) ?? null,
+                    current: cell === currentCell,
+                    marked: selectedCells.has(cell)
+                }))}
+                onframeclick={handleCellClick}
+                onrestore={() => {}}
+            />
+        </div>
     {/if}
 
     <EditorFooter

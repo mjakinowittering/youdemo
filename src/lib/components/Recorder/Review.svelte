@@ -9,7 +9,7 @@
     import type { BlurIntensity } from '$lib/blurProcessor.js';
     import { cn } from '$lib/utils.js';
 
-    import ControlBar from './ControlBar.svelte';
+    import DockBand from './DockBand.svelte';
 
     interface Props {
         onresume: () => void;
@@ -112,5 +112,5 @@
         </div>
     </div>
 
-    <ControlBar bind:micMuted bind:camEnabled bind:blurOn bind:blurIntensity disabled={true} />
+    <DockBand bind:micMuted bind:camEnabled bind:blurOn bind:blurIntensity locked />
 </div>

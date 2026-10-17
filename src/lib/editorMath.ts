@@ -6,6 +6,20 @@
  */
 import type { DeletedRange } from './types.js';
 
+/** One thing in the frame strip: a frame, or the marker where a cut was made. */
+export type StripItem =
+    | {
+          kind: 'frame';
+          /** The 0.2 s cell it starts at, which keys its thumbnail. */
+          cell: number;
+          /** Not generated yet: drawn as a skeleton. */
+          thumb: string | null;
+          current: boolean;
+          /** Selected for removal while trimming. */
+          marked: boolean;
+      }
+    | { kind: 'cut'; cut: number; seconds: number };
+
 /** Frame-strip layout constants — shared by the Editor shell and FrameStrip. */
 export const FRAME_RATE = 30;
 export const SAMPLE_INTERVAL = 0.2;

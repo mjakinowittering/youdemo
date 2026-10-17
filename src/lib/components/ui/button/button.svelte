@@ -7,15 +7,17 @@
     // YouDemo V2 buttons (docs/design/specs/foundations.md "Controls"): 1.5px ink
     // outline, a hard 0 4px 0 ink shadow and a 4px bottom margin that reserves it;
     // hover and press move 2px down onto 0 2px 0. Disabled is dashed, never faded.
+    // Buttons use proportional figures (the design's `font` shorthand resets them);
+    // links keep the page's tabular ones.
     export const buttonVariants = tv({
-        base: 'mb-1 inline-flex min-h-11 shrink-0 cursor-pointer items-center justify-center gap-2 rounded-control border-[1.5px] border-solid border-yd-ink px-[18px] text-button font-semibold whitespace-nowrap shadow-offset transition-[translate,box-shadow] duration-[120ms] outline-none select-none not-disabled:not-aria-disabled:hover:translate-y-0.5 not-disabled:not-aria-disabled:hover:shadow-offset-press focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-yd-ink disabled:cursor-not-allowed disabled:border-dashed disabled:border-yd-muted disabled:bg-yd-base disabled:text-yd-muted disabled:shadow-none aria-disabled:cursor-not-allowed aria-disabled:border-dashed aria-disabled:border-yd-muted aria-disabled:bg-yd-base aria-disabled:text-yd-muted aria-disabled:shadow-none motion-reduce:transition-none',
+        base: 'mb-1 inline-flex min-h-11 shrink-0 cursor-pointer items-center justify-center gap-2 rounded-control border-[1.5px] border-solid border-yd-ink px-[18px] text-button font-semibold whitespace-nowrap normal-nums shadow-offset transition-[translate,box-shadow] duration-[120ms] outline-none select-none not-disabled:not-aria-disabled:hover:translate-y-0.5 not-disabled:not-aria-disabled:hover:shadow-offset-press focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-yd-ink disabled:cursor-not-allowed disabled:border-dashed disabled:border-yd-muted disabled:bg-yd-base disabled:text-yd-muted disabled:shadow-none aria-disabled:cursor-not-allowed aria-disabled:border-dashed aria-disabled:border-yd-muted aria-disabled:bg-yd-base aria-disabled:text-yd-muted aria-disabled:shadow-none motion-reduce:transition-none',
         variants: {
             variant: {
                 primary: 'bg-yd-accent text-yd-ink',
                 ghost: 'bg-yd-card text-yd-ink',
                 danger: 'bg-yd-danger text-yd-card',
                 'danger-ghost': 'bg-yd-card text-yd-danger',
-                link: 'mb-0 gap-1.5 rounded-none border-0 bg-transparent px-0 text-yd-ink underline decoration-yd-accent decoration-[2.5px] underline-offset-4 shadow-none not-disabled:not-aria-disabled:hover:translate-y-0 not-disabled:not-aria-disabled:hover:shadow-none not-disabled:not-aria-disabled:hover:decoration-4',
+                link: 'mb-0 gap-1.5 tabular-nums rounded-none border-0 bg-transparent px-0 text-yd-ink underline decoration-yd-accent decoration-[2.5px] underline-offset-4 shadow-none not-disabled:not-aria-disabled:hover:translate-y-0 not-disabled:not-aria-disabled:hover:shadow-none not-disabled:not-aria-disabled:hover:decoration-4 disabled:bg-transparent disabled:text-yd-ink aria-disabled:bg-transparent aria-disabled:text-yd-ink',
                 // shadcn's own names, used by the generated primitives
                 // (alert-dialog action and cancel)
                 default: 'bg-yd-accent text-yd-ink',

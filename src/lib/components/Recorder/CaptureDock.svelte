@@ -10,7 +10,8 @@
         camEnabled?: boolean;
         blurOn?: boolean;
         blurIntensity?: BlurIntensity;
-        disabled?: boolean;
+        /** While a take counts down or records: every control dashed. */
+        locked?: boolean;
     }
 
     let {
@@ -18,12 +19,15 @@
         camEnabled = $bindable(true),
         blurOn = $bindable(false),
         blurIntensity = $bindable<BlurIntensity>('default'),
-        disabled = false
+        locked = false
     }: Props = $props();
 </script>
 
-<div class="flex items-center justify-center gap-2 border-t px-4 py-3">
-    <MicControl bind:micMuted {disabled} />
-    <CamControl bind:camEnabled {disabled} />
-    <BlurControl bind:blurOn bind:intensity={blurIntensity} {camEnabled} {disabled} />
+<!-- Mic, camera and blur, each a toggle with a device (or intensity) menu -->
+<div
+    class="inline-flex items-start gap-3.5 rounded-panel border-[1.5px] border-solid border-yd-ink bg-yd-card px-3.5 pt-3 pb-2"
+>
+    <MicControl bind:micMuted disabled={locked} />
+    <CamControl bind:camEnabled disabled={locked} />
+    <BlurControl bind:blurOn bind:intensity={blurIntensity} disabled={locked} />
 </div>

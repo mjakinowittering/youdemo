@@ -12,7 +12,7 @@
     import { formatElapsed } from '$lib/titles.js';
     import { cn, srcObject } from '$lib/utils.js';
 
-    import ControlBar from './ControlBar.svelte';
+    import DockBand from './DockBand.svelte';
 
     interface Props {
         onstop: () => void;
@@ -139,5 +139,5 @@
         </div>
     </div>
 
-    <ControlBar bind:micMuted bind:camEnabled bind:blurOn bind:blurIntensity disabled={true} />
+    <DockBand bind:micMuted bind:camEnabled bind:blurOn bind:blurIntensity locked />
 </div>

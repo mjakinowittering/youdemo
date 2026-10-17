@@ -45,3 +45,53 @@ export function bubbleCoords(pos: BubblePosition, frame: Rect): { x: number; y: 
             return { x: left, y: cy };
     }
 }
+
+/** A box's size: the inner (padding) box and the outer (border) box of a frame. */
+export interface FrameSize {
+    innerW: number;
+    innerH: number;
+    outerW: number;
+    outerH: number;
+}
+
+/**
+ * Top-left of a `w`×`h` box at `pos` in a preview frame, `inset` from its inner
+ * edges. Centred spots are centred on the frame's outer box, as the design draws
+ * them. In CSS pixels relative to the frame's padding box.
+ */
+export function previewSpot(
+    pos: BubblePosition,
+    frame: FrameSize,
+    w: number,
+    h: number,
+    inset: number
+): { x: number; y: number } {
+    const xs = { l: inset, c: (frame.outerW - w) / 2, r: frame.innerW - w - inset };
+    const ys = { t: inset, c: (frame.outerH - h) / 2, b: frame.innerH - h - inset };
+    const [y, x] = {
+        tl: ['t', 'l'],
+        tc: ['t', 'c'],
+        tr: ['t', 'r'],
+        lc: ['c', 'l'],
+        rc: ['c', 'r'],
+        bl: ['b', 'l'],
+        bc: ['b', 'c'],
+        br: ['b', 'r']
+    }[pos] as ['t' | 'c' | 'b', 'l' | 'c' | 'r'];
+    return { x: xs[x], y: ys[y] };
+}
+
+/**
+ * The preview bubble for a frame of this inner height: the recording's bubble
+ * (BUBBLE_FRAC, PAD_FRAC) drawn 8px larger, so it reads as lifted off its slot.
+ */
+export function previewBubble(innerH: number): { size: number; inset: number } {
+    return {
+        size: Math.floor(innerH * BUBBLE_FRAC) + SLOT_SHRINK,
+        inset: Math.floor(innerH * PAD_FRAC) - SLOT_INSET
+    };
+}
+
+/** A dashed slot is the bubble `SLOT_SHRINK` smaller, `SLOT_INSET` further in. */
+export const SLOT_SHRINK = 8;
+export const SLOT_INSET = 2;

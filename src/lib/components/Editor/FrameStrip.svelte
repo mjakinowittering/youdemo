@@ -1,121 +1,100 @@
 <script lang="ts">
-    import {
-        CELL_GAP,
-        CELL_HEIGHT,
-        CELL_STRIDE,
-        CELL_WIDTH,
-        computeTimestampLabels,
-        computeVirtualWindow
-    } from '$lib/editorMath.js';
+    import { UndoIcon } from '@hugeicons/core-free-icons';
+
+    import Icon from '$lib/components/Icon.svelte';
+    import { Button } from '$lib/components/ui/button/index.js';
+
+    import type { StripItem } from '$lib/editorMath.js';
+    import { cn } from '$lib/utils.js';
 
     interface Props {
-        visibleCells?: number[];
-        thumbnails?: Map<number, string>;
-        currentCell?: number;
-        selectedCells?: Set<number>;
-        collapsingCells?: Set<number>;
-        paused?: boolean;
-        oncellclick?: (index: number) => void;
+        /** The items in view; the rest are stood in for by `leading`. */
+        items: StripItem[];
+        /** Width in px of the items before those rendered. */
+        leading?: number;
+        /** How far the strip is panned, in px. */
+        offset?: number;
+        disabled?: boolean;
+        onframeclick: (cell: number) => void;
+        onrestore: (cut: number) => void;
+        /** Wheel or trackpad: pan by this many px. */
+        onpan?: (delta: number) => void;
+        class?: string;
     }
 
     let {
-        visibleCells = [],
-        thumbnails = new Map<number, string>(),
-        currentCell = 0,
-        selectedCells = new Set<number>(),
-        collapsingCells = new Set<number>(),
-        paused = true,
-        oncellclick
+        items,
+        leading = 0,
+        offset = 0,
+        disabled = false,
+        onframeclick,
+        onrestore,
+        onpan,
+        class: className
     }: Props = $props();
 
-    let scrollContainer = $state<HTMLDivElement | undefined>(undefined);
-    let scrollLeft = $state(0);
-    let containerWidth = $state(0);
-
-    // Map from original cell index → rendered (sequential) position in the strip.
-    let cellRenderPos = $derived(new Map(visibleCells.map((idx, pos) => [idx, pos])));
-    let currentCellPos = $derived(cellRenderPos.get(currentCell) ?? -1);
-
-    let virtualWindow = $derived(
-        computeVirtualWindow(scrollLeft, containerWidth, visibleCells.length)
-    );
-    let posStart = $derived(virtualWindow.posStart);
-    let posEnd = $derived(virtualWindow.posEnd);
-    let totalStripWidth = $derived(visibleCells.length * CELL_STRIDE);
-    let leftSpacerWidth = $derived(posStart * CELL_STRIDE);
-    let timestampLabels = $derived(computeTimestampLabels(visibleCells));
-
-    // Keep the current cell in view while playing.
-    $effect(() => {
-        if (!scrollContainer || paused || currentCellPos < 0) return;
-        const targetScrollLeft = currentCellPos * CELL_STRIDE - containerWidth / 2;
-        scrollContainer.scrollLeft = Math.max(0, targetScrollLeft);
-    });
+    // Non-passive, so the page doesn't scroll while the strip pans
+    function wheel(node: HTMLElement) {
+        const handler = (e: WheelEvent) => {
+            if (!onpan) return;
+            e.preventDefault();
+            onpan(Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY);
+        };
+        node.addEventListener('wheel', handler, { passive: false });
+        return () => node.removeEventListener('wheel', handler);
+    }
 </script>
 
-{#if visibleCells.length > 0}
-    <div
-        bind:this={scrollContainer}
-        class="overflow-x-auto border-t"
-        bind:clientWidth={containerWidth}
-        onscroll={(e) => (scrollLeft = (e.currentTarget as HTMLDivElement).scrollLeft)}
-    >
-        <div
-            style="width: {totalStripWidth}px; position: relative; display: flex; align-items: flex-start; height: {CELL_HEIGHT +
-                12}px; transition: width 250ms ease;"
-        >
-            <div style="width: {leftSpacerWidth}px; flex-shrink: 0;"></div>
-
-            {#each visibleCells.slice(posStart, posEnd + 1) as cellIndex (cellIndex)}
-                <div
-                    class={[
-                        'shrink-0 cursor-pointer overflow-hidden rounded-md border-2 transition-[width,margin,opacity] duration-250',
-                        selectedCells.has(cellIndex)
-                            ? 'border-red-500'
-                            : cellIndex === currentCell
-                              ? 'border-indigo-500'
-                              : 'border-border',
-                        collapsingCells.has(cellIndex) && 'mr-0! w-0! opacity-0'
-                    ]}
-                    style="width: {CELL_WIDTH}px; height: {CELL_HEIGHT}px; margin-right: {CELL_GAP}px; position: relative;"
-                    role="button"
-                    tabindex="0"
-                    onclick={() => oncellclick?.(cellIndex)}
-                    onkeydown={(e) => {
-                        if (e.key === 'Enter' || e.key === ' ') oncellclick?.(cellIndex);
-                    }}
+<!-- The row of frames and cut markers. It doesn't clip itself: the Editor puts it
+     in an overflow-hidden band, and pans it by `offset`. -->
+<div
+    class={cn('flex w-max gap-[3px]', className)}
+    style:transform={offset ? `translateX(${-offset}px)` : undefined}
+    {@attach wheel}
+>
+    {#if leading}<div class="shrink-0" style="width: {leading}px"></div>{/if}
+    {#each items as item (item.kind === 'cut' ? `cut-${item.cut}` : item.cell)}
+        {#if item.kind === 'cut'}
+            <div class="relative mx-1 w-[3px] shrink-0 rounded-[2px] bg-yd-danger">
+                <Button
+                    variant="ghost"
+                    size="icon-sm"
+                    class="absolute top-[-22px] left-1/2 -translate-x-1/2"
+                    {disabled}
+                    aria-label="Restore cut, {item.seconds} seconds"
+                    onclick={() => onrestore(item.cut)}
                 >
-                    {#if thumbnails.has(cellIndex)}
-                        <img
-                            src={thumbnails.get(cellIndex)}
-                            alt=""
-                            class="block size-full object-cover"
-                        />
-                    {:else}
-                        <div class="size-full animate-pulse bg-muted-foreground/20"></div>
-                    {/if}
-                    {#if cellIndex === currentCell}
-                        <div
-                            class="pointer-events-none absolute inset-0 z-10 bg-indigo-500/30"
-                        ></div>
-                    {/if}
-                    {#if selectedCells.has(cellIndex)}
-                        <div class="pointer-events-none absolute inset-0 z-10 bg-red-500/20"></div>
-                    {/if}
-                </div>
-            {/each}
-        </div>
-
-        <!-- Timestamp labels — reactive to effectiveDuration and visible cell count -->
-        <div class="relative h-5 overflow-hidden" style="width: {totalStripWidth}px;">
-            {#each timestampLabels as { visibleIndex, label } (visibleIndex)}
-                <span
-                    class="absolute -translate-x-1/2 text-xs text-muted-foreground"
-                    style="left: {visibleIndex * CELL_STRIDE}px;"
-                >
-                    {label}
-                </span>
-            {/each}
-        </div>
-    </div>
-{/if}
+                    <Icon icon={UndoIcon} size={16} />
+                </Button>
+            </div>
+        {:else if item.thumb}
+            <button
+                type="button"
+                class={cn(
+                    'relative h-16 w-20 shrink-0 overflow-hidden rounded-frame border-[1.5px] border-solid border-yd-ink bg-yd-card',
+                    item.current && 'outline-3 outline-offset-1 outline-yd-ink',
+                    item.marked && 'border-yd-danger'
+                )}
+                {disabled}
+                aria-pressed={item.marked}
+                aria-label="Frame {item.cell}"
+                onclick={() => onframeclick(item.cell)}
+            >
+                <!-- Sized as drawn: 77×61 inside the outline -->
+                <img
+                    src={item.thumb}
+                    alt=""
+                    class="absolute top-0 left-0 h-[61px] w-[77px] object-cover"
+                    data-compare-mask
+                />
+                {#if item.marked}
+                    <span class="absolute inset-0 bg-yd-danger-tint opacity-72"></span>
+                {/if}
+            </button>
+        {:else}
+            <div
+                class="h-16 w-20 shrink-0 animate-skeleton rounded-frame border-[1.5px] border-solid border-yd-rule bg-yd-rule motion-reduce:animate-none"
+            ></div>
+        {/if}
+    {/each}
+</div>
