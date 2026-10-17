@@ -3,6 +3,7 @@ import fixWebmDuration from 'fix-webm-duration';
 import { BUBBLE_FRAC, bubbleCoords, type BubblePosition } from '$lib/bubbleGeometry.js';
 import { FRAME_RATE, SAMPLE_INTERVAL } from '$lib/editorMath.js';
 import type { Take } from '$lib/types.js';
+import { blackMargins, NO_MARGINS, type Margins } from '$lib/windowCrop.js';
 
 export interface RecorderOptions {
     screenStream: MediaStream;
@@ -63,6 +64,9 @@ let _canvasCaptureTrack: CanvasCaptureMediaStreamTrack | null = null;
 let _bubbleCanvas: HTMLCanvasElement | null = null;
 let _bubbleCtx: CanvasRenderingContext2D | null = null;
 let _bubbleMask: CanvasGradient | null = null;
+// A window share's shadow margin, left out of every frame (windowCrop.ts)
+let _isWindowShare = false;
+let _margins: Margins = NO_MARGINS;
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
 
@@ -85,6 +89,22 @@ function cappedDimensions(srcW: number, srcH: number): { width: number; height: 
     };
 }
 
+// Measures the margin a window share brought with it, from the frame showing now.
+// Runs at start and when the window is resized, never per frame.
+function measureMargins(): void {
+    if (!_screenVideo || !_isWindowShare) return;
+    const w = _screenVideo.videoWidth;
+    const h = _screenVideo.videoHeight;
+    if (!w || !h) return;
+    const probe = document.createElement('canvas');
+    probe.width = w;
+    probe.height = h;
+    const ctx = probe.getContext('2d', { willReadFrequently: true });
+    if (!ctx) return;
+    ctx.drawImage(_screenVideo, 0, 0);
+    _margins = blackMargins(ctx.getImageData(0, 0, w, h).data, w, h);
+}
+
 function videoReady(video: HTMLVideoElement): Promise<void> {
     return new Promise((resolve) => {
         if (video.readyState >= 2) resolve();
@@ -98,7 +118,10 @@ function drawFrame(): void {
     const h = _canvas.height;
 
     if (_screenVideo.readyState >= 2) {
-        _ctx.drawImage(_screenVideo, 0, 0, w, h);
+        const { top, right, bottom, left } = _margins;
+        const sw = _screenVideo.videoWidth - left - right;
+        const sh = _screenVideo.videoHeight - top - bottom;
+        _ctx.drawImage(_screenVideo, left, top, sw, sh, 0, 0, w, h);
     }
 
     if (
@@ -144,6 +167,7 @@ function cleanup(): void {
     // are intentionally NOT stopped here: both outlive a take, so the next take
     // can reuse them. Only the mic stream acquired below belongs to the recorder.
     if (_screenVideo) {
+        _screenVideo.removeEventListener('resize', measureMargins);
         _screenVideo.srcObject = null;
         _screenVideo = null;
     }
@@ -166,6 +190,8 @@ function cleanup(): void {
     _bubbleCanvas = null;
     _bubbleCtx = null;
     _bubbleMask = null;
+    _isWindowShare = false;
+    _margins = NO_MARGINS;
 }
 
 // ─── public API ───────────────────────────────────────────────────────────────
@@ -246,10 +272,17 @@ export async function start(options: RecorderOptions): Promise<MediaStream> {
     if (_webcamVideo) readyPromises.push(videoReady(_webcamVideo));
     await Promise.all(readyPromises);
 
+    // A window share is recorded without its shadow margin, measured again
+    // whenever the window is resized; the canvas keeps its first size
+    _isWindowShare = screenStream.getVideoTracks()[0]?.getSettings().displaySurface === 'window';
+    measureMargins();
+    _screenVideo.addEventListener('resize', measureMargins);
+
     // Size the canvas now that the screen video's intrinsic dimensions are known
+    const { top, right, bottom, left } = _margins;
     const { width, height } = cappedDimensions(
-        _screenVideo.videoWidth || 1920,
-        _screenVideo.videoHeight || 1080
+        (_screenVideo.videoWidth || 1920) - left - right,
+        (_screenVideo.videoHeight || 1080) - top - bottom
     );
     _canvas.width = width;
     _canvas.height = height;

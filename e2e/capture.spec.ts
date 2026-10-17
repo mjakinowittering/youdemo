@@ -1,9 +1,11 @@
-import { expect, test } from './fixtures/app';
+import { expect, newAppPage, test } from './fixtures/app';
+import { HEIGHT, WIDTH } from './fixtures/fakeDisplay';
+import { Inspector } from './lib/inspect';
 
 test('choosing a share counts down, records, and stops to review', async ({ app }) => {
     const { page } = app;
     await app.chooseButton.click();
-    await expect(page).toHaveTitle(/^[123]… \| YouDemo$/);
+    await expect(page).toHaveTitle(/^[123] \| YouDemo$/);
     await expect(app.stopButton).toBeVisible({ timeout: 10_000 });
     await expect(page).toHaveTitle(/^● REC \d\d:\d\d \| YouDemo$/);
     // The live preview plays the composited frame being encoded.
@@ -59,4 +61,20 @@ test('Discard, once confirmed, returns to Setup and forgets the takes', async ({
     await page.getByRole('alertdialog').getByRole('button', { name: 'Discard' }).click();
     await expect(app.chooseButton).toBeVisible();
     await expect.poll(() => app.opfsTakeCount()).toBe(0);
+});
+
+test('a window share is recorded without its black shadow margin', async ({
+    browser
+}, testInfo) => {
+    const app = await newAppPage(browser, testInfo, { windowMargins: [12, 16, 40, 16] });
+    await app.goto();
+    await app.recordTake(2);
+    const [file] = await app.readTakes(1);
+    const inspector = await Inspector.open(await app.page.context().newPage());
+    const take = await inspector.inspect(file);
+    expect([take.width, take.height]).toEqual([WIDTH, HEIGHT]);
+    // The barcode sits where it was painted, so the crop lines up with the screen
+    const read = take.frames.filter((f) => f.code >= 0).length;
+    expect(read / take.frames.length).toBeGreaterThan(0.9);
+    await app.page.context().close();
 });

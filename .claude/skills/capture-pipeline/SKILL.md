@@ -39,6 +39,17 @@ starting (`videoReady()`).
 compositing + encode is the main cause of renderer crashes ("white screen") mid
 recording.
 
+**A window share loses its shadow margin.** Sharing one window can bring the
+window's see-through shadow with it, which the opaque canvas records as black
+bands (deeper below, as GNOME draws them). When the track's `displaySurface`
+is `'window'`, `measureMargins()` reads one frame through `blackMargins()`
+(`windowCrop.ts`, unit-tested) at start and again on the video's `resize`; the
+canvas is sized to the window without them and `drawFrame()` draws only the
+inner rect, so the bubble sits inside the window. An edge is cropped only where
+every pixel of a line is near-black, and never once the band reaches 12% of the
+frame (that's content). Measuring reads pixels, so it never runs per frame.
+The E2E fake can share a window with a margin (`windowMargins`).
+
 **Bitrates:** `videoBitsPerSecond: 5_000_000`, `audioBitsPerSecond: 128_000`.
 `VIDEO_BITS_PER_SECOND` is exported: export's re-encode fallback reuses it.
 

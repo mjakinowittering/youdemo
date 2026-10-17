@@ -16,6 +16,11 @@ export interface FakeDisplayOptions {
     noMic?: boolean;
     /** Screen size per getDisplayMedia call, cycling; defaults to WIDTH × HEIGHT. */
     sizes?: [number, number][];
+    /**
+     * Share a window that brings a black shadow margin this many px deep on each
+     * side (top, right, bottom, left), around a screen of the usual size.
+     */
+    windowMargins?: [number, number, number, number];
 }
 
 export const WIDTH = 1280;
@@ -93,13 +98,20 @@ export function installFakeDisplay(
             opts.width,
             opts.height
         ];
-        canvas.width = width;
-        canvas.height = height;
+        const [top, right, bottom, left] = opts.windowMargins ?? [0, 0, 0, 0];
+        canvas.width = left + width + right;
+        canvas.height = top + height + bottom;
         const ctx = canvas.getContext('2d', { alpha: false })!;
+        // The margin stays black; the screen is painted inside it
+        ctx.translate(left, top);
         paint(ctx, width, height);
         const stream = canvas.captureStream(30);
         const id = setInterval(() => paint(ctx, width, height), 1000 / 30);
         const video = stream.getVideoTracks()[0];
+        if (opts.windowMargins) {
+            const settings = video.getSettings.bind(video);
+            video.getSettings = () => ({ ...settings(), displaySurface: 'window' });
+        }
         video.addEventListener('ended', () => clearInterval(id));
         tracks.length = 0;
         tracks.push(video);
