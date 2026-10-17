@@ -7,7 +7,7 @@
     import type { DeletedRange } from '$lib/types.js';
 
     interface Props {
-        videoUrl?: string | null;
+        videoUrl: string;
         deletedRanges?: DeletedRange[];
         paused?: boolean;
         currentTime?: number;
@@ -15,7 +15,7 @@
     }
 
     let {
-        videoUrl = null,
+        videoUrl,
         deletedRanges = [],
         paused = $bindable(true),
         currentTime = $bindable(0),
@@ -77,45 +77,34 @@
     });
 </script>
 
-<div class="relative min-h-0 flex-1">
-    {#if videoUrl}
-        <div
-            class="relative h-full cursor-pointer"
-            onclick={handleVideoClick}
-            role="button"
-            tabindex="0"
-            onkeydown={(e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault();
-                    handleVideoClick();
-                }
-            }}
-            aria-label="Toggle play/pause"
-        >
-            <!-- svelte-ignore a11y_media_has_caption -->
-            <video
-                bind:this={videoEl}
-                src={videoUrl}
-                bind:paused
-                bind:currentTime
-                bind:duration
-                class="size-full object-contain"
-            ></video>
-            {#if showPlayIcon || showPauseIcon}
-                <div class="pointer-events-none absolute inset-0 flex items-center justify-center">
-                    <div class="animate-ping-once text-indigo-500">
-                        {#if showPlayIcon}
-                            <Icon icon={PlayIcon} size={96} />
-                        {:else}
-                            <Icon icon={PauseIcon} size={96} />
-                        {/if}
-                    </div>
-                </div>
-            {/if}
-        </div>
-    {:else}
-        <div class="flex h-full items-center justify-center text-sm text-muted-foreground">
-            No video loaded
+<!-- Fills its VideoFrame; a click (or Enter/Space) plays or pauses -->
+<div
+    class="absolute inset-0 cursor-pointer"
+    onclick={handleVideoClick}
+    role="button"
+    tabindex="0"
+    onkeydown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            handleVideoClick();
+        }
+    }}
+    aria-label="Toggle play/pause"
+>
+    <!-- svelte-ignore a11y_media_has_caption -->
+    <video
+        bind:this={videoEl}
+        src={videoUrl}
+        bind:paused
+        bind:currentTime
+        bind:duration
+        class="size-full object-contain"
+    ></video>
+    {#if showPlayIcon || showPauseIcon}
+        <div class="pointer-events-none absolute inset-0 flex items-center justify-center">
+            <div class="animate-ping-once text-yd-ink motion-reduce:animate-none">
+                <Icon icon={showPlayIcon ? PlayIcon : PauseIcon} size={96} />
+            </div>
         </div>
     {/if}
 </div>

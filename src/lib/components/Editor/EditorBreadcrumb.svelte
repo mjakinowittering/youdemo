@@ -30,14 +30,14 @@
     data-section="breadcrumb"
     class={cn('flex h-14 shrink-0 items-center gap-3 bg-yd-base px-6', className)}
 >
-    <Breadcrumb.List class="flex-nowrap gap-3 text-small text-yd-muted sm:gap-3">
-        <Breadcrumb.Item class="gap-3">
+    <Breadcrumb.List class="contents text-small text-yd-muted">
+        <Breadcrumb.Item class="contents">
             <Button variant="link" {disabled} onclick={onback}>
                 <Icon icon={ArrowLeft01Icon} size={18} />Back to review
             </Button>
         </Breadcrumb.Item>
-        <Breadcrumb.Separator>/</Breadcrumb.Separator>
-        <Breadcrumb.Item>
+        <Breadcrumb.Separator class="text-small">/</Breadcrumb.Separator>
+        <Breadcrumb.Item class="contents">
             <Breadcrumb.Page class="font-semibold text-yd-ink">Edit</Breadcrumb.Page>
         </Breadcrumb.Item>
     </Breadcrumb.List>

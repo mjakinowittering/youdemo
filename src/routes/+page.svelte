@@ -3,29 +3,28 @@
     import { untrack } from 'svelte';
 
     import BrowserCheck from '$lib/components/BrowserCheck.svelte';
-    import Done from '$lib/components/Editor/Done.svelte';
     import Editor from '$lib/components/Editor/Editor.svelte';
-    import Processing from '$lib/components/Editor/Processing.svelte';
     import ErrorScreen from '$lib/components/ErrorScreen.svelte';
     import Countdown from '$lib/components/Recorder/Countdown.svelte';
     import Recording from '$lib/components/Recorder/Recording.svelte';
     import Review from '$lib/components/Recorder/Review.svelte';
     import Setup from '$lib/components/Recorder/Setup.svelte';
-    import { Progress } from '$lib/components/ui/progress/index.js';
 
     import { createBlurProcessor } from '$lib/blurProcessor.js';
     import type { BlurIntensity, BlurProcessor } from '$lib/blurProcessor.js';
     import type { BubblePosition } from '$lib/bubbleGeometry.js';
     import * as crashStore from '$lib/crashStore.js';
     import { deviceStore } from '$lib/deviceStore.svelte.js';
+    import { currentCuts, emptyHistory, type CutHistory } from '$lib/editorMath.js';
     import {
         DISPLAY_MEDIA_OPTIONS,
         start as recorderStart,
         stop as recorderStop
     } from '$lib/recorder.js';
     import { titleFor } from '$lib/titles.js';
-    import type { AppState, DeletedRange, Take } from '$lib/types.js';
-    import { stitchSegments, takeDuration } from '$lib/videoStitcher.js';
+    import type { AppState, EditorPhase, Take } from '$lib/types.js';
+    import { downloadBlob } from '$lib/utils.js';
+    import { renderEditedVideo, stitchSegments, takeDuration } from '$lib/videoStitcher.js';
 
     let errorMessage = $state('');
     let hasError = $state(false);
@@ -48,7 +47,6 @@
     // props and the title has a single owner.
     let countdownValue = $state(3);
     let recordingElapsed = $state(0);
-    let exportProgress = $state(0);
     let tick: ReturnType<typeof setInterval> | undefined;
 
     // ── shares, camera and takes ─────────────────────────────────────────────────
@@ -68,11 +66,17 @@
     let takes = $state<Take[]>([]);
     let discardOpen = $state(false);
     let editorVideoUrl = $state<string | null>(null);
-    // Single combined source for the Editor + export. Built (stitched) from
+    // Single combined source for the Editor + export. Built (joined) from
     // `takes` on entering the Editor and cached until the takes change.
     let editorBlob = $state<Blob | null>(null);
-    let stitchProgress = $state(0);
-    let outputBlob = $state<Blob | null>(null);
+    // The Editor's phase and the progress of joining or exporting (0–100)
+    let editorPhase = $state<EditorPhase>('ready');
+    let editorProgress = $state(0);
+    // The cuts, with undo and redo. Owned here so they survive Back to review.
+    let cutHistory = $state<CutHistory>(emptyHistory());
+    // The file just exported, for the Exported notice, and why an export failed
+    let exportedFile = $state<string | null>(null);
+    let exportError = $state<unknown>(null);
 
     // The document title for the current moment of the journey — the only place a
     // title is set. Rendered through `<svelte:head>` below.
@@ -81,12 +85,11 @@
             hasError,
             count: countdownValue,
             elapsed: recordingElapsed,
-            progress: appState === 'stitching' ? stitchProgress : exportProgress
+            phase: editorPhase,
+            progress: editorProgress,
+            exported: exportedFile !== null
         })
     );
-
-    // Export params (set when leaving editor → processing)
-    let exportDeletedRanges = $state<DeletedRange[]>([]);
 
     // Device / recording controls — bound down through the dock into the leaf
     // controls (MicControl / CamControl / BlurControl) on each capture screen.
@@ -396,12 +399,13 @@
         bubblePosition = 'tr';
         if (editorVideoUrl) URL.revokeObjectURL(editorVideoUrl);
         editorVideoUrl = null;
-        outputBlob = null;
-        exportDeletedRanges = [];
+        cutHistory = emptyHistory();
+        exportedFile = null;
+        exportError = null;
+        editorPhase = 'ready';
+        editorProgress = 0;
         countdownValue = 3;
         recordingElapsed = 0;
-        exportProgress = 0;
-        stitchProgress = 0;
         discardOpen = false;
         crashStore.clear();
         appState = 'setup';
@@ -410,27 +414,28 @@
     async function goToEditor() {
         // Editing doesn't need the share; the camera is released by its effect
         stopShare();
+        exportedFile = null;
+        // The Editor mounts at once; several takes are joined first, losslessly
+        // (a packet copy), and the result is cached until the takes change.
+        appState = 'editor';
+        if (editorBlob) {
+            editorPhase = 'ready';
+            return;
+        }
         try {
-            // Build (once) a single combined source so the Editor timeline, scrubbing
-            // and cuts span the whole recording. Multiple takes are joined losslessly
-            // via stitchSegments (a packet copy); the result is cached until takes change.
-            if (!editorBlob) {
-                if (takes.length > 1) {
-                    stitchProgress = 0;
-                    appState = 'stitching';
-                    editorBlob = await stitchSegments(
-                        takes.map((t) => t.blob),
-                        (f) => {
-                            stitchProgress = Math.round(f * 100);
-                        }
-                    );
-                } else {
-                    editorBlob = takes[0].blob;
-                }
-                if (editorVideoUrl) URL.revokeObjectURL(editorVideoUrl);
-                editorVideoUrl = URL.createObjectURL(editorBlob);
+            if (takes.length > 1) {
+                editorPhase = 'joining';
+                editorProgress = 0;
+                editorBlob = await stitchSegments(
+                    takes.map((t) => t.blob),
+                    (f) => (editorProgress = Math.round(f * 100))
+                );
+            } else {
+                editorBlob = takes[0].blob;
             }
-            appState = 'editor';
+            if (editorVideoUrl) URL.revokeObjectURL(editorVideoUrl);
+            editorVideoUrl = URL.createObjectURL(editorBlob);
+            editorPhase = 'ready';
         } catch (err) {
             errorMessage =
                 err instanceof Error ? `${err.message}\n${err.stack ?? ''}` : String(err);
@@ -442,20 +447,27 @@
         appState = 'review';
     }
 
-    function handleExport(deletedRanges: DeletedRange[]) {
-        exportDeletedRanges = deletedRanges;
-        exportProgress = 0;
-        appState = 'processing';
-    }
-
-    function handleProcessingDone(blob: Blob) {
-        outputBlob = blob;
-        crashStore.clear();
-        appState = 'done';
-    }
-
-    function backToEditor() {
-        appState = 'editor';
+    // Export runs inside the Editor: a packet copy of the kept ranges, saved
+    // straight to the downloads. The crash store is kept: Discard and New
+    // recording clear it.
+    async function exportVideo(filename: string) {
+        if (!editorBlob) return;
+        editorPhase = 'exporting';
+        editorProgress = 0;
+        exportedFile = null;
+        try {
+            const blob = await renderEditedVideo(
+                editorBlob,
+                currentCuts(cutHistory),
+                (f) => (editorProgress = Math.round(f * 100))
+            );
+            downloadBlob(blob, filename);
+            exportedFile = filename;
+            editorPhase = 'ready';
+        } catch (err) {
+            exportError = err;
+            editorPhase = 'failed';
+        }
     }
 </script>
 
@@ -517,30 +529,17 @@
         onedit={goToEditor}
         ondiscard={resetToSetup}
     />
-{:else if appState === 'stitching'}
-    <div class="flex h-full flex-col items-center justify-center p-8">
-        <div class="w-full max-w-sm space-y-3">
-            <div class="flex items-baseline justify-between text-sm">
-                <span class="text-muted-foreground">Combining recordings…</span>
-                <span class="font-mono tabular-nums">{stitchProgress}%</span>
-            </div>
-            <Progress value={stitchProgress} />
-        </div>
-    </div>
 {:else if appState === 'editor'}
     <Editor
         videoUrl={editorVideoUrl}
+        phase={editorPhase}
+        progress={editorProgress}
+        takeCount={takes.length}
+        bind:history={cutHistory}
+        bind:exportedFile
+        {exportError}
         onback={backToReview}
-        onexport={handleExport}
+        onexport={exportVideo}
         ondiscard={resetToSetup}
     />
-{:else if appState === 'processing'}
-    <Processing
-        segments={editorBlob ? [editorBlob] : takes.map((t) => t.blob)}
-        deletedRanges={exportDeletedRanges}
-        bind:progress={exportProgress}
-        oncomplete={handleProcessingDone}
-    />
-{:else if appState === 'done'}
-    <Done videoBlob={outputBlob} onbacktoeditor={backToEditor} onnewrecording={resetToSetup} />
 {/if}

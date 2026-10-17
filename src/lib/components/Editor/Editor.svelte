@@ -1,199 +1,328 @@
 <script lang="ts">
-    import { onMount } from 'svelte';
     import { SvelteMap } from 'svelte/reactivity';
 
     import {
+        addCut,
+        canRedo,
+        canUndo,
         CELL_HEIGHT,
         CELL_WIDTH,
-        computeCellCount,
-        computeDeletedCells,
         computeEffectiveCurrentTime,
         computeEffectiveDuration,
-        computeVisibleCells,
+        currentCuts,
         effectiveToRawTime,
+        entriesInView,
         formatTime,
+        frameAt,
+        overviewGeometry,
+        redo,
         resolveSeekTarget,
+        restoreCut,
         SAMPLE_INTERVAL,
-        selectionToRange
+        selectionToRange,
+        stripLayout,
+        undo,
+        ZOOM_LEVELS,
+        zoomLabel,
+        type CutHistory,
+        type StripEntry,
+        type StripItem
     } from '$lib/editorMath.js';
-    import type { DeletedRange } from '$lib/types.js';
+    import { errorDetails, exportFailureReason } from '$lib/errors.js';
+    import type { EditorPhase } from '$lib/types.js';
+    import { exportFilename } from '$lib/utils.js';
 
-    import EditorFooter from './EditorFooter.svelte';
-    import EditorToolbar from './EditorToolbar.svelte';
-    import FrameStrip from './FrameStrip.svelte';
-    import Scrubber from './Scrubber.svelte';
+    import EditorView from './EditorView.svelte';
     import VideoPlayer from './VideoPlayer.svelte';
 
     interface Props {
+        /** The joined recording; null while takes are still being joined. */
+        videoUrl: string | null;
+        phase: EditorPhase;
+        progress?: number;
+        takeCount: number;
+        /** The cuts, with undo and redo; owned by +page.svelte so they survive Back. */
+        history: CutHistory;
+        /** The file just saved, for the Exported notice. */
+        exportedFile?: string | null;
+        exportError?: unknown;
         onback: () => void;
-        onexport: (deletedRanges: DeletedRange[], totalDuration: number) => void;
+        /** Confirmed: export to this file name. */
+        onexport: (filename: string) => void;
+        /** Confirmed: delete every take, cut and the crash store. */
         ondiscard: () => void;
-        videoUrl?: string | null;
     }
 
-    let { onback, onexport, ondiscard, videoUrl = null }: Props = $props();
+    let {
+        videoUrl,
+        phase,
+        progress = 0,
+        takeCount,
+        history = $bindable(),
+        exportedFile = $bindable(null),
+        exportError = null,
+        onback,
+        onexport,
+        ondiscard
+    }: Props = $props();
 
-    // Player state — bound to VideoPlayer, single source of truth for the shell.
+    // Playback, bound to the <video>
     let paused = $state(true);
     let currentTime = $state(0);
-    let videoDuration = $state(0);
+    let duration = $state(0);
 
-    // Edit state.
-    let thumbnails = new SvelteMap<number, string>();
-    let deletedRanges = $state<DeletedRange[]>([]);
-    let editMode = $state(false);
-    let anchorCell = $state<number | null>(null);
-    let selectedCells = $state(new Set<number>());
+    // Edit state
+    let trimming = $state(false);
+    let zoom = $state(0);
+    let anchor = $state<number | null>(null);
+    let selected = $state(new Set<number>());
+    let offset = $state(0);
+    let viewWidth = $state(0);
+    let exportOpen = $state(false);
+    let discardOpen = $state(false);
+    let newRecordingOpen = $state(false);
+    // Named when the Export dialog opens, so the file is saved as it said
+    let filename = $state(exportFilename());
+    const thumbnails = new SvelteMap<number, string>();
 
-    // Derived timeline math (all pure — see editorMath.ts).
-    let cellCount = $derived(computeCellCount(videoDuration));
-    let currentCell = $derived(Math.round(currentTime / SAMPLE_INTERVAL));
-    let deletedCells = $derived(computeDeletedCells(cellCount, deletedRanges));
-    let visibleCells = $derived(computeVisibleCells(cellCount, deletedCells));
-    let effectiveDuration = $derived(computeEffectiveDuration(videoDuration, deletedRanges));
-    let effectiveCurrentTime = $derived(computeEffectiveCurrentTime(currentTime, deletedRanges));
-    let canDelete = $derived(editMode && selectedCells.size > 0);
+    // The strip starts 24px in
+    const PAD = 24;
 
-    // Seek: snap out of deleted spans, clamp, then drive the player via bound currentTime.
-    function seekTo(rawTarget: number) {
-        if (!(videoDuration > 0)) return;
-        const resolved = resolveSeekTarget(rawTarget, deletedRanges);
-        currentTime = Math.min(resolved, videoDuration - 0.001);
+    let cuts = $derived(currentCuts(history));
+    let interval = $derived<number>(ZOOM_LEVELS[zoom]);
+    let kept = $derived(computeEffectiveDuration(duration, cuts));
+    let keptTime = $derived(computeEffectiveCurrentTime(currentTime, cuts));
+    let layout = $derived(stripLayout(duration, cuts, interval));
+    let inView = $derived(entriesInView(layout.entries, offset - PAD, viewWidth));
+    let current = $derived(frameAt(layout.entries, currentTime));
+    let locked = $derived(phase !== 'ready' && phase !== 'failed');
+
+    let strip = $derived<StripItem[]>(
+        inView.map((e) =>
+            e.kind === 'cut'
+                ? { kind: 'cut', cut: e.cut, seconds: e.seconds }
+                : {
+                      kind: 'frame',
+                      cell: e.cell,
+                      thumb: thumbnails.get(e.base) ?? null,
+                      current: e === current,
+                      marked: trimming && selected.has(e.cell)
+                  }
+        )
+    );
+    let leading = $derived(inView.length && inView[0].x > 0 ? inView[0].x - 3 : 0);
+
+    let labels = $derived.by(() => {
+        const frames = inView.filter(
+            (e): e is Extract<StripEntry, { kind: 'frame' }> =>
+                e.kind === 'frame' && e.x >= offset - PAD
+        );
+        const middle = frames.findLast((e) => e.x <= offset - PAD + viewWidth / 2);
+        const label = (e: { time: number } | undefined) =>
+            e ? formatTime(computeEffectiveCurrentTime(e.time, cuts)) : '';
+        return {
+            start: label(frames[0]),
+            middle: label(middle),
+            end: `${formatTime(kept)} after cuts`
+        };
+    });
+
+    function clampOffset(value: number): number {
+        return Math.max(0, Math.min(value, PAD + layout.width + PAD - viewWidth));
     }
 
-    function handleCellClick(cellIndex: number) {
-        if (!editMode) {
-            seekTo(cellIndex * SAMPLE_INTERVAL);
+    // While playing, keep the playhead's frame in view
+    $effect(() => {
+        if (paused || !current) return;
+        const x = current.x + PAD;
+        if (x < offset || x + CELL_WIDTH > offset + viewWidth) {
+            offset = clampOffset(x - viewWidth / 3);
+        }
+    });
+
+    // The file is named as the Export dialog opens
+    $effect(() => {
+        if (exportOpen) filename = exportFilename();
+    });
+
+    function seekTo(raw: number) {
+        if (!(duration > 0)) return;
+        currentTime = Math.min(resolveSeekTarget(raw, cuts), duration - 0.001);
+    }
+
+    function frameClick(cell: number) {
+        if (locked) return;
+        if (!trimming) {
+            seekTo(cell * interval);
             return;
         }
-
-        if (anchorCell === null) {
-            anchorCell = cellIndex;
-            selectedCells = new Set([cellIndex]);
+        if (anchor === null) {
+            anchor = cell;
+            selected = new Set([cell]);
         } else {
-            const start = Math.min(anchorCell, cellIndex);
-            const end = Math.max(anchorCell, cellIndex);
-            selectedCells = new Set(Array.from({ length: end - start + 1 }, (_, i) => start + i));
-            anchorCell = null;
+            const [from, to] = anchor < cell ? [anchor, cell] : [cell, anchor];
+            selected = new Set(Array.from({ length: to - from + 1 }, (_, i) => from + i));
+            anchor = null;
         }
     }
 
-    async function deleteSelectedCells() {
-        if (selectedCells.size === 0) return;
-
-        deletedRanges = [...deletedRanges, selectionToRange(selectedCells)];
-
-        selectedCells = new Set();
-        anchorCell = null;
-        editMode = false;
+    function clearSelection() {
+        selected = new Set();
+        anchor = null;
     }
 
-    function toggleEditMode() {
-        editMode = !editMode;
-        if (!editMode) {
-            selectedCells = new Set();
-            anchorCell = null;
-        }
+    // Only frames still in the strip count towards the selection's length
+    let selectedFrames = $derived(
+        layout.entries.filter((e) => e.kind === 'frame' && selected.has(e.cell)).length
+    );
+
+    function remove() {
+        if (selected.size === 0) return;
+        history = addCut(history, selectionToRange(selected, interval));
+        clearSelection();
+        seekTo(currentTime);
     }
 
-    // Thumbnail strip — generated off-DOM by seeking a hidden <video> and drawing
-    // each sample frame to a canvas. Browser-bound; not part of the pure math.
-    onMount(() => {
+    function setZoom(level: number) {
+        zoom = level;
+        clearSelection();
+        // Keep the playhead's frame in the middle of the strip
+        const frame = frameAt(stripLayout(duration, cuts, ZOOM_LEVELS[level]).entries, currentTime);
+        offset = 0;
+        if (frame) offset = clampOffset(frame.x + PAD - viewWidth / 2);
+    }
+
+    // Thumbnails: the frames in view first, then outwards, flushed in batches so
+    // a long recording stays responsive. Keyed by 0.2 s cell, shared by every zoom.
+    $effect(() => {
         if (!videoUrl) return;
-        const thumbVideo = document.createElement('video');
-        thumbVideo.src = videoUrl;
-        thumbVideo.muted = true;
+        const video = document.createElement('video');
+        video.src = videoUrl;
+        video.muted = true;
+        const canvas = document.createElement('canvas');
+        canvas.width = CELL_WIDTH;
+        canvas.height = CELL_HEIGHT;
+        const ctx = canvas.getContext('2d');
         let cancelled = false;
 
         (async () => {
             await new Promise<void>((resolve) => {
-                thumbVideo.onloadedmetadata = () => resolve();
-                thumbVideo.load();
+                video.onloadedmetadata = () => resolve();
+                video.load();
             });
-            const count = computeCellCount(thumbVideo.duration);
-            for (let i = 0; i < count; i++) {
+            // Generated but not yet shown; not reactive on purpose
+            let batch: Record<number, string> = {};
+            let flushed = performance.now();
+            const flush = () => {
+                for (const [base, url] of Object.entries(batch)) thumbnails.set(Number(base), url);
+                batch = {};
+                flushed = performance.now();
+            };
+            while (!cancelled) {
+                const centre = offset - PAD + viewWidth / 2;
+                const next = layout.entries
+                    .filter(
+                        (e): e is Extract<StripEntry, { kind: 'frame' }> =>
+                            e.kind === 'frame' && !thumbnails.has(e.base) && !(e.base in batch)
+                    )
+                    .sort((a, b) => Math.abs(a.x - centre) - Math.abs(b.x - centre))[0];
+                if (!next) {
+                    flush();
+                    // Nothing left in this layout: wait for a zoom, pan or cut
+                    await new Promise((resolve) => setTimeout(resolve, 250));
+                    continue;
+                }
+                video.currentTime = next.base * SAMPLE_INTERVAL;
+                await new Promise<void>((resolve) => (video.onseeked = () => resolve()));
                 if (cancelled) return;
-                thumbVideo.currentTime = i * SAMPLE_INTERVAL;
-                await new Promise<void>((resolve) => {
-                    thumbVideo.onseeked = () => resolve();
-                });
-                if (cancelled) return;
-                const canvas = document.createElement('canvas');
-                canvas.width = CELL_WIDTH;
-                canvas.height = CELL_HEIGHT;
-                canvas.getContext('2d')?.drawImage(thumbVideo, 0, 0, CELL_WIDTH, CELL_HEIGHT);
-                thumbnails.set(i, canvas.toDataURL('image/jpeg', 0.6));
-                await new Promise((resolve) => setTimeout(resolve, 0));
+                ctx?.drawImage(video, 0, 0, CELL_WIDTH, CELL_HEIGHT);
+                batch[next.base] = canvas.toDataURL('image/jpeg', 0.6);
+                if (Object.keys(batch).length >= 8 || performance.now() - flushed > 150) flush();
             }
         })();
 
         return () => {
             cancelled = true;
-            thumbVideo.src = '';
+            video.src = '';
         };
     });
+
+    let cutWord = $derived(cuts.length === 1 ? 'cut' : 'cuts');
+    let discardBody = $derived(
+        `${takeCount === 1 ? 'The take' : takeCount === 2 ? 'Both takes' : `All ${takeCount} takes`}${cuts.length ? ` and your ${cutWord}` : ''} ${takeCount === 1 && !cuts.length ? 'is' : 'are'} deleted from this browser, including the copy kept in case it crashes. This can't be undone.`
+    );
 </script>
 
-<div class="flex h-full flex-col">
-    <VideoPlayer
-        {videoUrl}
-        {deletedRanges}
-        bind:paused
-        bind:currentTime
-        bind:duration={videoDuration}
-    />
-
-    <Scrubber
-        {paused}
-        time="{formatTime(effectiveCurrentTime)} / {formatTime(effectiveDuration)}"
-        percent={effectiveDuration > 0 ? (100 * effectiveCurrentTime) / effectiveDuration : 0}
-        ontoggleplay={() => (paused = !paused)}
-        onseek={(percent) =>
-            seekTo(
-                effectiveToRawTime(
-                    (percent / 100) * effectiveDuration,
-                    deletedRanges,
-                    videoDuration
-                )
-            )}
-    />
-
-    <EditorToolbar
-        trimming={editMode}
-        canUndo={false}
-        canRedo={false}
-        zoomLabel="0.2 s a frame"
-        canZoomIn={false}
-        canZoomOut={false}
-        selection={canDelete ? `${(selectedCells.size * SAMPLE_INTERVAL).toFixed(1)} s` : ''}
-        ontoggletrim={toggleEditMode}
-        onundo={() => {}}
-        onredo={() => {}}
-        onzoomin={() => {}}
-        onzoomout={() => {}}
-        onremove={deleteSelectedCells}
-    />
-
-    {#if videoDuration > 0}
-        <div class="overflow-hidden">
-            <FrameStrip
-                class="pt-[30px] pl-6"
-                items={visibleCells.map((cell) => ({
-                    kind: 'frame' as const,
-                    cell,
-                    thumb: thumbnails.get(cell) ?? null,
-                    current: cell === currentCell,
-                    marked: selectedCells.has(cell)
-                }))}
-                onframeclick={handleCellClick}
-                onrestore={() => {}}
+<EditorView
+    {phase}
+    {progress}
+    joiningTitle="Joining {takeCount} takes"
+    exportingNote={cuts.length
+        ? `Applying your ${cutWord}. Editing unlocks when the file is saved.`
+        : 'Saving your recording. Editing unlocks when the file is saved.'}
+    {exportedFile}
+    failure={phase === 'failed'
+        ? { reason: exportFailureReason(exportError), details: errorDetails(exportError) }
+        : null}
+    {paused}
+    time="{formatTime(keptTime)} / {formatTime(kept)}"
+    percent={kept > 0 ? (100 * keptTime) / kept : 0}
+    {trimming}
+    canUndo={canUndo(history)}
+    canRedo={canRedo(history)}
+    zoomLabel={zoomLabel(interval)}
+    canZoomIn={zoom > 0}
+    canZoomOut={zoom < ZOOM_LEVELS.length - 1}
+    selection={selectedFrames ? `${Math.round(selectedFrames * interval * 10) / 10} s` : ''}
+    overview={overviewGeometry(layout.width, offset, viewWidth, cuts, duration, currentTime)}
+    {strip}
+    stripLeading={leading}
+    stripOffset={offset}
+    bind:stripWidth={viewWidth}
+    {labels}
+    bind:exportOpen
+    bind:discardOpen
+    bind:newRecordingOpen
+    exportDetails={[
+        { label: 'Length', value: formatTime(kept) },
+        { label: 'Cuts', value: String(cuts.length) },
+        { label: 'File', value: filename }
+    ]}
+    {discardBody}
+    {onback}
+    ontoggleplay={() => (paused = !paused)}
+    onseek={(percent) => seekTo(effectiveToRawTime((percent / 100) * kept, cuts, duration))}
+    ontoggletrim={() => {
+        trimming = !trimming;
+        clearSelection();
+    }}
+    onundo={() => (history = undo(history))}
+    onredo={() => (history = redo(history))}
+    onzoomin={() => setZoom(zoom - 1)}
+    onzoomout={() => setZoom(zoom + 1)}
+    onremove={remove}
+    onpanto={(fraction) =>
+        (offset = clampOffset(fraction * (layout.width + 2 * PAD) - viewWidth / 2))}
+    onpanby={(delta) => (offset = clampOffset(offset + delta))}
+    onframeclick={frameClick}
+    onrestore={(cut) => {
+        if (!locked) history = restoreCut(history, cut);
+    }}
+    ondismissexported={() => (exportedFile = null)}
+    onretry={() => onexport(filename)}
+    onconfirmexport={() => onexport(filename)}
+    onconfirmdiscard={ondiscard}
+    onconfirmnewrecording={ondiscard}
+>
+    {#snippet video()}
+        {#if videoUrl}
+            <VideoPlayer
+                {videoUrl}
+                deletedRanges={cuts}
+                bind:paused
+                bind:currentTime
+                bind:duration
             />
-        </div>
-    {/if}
-
-    <EditorFooter
-        onback={() => onback()}
-        ondiscard={() => ondiscard()}
-        onexport={() => onexport(deletedRanges, videoDuration)}
-    />
-</div>
+        {/if}
+    {/snippet}
+</EditorView>

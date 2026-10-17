@@ -20,13 +20,11 @@ export interface Take {
  * Every step of the user journey. Owned as `$state` by `+page.svelte`, which
  * renders the matching screen; `titles.ts` maps each one to a document title.
  */
-export type AppState =
-    | 'check'
-    | 'setup'
-    | 'countdown'
-    | 'recording'
-    | 'review'
-    | 'stitching'
-    | 'editor'
-    | 'processing'
-    | 'done';
+export type AppState = 'check' | 'setup' | 'countdown' | 'recording' | 'review' | 'editor';
+
+/**
+ * The Editor's phases. It mounts at once: `joining` while several takes are
+ * joined, `ready` to edit, `exporting` while the file is written, and `failed`
+ * if that didn't finish.
+ */
+export type EditorPhase = 'joining' | 'ready' | 'exporting' | 'failed';

@@ -1,13 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
 import {
-    CELL_STRIDE,
     computeCellCount,
     computeDeletedCells,
     computeEffectiveCurrentTime,
     computeEffectiveDuration,
-    computeTimestampLabels,
-    computeVirtualWindow,
     computeVisibleCells,
     effectiveToRawTime,
     formatTime,
@@ -124,36 +121,6 @@ describe('computeDeletedCells / computeVisibleCells', () => {
     it('has no deleted cells when there are no ranges', () => {
         expect(computeDeletedCells(5, [])).toEqual(new Set());
         expect(computeVisibleCells(3, new Set())).toEqual([0, 1, 2]);
-    });
-});
-
-describe('computeVirtualWindow', () => {
-    it('clamps to the available range with a 5-cell overscan', () => {
-        const { posStart, posEnd } = computeVirtualWindow(0, 400, 100);
-        expect(posStart).toBe(0);
-        expect(posEnd).toBe(Math.min(99, Math.ceil(400 / CELL_STRIDE) + 5));
-    });
-
-    it('offsets the window when scrolled', () => {
-        const scrollLeft = 20 * CELL_STRIDE;
-        const { posStart } = computeVirtualWindow(scrollLeft, 400, 100);
-        expect(posStart).toBe(15); // floor(20) - 5
-    });
-});
-
-describe('computeTimestampLabels', () => {
-    it('produces roughly 8 evenly spaced labels', () => {
-        const visible = Array.from({ length: 80 }, (_, i) => i);
-        const labels = computeTimestampLabels(visible);
-        expect(labels.length).toBeGreaterThan(0);
-        expect(labels[0]).toEqual({ visibleIndex: 0, label: '00:00' });
-        // spacing is a constant stride
-        const stride = labels[1].visibleIndex - labels[0].visibleIndex;
-        expect(stride).toBe(Math.max(1, Math.round(visible.length / 8)));
-    });
-
-    it('handles an empty strip', () => {
-        expect(computeTimestampLabels([])).toEqual([]);
     });
 });
 
