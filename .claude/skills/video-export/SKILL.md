@@ -1,6 +1,6 @@
 ---
 name: video-export
-description: Lossless video export — videoStitcher.ts (stitchSegments, renderEditedVideo) copying recorded packets with Mediabunny, the pure remuxPlan.ts, the re-encode fallback, the Processing screen, the Done screen and download filename, plus the history of why ffmpeg.wasm and the real-time canvas replay were removed. Load when changing export, combining segments, applying trims, export progress, or before ever proposing ffmpeg/WASM transcoding or a real-time replay.
+description: Lossless video export — videoStitcher.ts (stitchSegments, renderEditedVideo) copying recorded packets with Mediabunny, the pure remuxPlan.ts, the re-encode fallback, the Editor's joining and exporting phases, the download and its filename, plus the history of why ffmpeg.wasm and the real-time canvas replay were removed. Load when changing export, combining segments, applying trims, export progress, or before ever proposing ffmpeg/WASM transcoding or a real-time replay.
 ---
 
 # Export (`src/lib/videoStitcher.ts`)
@@ -35,7 +35,7 @@ unit-tested in `tests/remuxPlan.spec.ts`.
 ## The re-encode fallback
 
 `needsNormalising` flags takes that can't be copied: encoder settings that
-differ (a resume picked a different-sized screen) or keyframes too sparse to cut
+differ (Change picked a different-sized screen) or keyframes too sparse to cut
 on (takes recovered from OPFS that were recorded before the recorder keyed every
 cell). Then **every** take is re-encoded once, first — at the first take's size,
 letterboxed, keyed every cell, audio copied — and the copy path runs as usual.
@@ -72,37 +72,26 @@ only re-encode is the fallback's, through the browser's native encoder. If you
 are tempted to reintroduce ffmpeg, WASM transcoding or a real-time replay, read
 this section first and raise it explicitly.
 
-It runs on the main thread. A Web Worker would only matter if the Processing
+It runs on the main thread. A Web Worker would only matter if the export
 progress bar stutters on a long recording — measure first.
 
-## Processing.svelte
+## In the Editor
 
-Runs the pipeline in `onMount` with a `cancelled` guard, then calls
-`oncomplete(blob)` after a 300ms pause on "Done!".
+There is no separate processing or download screen: joining and exporting are
+phases of the Editor, run by `+page.svelte` (`app-shell`).
 
-1. `source = segments[0]`.
-2. `segments.length > 1` → `stitchSegments` (status "Combining recordings…").
-   The Editor normally passes a single already-combined blob, so this is a safety
-   net — see `app-shell`.
-3. `deletedRanges.length > 0` → `renderEditedVideo` (status "Applying edits…"),
-   progress reset to 0 first.
-4. No cuts → `source` is the final file, unmodified.
-
-UI is an `Empty` inside a card: `Film` icon at 128px, the status as title, a
-`Progress` bar (`class="*:bg-indigo-500"`) and a percentage. Failure swaps in a
-`TriangleAlert` and the message in monospace — export errors are shown in place,
-not routed to the global `ErrorScreen`.
-
-`progress` is `$bindable` so `+page.svelte` can put it in the document title.
-
-## Done.svelte
-
-- **Auto-downloads on mount** via a synthesised `<a download>` click, revoking the
-  object URL on teardown. A `null` blob is a no-op — which is what lets it render
-  safely in Storybook.
-- Filename (format in `CLAUDE.md`'s branding rule) is built by `exportFilename()` in
-  `src/lib/utils.ts` (pure, unit-tested in `tests/utils.spec.ts`). Local time, not
-  UTC, so the stamp matches the user's clock; the seconds keep same-day exports
-  from colliding.
-- `Empty` with a 128px `CircleCheck`, title "Download started", and two buttons:
-  "Back to Editor" (indigo) and "New Recording" (outline).
+- **Joining** (`stitchSegments`) on entering the Editor with several takes;
+  the Editor shows "Joining N takes" with progress over skeleton controls.
+- **Export** confirms in a dialog (length after cuts, number of cuts, file
+  name), then `renderEditedVideo(editorBlob, cuts, onProgress)` with the stage
+  showing "Exporting" and its percentage and every control disabled. No cuts →
+  the joined recording as is.
+- The file downloads straight away through `downloadBlob(blob, filename)` in
+  `utils.ts`; the name is `exportFilename()` (format in `CLAUDE.md`'s
+  branding rule; local time, with seconds), fixed when the dialog opened. The
+  Editor then shows the dismissible Exported notice. **The crash store is
+  kept**; only Discard and New recording clear it.
+- **Failure** shows in place, never through the global `ErrorScreen`: the
+  export-failed card with the reason in words (`exportFailureReason` in
+  `errors.ts`), Technical details, **Try again** and **Copy error**. Takes and
+  cuts are untouched.

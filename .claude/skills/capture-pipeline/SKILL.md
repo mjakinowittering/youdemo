@@ -84,7 +84,7 @@ remove it.
 
 Mute is a graph operation, not a track flag: `setMicMuted()` connects/disconnects
 `_micNode` from the destination. (In practice mute is fixed at `start()` because
-the ControlBar is disabled mid-recording — see `capture-screens`.)
+the dock is locked mid-recording — see `capture-screens`.)
 
 ## Webcam bubble compositing
 
@@ -112,19 +112,21 @@ as the frame; the preview passes its letterboxed rect. Covered by
 track itself — not a clone, and no audio, so the preview can't echo. `+page.svelte`
 keeps it as `previewStream` for the Recording screen; it ends with the recorder.
 
-`DISPLAY_MEDIA_OPTIONS` is the one screen-picker request (Setup and Resume):
+`DISPLAY_MEDIA_OPTIONS` is the one screen-picker request (`chooseShare()` in
+`+page.svelte`, from Setup and Review):
 `selfBrowserSurface: 'exclude'` keeps the YouDemo tab out of the picker so the
 preview isn't recorded inside itself. A whole-screen share with YouDemo visible
 still mirrors — accepted.
 
 ## Stream ownership & teardown
 
-- **The recorder owns** the screen stream and the mic stream it acquires. Both are
-  stopped immediately in `stop()`, before the recorder finishes flushing, so the
-  browser's sharing indicator clears promptly.
-- **The recorder does not own the webcam.** The raw stream comes in through
-  `options` and is deliberately *not* stopped in `cleanup()` — `+page.svelte`
-  releases it (`releaseCamera()`), which is what lets a resume reuse it.
+- **The recorder owns only the mic stream** it acquires, stopped in `stop()`.
+- **It does not own the share or the webcam.** Both come in through `options`
+  and are deliberately *not* stopped: `+page.svelte` keeps them for the next
+  take (Record take N reuses a live share) and stops them on reset or on
+  entering the Editor (`app-shell`).
+- `stop()` resolves with the `Take`: the duration-fixed blob and its length in
+  seconds, which Review lists.
 - `recorder.ts` only ever calls `getUserMedia` for the **mic**. It must never open
   a second camera capture: it's wasteful and some webcams reject a concurrent open.
 - When `processedWebcamStream` (blurred) is present it is drawn in preference to

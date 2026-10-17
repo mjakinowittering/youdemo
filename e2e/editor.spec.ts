@@ -13,10 +13,7 @@ test('three takes open as one timeline, as long as all three together', async ({
     expect(takes).toHaveLength(3);
 });
 
-test('cuts shorten the final duration and survive a round trip to Done', async ({ app }) => {
-    // Back to Editor remounts the Editor, which owns deletedRanges, so the
-    // cuts are lost. Remove this marker once +page.svelte keeps them.
-    test.fail(true, 'Back to Editor drops the cuts');
+test('cuts shorten the final duration and survive Back to review', async ({ app }) => {
     await app.recordTake(4);
     await app.openEditor();
     const before = await app.finalDuration();
@@ -26,11 +23,25 @@ test('cuts shorten the final duration and survive a round trip to Done', async (
     expect(after).toBeLessThan(before);
 
     await app.exportAndDownload();
-    await expect(app.page.getByText('Download started')).toBeVisible();
-    await app.page.getByRole('button', { name: 'Back to Editor' }).click();
-    // The read-out is 0:00 until the video loads, then the real value.
-    await expect.poll(() => app.finalDuration()).toBeGreaterThan(0);
+    await expect(app.page.getByText(/Saved youdemo-.*to your downloads/)).toBeVisible();
+    await app.button('Back to review').click();
+    await app.openEditor();
     expect(await app.finalDuration()).toBe(after);
+    await expect(app.button(/^Restore cut, /)).toHaveCount(1);
+});
+
+test('a cut can be undone, redone and restored', async ({ app }) => {
+    await app.recordTake(3);
+    await app.openEditor();
+    const full = await app.cells.count();
+    await app.cut(4, 8);
+    await expect(app.cells).toHaveCount(full - 5);
+    await app.button('Undo').click();
+    await expect(app.cells).toHaveCount(full);
+    await app.button('Redo').click();
+    await expect(app.cells).toHaveCount(full - 5);
+    await app.button(/^Restore cut, /).click();
+    await expect(app.cells).toHaveCount(full);
 });
 
 test('cutting every cell leaves nothing to export', async ({ app }) => {

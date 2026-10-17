@@ -13,25 +13,26 @@ Try [YouDemo](https://mjakinowittering.github.io/youdemo/) now!
 
 - **Screen capture** — record any tab, window, or screen
 - **Webcam overlay** — picture-in-picture webcam bubble, draggable to 8
-  positions
+  positions before the first take and between takes
 - **Background blur** — blur the background behind your webcam in real time
   using on-device AI segmentation; three intensity levels, nothing uploaded
 - **Audio mixing** — microphone and system audio captured together
 - **Canvas compositing** — screen and webcam combined into a single video stream
   in real time
-- **Record in takes** — pause and resume to capture multiple clips; they're
-  stitched into one continuous video automatically
-- **Frame strip editor** — timeline of thumbnail frames, select and soft-delete
-  sections before export
-- **WebM export** — combining and trimming are rendered natively in the browser
-  (canvas + `MediaRecorder`); output is ready to drop into Slack, Notion, or
-  anywhere else
+- **Record in takes** — record take after take, reusing the screen you're
+  sharing; the takes are joined into one continuous video in the editor
+- **Frame strip editor** — a zoomable timeline of thumbnail frames: trim
+  sections out, undo and redo, and restore any cut before you export
+- **WebM export** — joining takes and applying cuts copy the recorded packets
+  into a new WebM with Mediabunny, in the browser: no real-time replay and no
+  quality loss, and only a take that can't be copied is re-encoded, once,
+  through WebCodecs; output is ready to drop into Slack, Notion, or anywhere
+  else
 - **Crash recovery** — every take is saved to the browser's private file storage
   (OPFS) as you record, so if the tab crashes or you reload by accident, YouDemo
-  reopens straight into the editor with your whole recording intact — nothing
-  leaves your machine
+  reopens straight into the editor with your whole recording intact, until you
+  discard it or start a new one — nothing leaves your machine
 - **No backend** — everything runs in the browser; nothing is uploaded anywhere
-- **Dark and light mode** — because it matters
 - **Deployable to GitHub Pages** — host it yourself for free
 
 ---
@@ -54,33 +55,6 @@ Things that would make YouDemo even better — contributions welcome.
       isn't available. Because blur is a privacy control, the fix must never
       record an unblurred background while the button says blur is on
 
-#### Editor
-
-- [ ] **Keep cuts on Back to Editor** — Done's "Back to Editor" remounts
-      `Editor.svelte`, which owns `deletedRanges`, so every cut is lost and the
-      full recording comes back. Lift the cuts into `+page.svelte` (it already
-      holds `exportDeletedRanges`) and pass them down. The E2E test "cuts
-      shorten the final duration and survive a round trip to Done" is marked
-      `test.fail()` until then
-- [ ] **Fix `effectiveToRawTime` at a cut boundary** — in `editorMath.ts`, a
-      kept time that lands exactly on the start of a deleted span maps to that
-      span's start rather than its end (the `remaining <= keptDuration` check),
-      so effective time 0 with the opening seconds cut returns 0. Harmless in
-      the app today because `resolveSeekTarget` snaps it forward, but the
-      function is wrong on its own; add the edge case to
-      `tests/editorMath.spec.ts`
-
-#### Docs
-
-- [ ] **Fix the README's WebM export bullet** — `## Features` still says
-      combining and trimming are rendered natively in the browser with "canvas +
-      `MediaRecorder`", but `videoStitcher.ts` (`stitchSegments`,
-      `renderEditedVideo`) now copies the recorded packets into a new WebM with
-      Mediabunny — no real-time replay, no quality loss — and only re-encodes a
-      take that can't be copied, once, through WebCodecs. `## Tech Stack`
-      already describes it correctly; reword the Features bullet to match,
-      without suggesting a canvas replay or a WASM transcoder
-
 ### Features
 
 #### Capture
@@ -90,19 +64,15 @@ Things that would make YouDemo even better — contributions welcome.
 
 #### Editor
 
-- [ ] **Undo deleted frames** — restore soft-deleted frames before export
 - [ ] **Quick trim** — trim-to-highlight shortcut for the most common editing
       workflow
-- [ ] **Graduate the frame strip in seconds** — `FrameStrip.svelte` labels the
-      strip from `computeTimestampLabels` in `editorMath.ts`, which spreads
-      about eight labels across the whole recording (`visibleCells.length / 8`),
-      so the gap grows with its length: a 10-minute take gets a label every 75
-      seconds, some 31,000px apart, with nothing in between. Add a labelled tick
-      every second (every five cells at the 0.2s `SAMPLE_INTERVAL`), in
-      effective time so the scale stays continuous across cuts, and render only
-      the ticks inside the strip's virtual window (`posStart`..`posEnd`), as the
-      cells already are. Unit-test the tick maths in `tests/editorMath.spec.ts`.
-      A scale only — zooming the strip is out of scope
+- [ ] **Graduate the frame strip in seconds** — `TimelineLabels.svelte` shows
+      three times under the strip (its start, its middle and the length after
+      cuts), worked out in `Editor.svelte`. Add a labelled tick every second of
+      effective time, so the scale stays continuous across cuts, at each zoom
+      level, rendering only the ticks in view as the frames already are
+      (`entriesInView` in `editorMath.ts`). Unit-test the tick maths in
+      `tests/editorMath.spec.ts`
 
 #### Fun
 
@@ -184,6 +154,9 @@ npm run preview
 
 # Run tests
 npm run test
+
+# Compare every visual story with the approved design boards
+npm run compare
 
 # Lint and format
 npm run lint

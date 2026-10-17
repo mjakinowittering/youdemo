@@ -31,6 +31,8 @@
         shareStream?: MediaStream | null;
         /** The camera as previewed: blurred when blur is on. */
         cameraStream?: MediaStream | null;
+        /** Blur is starting: the bubble dims the raw camera under a spinner. */
+        blurLoading?: boolean;
         /** The discard confirmation is open. */
         discardOpen?: boolean;
         /** Record take N: straight to the countdown with a live share, else the picker first. */
@@ -52,6 +54,7 @@
         shareLabel = '',
         shareStream = null,
         cameraStream = null,
+        blurLoading = false,
         discardOpen = $bindable(false),
         onrecord,
         onchangeshare,
@@ -113,6 +116,7 @@
                             <WebcamBubble
                                 bind:position={bubblePosition}
                                 stream={cameraStream}
+                                loading={blurLoading}
                                 slots="always"
                             />
                         {/if}
@@ -123,7 +127,8 @@
                     >
                         <Icon icon={ComputerScreenShareIcon} />
                         {#if shareLabel}
-                            <span class="text-small text-yd-ink">
+                            <!-- A long window or tab name is cut short, never Change -->
+                            <span class="min-w-0 truncate text-small text-yd-ink">
                                 Next take shares <b>{shareLabel}</b>
                             </span>
                         {:else}
@@ -132,7 +137,11 @@
                             </span>
                         {/if}
                         <span class="flex-1"></span>
-                        <Button variant="link" class="min-h-8 text-small" onclick={onchangeshare}>
+                        <Button
+                            variant="link"
+                            class="min-h-8 shrink-0 text-small"
+                            onclick={onchangeshare}
+                        >
                             {shareLabel ? 'Change' : 'Choose'}
                         </Button>
                     </div>

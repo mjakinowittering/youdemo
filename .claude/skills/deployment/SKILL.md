@@ -81,8 +81,7 @@ apt stalls on optional CJK fonts).
 
 ## meta / OpenGraph (`src/app.html`)
 
-`<html lang="en" class="dark">` — dark is the default theme, applied before any JS
-runs so there's no flash. `+layout.svelte` then reconciles it with `ydTheme`.
+`<html lang="en">` — light is the only theme for now (dark mode is later work).
 
 The head carries a `description` plus a full social-preview set:
 
@@ -95,8 +94,8 @@ The head carries a `description` plus a full social-preview set:
 The image URLs are **absolute** — required by crawlers, and the reason they're not
 built from `base`. If the site ever moves, update all of them together with
 `og:url`. The description text is duplicated across `description`,
-`og:description`, `twitter:description` and the WelcomeModal body copy; keep them
-in sync.
+`og:description`, `twitter:description` and, near enough, Setup's first-visit
+lead; keep them in sync.
 
 `<title>YouDemo</title>` in `app.html` is only the pre-hydration default —
 `+page.svelte` owns the live title. See `app-shell`.

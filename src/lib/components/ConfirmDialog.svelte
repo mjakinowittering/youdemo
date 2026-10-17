@@ -71,7 +71,14 @@
                         {/if}
                         <div class="flex items-center justify-end gap-3.5">
                             <AlertDialog.Cancel variant="ghost">{cancelLabel}</AlertDialog.Cancel>
-                            <AlertDialog.Action variant={tone} onclick={onconfirm}>
+                            <AlertDialog.Action
+                                variant={tone}
+                                onclick={() => {
+                                    // bits' Action doesn't close the dialog itself
+                                    open = false;
+                                    onconfirm();
+                                }}
+                            >
                                 {#if confirmIcon}<Icon icon={confirmIcon} />{/if}{confirmLabel}
                             </AlertDialog.Action>
                         </div>

@@ -1,162 +1,84 @@
 ---
 name: capture-screens
-description: The four capture screens (Setup, Countdown, Recording, Review) and the shared ControlBar with its Mic, Cam and Blur controls — layout, empty states, screen picker, countdown timing, REC badge, and each control's variant/tooltip table. Load when changing anything on the setup, countdown, recording or review screens, or any mic/camera/blur control.
+description: The four capture screens (Setup, Countdown, Recording, Review), the capture dock (DockBand, CaptureDock and the Mic, Cam and Blur split buttons) and the movable webcam bubble — layout, the welcome on first visit, countdown ring, REC pill, takes list, next-share row, and each control's states. Load when changing anything on the setup, countdown, recording or review screens, the dock, or the bubble.
 ---
 
 # Capture screens
 
-All four live in `src/lib/components/Recorder/`. Each is `flex h-full flex-col`
-with a content area and the shared `ControlBar` as its footer. The top bar comes
-from `+layout.svelte` — screens don't draw one. See `app-shell` for how they're
-wired and `tailwind-theme` for colours.
+All live in `src/lib/components/Recorder/` and are **pure**: streams, takes,
+ticks and every callback come from `+page.svelte` (`app-shell`). Each is a
+column of a sand `stage` band over the `DockBand`. Their boards are
+`docs/design/reference/screens/` (setup-*, countdown, recording, review*); the
+behaviour is `docs/design/specs/journey.md` sections 3–6.
 
-## Shared layout idiom
+## Setup
 
-Setup, Recording and Review all use the same clickable-`Card.Root` pattern for
-their primary action: `role="button"` + `tabindex={0}` + Enter/Space `onkeydown`
-on the card, with a `pointer-events-none` `<div>` styled by `buttonVariants` as
-the visible CTA. Details in `shadcn-ui`.
+- Left column (460): on first visit (`firstVisit`) the "First time here" pill,
+  display heading, lead and three feature rows; otherwise "Ready when you are".
+  Then **Choose what to share** (primary, large), which calls `onchoose`; the
+  picker and countdown follow in `+page.svelte`. `pickError` shows under it.
+- Right: the dashed preview area with `SharePlaceholder` and the live
+  `WebcamBubble` (112px, 18px inset, "Drag to move" pill).
+- Dock live.
 
-## Setup.svelte
+## Countdown
 
-- **Preview area** — live screen stream (`object-contain`) or, when there's no
-  stream, an `Empty` inside a clickable card.
-- **Empty state** — `Clapperboard` icon at `size={128}`, title "No screen
-  selected", description "Choose a screen and recording starts straight away",
-  CTA "Start Recording" (indigo; reads "Requesting…" while the picker is open).
-- **Screen picker** — clicking the card calls
-  `getDisplayMedia(DISPLAY_MEDIA_OPTIONS)` (`capture-pipeline`) and then
-  `onstart()` immediately. **Recording auto-starts on any
-  surface** (tab, window or screen); there is no separate start step. A
-  `NotAllowedError` (user cancelled) is silent; other failures set `pickError`.
-- **Stream ended** during setup → tracks stopped, `screenStream` nulled, back to
-  the empty state.
-- **Webcam preview** — a `$effect` keyed on `camEnabled` +
-  `deviceStore.webcamDeviceId` acquires/tears down the preview stream, writing to
-  the bound `webcamStream` so `+page.svelte` owns it. Uses `untrack` around the
-  writes to avoid self-triggering.
-- `WebcamBubble` renders only when `camEnabled`. `ControlBar` is `disabled={false}`
-  — this is the only screen where the controls are interactive.
+The 200px ring: a `rule` track and a tangerine arc (r 86, 10 wide, round caps)
+inside a 1.5px ink circle at r 93, the numeral at 88/800. The arc drains a
+third each second (`animate-drain` from `--from` to `--to`; still at the end
+value under reduced motion). "Recording starts in N", the hint, and **Cancel**
+(`oncancel`). `count` is a prop. Dock locked, with its note.
 
-`screenAspect` is captured from `onloadedmetadata` and passed to `WebcamBubble` so
-the bubble lines up with the composited frame (see `capture-pipeline`).
+## Recording
 
-## WebcamBubble.svelte
+REC pill (ink, rec dot, `formatElapsed(elapsed)`), "Take N", the note about
+stopping the share; the live composited preview (`previewStream`, labelled
+"Live recording preview") in an 820×461 ink frame; **Stop recording** (danger,
+large). Dock locked.
 
-- **Fixed size, no resize.** Size, the eight positions and their coordinates all
-  come from `$lib/bubbleGeometry.ts`, shared with the recorder — see
-  `capture-pipeline`.
-- Positions against the **letterboxed video rect**, derived from `screenAspect`,
-  not the raw container, because the composited frame has no letterbox bars.
-  `screenAspect === 0` falls back to filling the container.
-- 8 snap positions: `tl tr bl br tc rc bc lc`. Default `tr`.
-- **Draggable**: pointer capture, clamped to the frame rect, snapping to the
-  nearest position on release. While dragging, the seven other positions render as
-  translucent ghost circles.
-- A `ResizeObserver` (via an `{@attach}`) keeps the container dimensions current.
-- Styling: `rounded-full ring-2 ring-indigo-500`, video is `object-cover` (square
-  centre-crop, matching the recorder). Falls back to a "No cam" placeholder.
-- Prefers `processedStream` (blurred) over the raw `stream` when present, so the
-  preview shows exactly what gets recorded.
-- While `loading` (blur being set up), a `role="status"` overlay dims the raw
-  preview under a white `LoaderCircle` spinner, so the unblurred frame is never
-  mistaken for blur.
-- Visible in Setup only — hidden from countdown onwards.
+## Review
 
-## Countdown.svelte
+- Heading "N takes, mm:ss in total" under the "Recording paused" eyebrow.
+- Left (620): the next take's share live (or Setup's dashed placeholder once it
+  has ended) with the bubble on it and the dashed slots always shown; the share
+  row "Next take shares **label**" with **Change**, or "Next take: choose what
+  to share" with **Choose**; the drag hint.
+- Right (380): the takes card (`ListCard` labelled "Takes", scrolling, with
+  **Record take N** pinned at its foot), **Discard recording** (confirmed in a
+  `ConfirmDialog`), an ink rule, then **Edit and export**.
+- Dock live: changes apply to the next take.
 
-Overlay (`absolute inset-0`), so its story shell needs `relative`.
+# The dock
 
-- 3 → 2 → 1 → 0, one second each (`STEP = 1000`), then a 300ms hold on 0
-  (`ZERO_HOLD`) before `oncomplete()`.
-- Number: `text-7xl font-bold text-indigo-500 tabular-nums`.
-- **Card-flip between counts** via local `flipIn`/`flipOut` Svelte transitions
-  (`rotateX` ±90° + opacity, 250/200ms) inside a `{#key count}` block, with
-  `perspective:400px` on the parent.
-- Ring: an SVG circle with `stroke-dasharray={CIRC}` (452.4 ≈ 2πR, R=72) driven by
-  the `animate-deplete` keyframe token, re-keyed each count. See `tailwind-theme`.
-- Beep: a Web Audio `OscillatorNode` at 880Hz with a 150ms exponential gain ramp,
-  fired on every count. Wrapped in try/catch — no AudioContext means a silent
-  countdown, not a crash.
-- `count` is `$bindable` so `+page.svelte` can put it in the document title.
+`DockBand` is the band (rule above, centred dock, the "Mic, camera and blur can
+change between takes" note when `locked`); `CaptureDock` is the card of three
+`DockControl` split buttons (see `shadcn-ui`). `locked` on Countdown and
+Recording; live on Setup and Review.
 
-## Recording.svelte
+| Control | States (word, icon, tone)                                                     |
+| ------- | ----------------------------------------------------------------------------- |
+| Mic     | "Mic" `Mic01Icon` · "Muted" `MicOff01Icon`, off                                |
+| Camera  | "Camera" `Video01Icon` · "Camera off" `VideoOffIcon`, off                      |
+| Blur    | "Blur off" `UserIcon` · "Blur on" `BlurIcon`, on; the chevron sets intensity   |
 
-- **Live preview** — `previewStream` is the recorder's composited canvas track
-  (`capture-pipeline`), so it shows exactly what is being encoded, bubble and blur
-  included. It fills the area (`object-contain`, `aria-label` "Live recording
-  preview") above a real destructive "Stop Recording" `Button` with a filled
-  `Square` icon; the video itself isn't clickable.
-- **Fallback** — with no `previewStream` (stories), the `Tv` empty state "Recording
-  in progress", where the whole card is the stop target. Both carry the "Stop
-  Recording" name, which E2E stops by.
-- **REC badge** — `absolute top-4 left-4`, black translucent pill: a
-  `animate-rec-pulse` red dot, "REC", and `elapsed` formatted by `formatElapsed`
-  from `titles.ts` (the same helper the document title uses).
-- The elapsed timer is a 1s `setInterval` started in `onMount`, cleared on stop and
-  in `onDestroy`. `elapsed` is `$bindable` — `+page.svelte` reads it for the title.
-- A `$effect` (not `onMount`, so teardown is reliable) listens for the screen
-  track's `ended` event and calls `onstreamended`.
-- `ControlBar` is `disabled={true}`.
+Mic and Cam enumerate their devices in `onMount` and read/write `deviceStore`;
+tooltips name the device. Blur stays usable while the camera is off, as the
+board draws it. `aria-label`s name the action ("Mute microphone",
+"Enable background blur"); the E2E specs use them.
 
-## Review.svelte
+# The webcam bubble
 
-Three cards in a row (`flex-col sm:flex-row`), each fully clickable:
+`WebcamBubble` (positioning + drag) over `WebcamBubbleFace` (the circle, 2px
+ink outline, `shadow-bubble`, optional "Drag to move" pill).
 
-| Card              | Icon           | Button label | Variant       | Callback    |
-| ----------------- | -------------- | ------------ | ------------- | ----------- |
-| Resume recording  | `Clapperboard` | Continue     | `outline`     | `onresume`  |
-| Edit recording    | `Film`         | Continue     | `outline`     | `onedit`    |
-| Discard recording | `Trash2`       | Discard      | `destructive` | `ondiscard` |
-
-Rendered from a single `{#snippet actionCard(...)}` — add a card by calling the
-snippet, not by copying markup. Destructive cards get `text-destructive` and
-`hover:ring-destructive`; the others get indigo.
-
-No freeze-frame, no duration/mic/cam badges. `ControlBar` is `disabled={true}`.
-
-# ControlBar & controls
-
-`ControlBar.svelte` is the footer on **all three** of Setup, Recording and Review —
-the markup exists once. Props are all `$bindable` (`micMuted`, `camEnabled`,
-`blurOn`, `blurIntensity`) plus a plain `disabled` flag.
-
-`disabled` is `false` on Setup only. Recording and Review show the state chosen in
-Setup but can't be operated: streams are locked in at `recorderStart()`, and a
-disabled control is far simpler than coding around mid-recording toggles.
-
-All three controls share the button+chevron composition described in `shadcn-ui`.
-
-## MicControl / CamControl
-
-`src/lib/components/Recorder/Control/`. Each enumerates its own devices in
-`onMount` via `enumerateDevices()` (filtered to `audioinput` / `videoinput`),
-defaults `deviceStore` to the first device if unset, and reads/writes
-`deviceStore` from the dropdown. The tooltip shows the selected device label.
-
-| State           | Variant       | Icon     |
-| --------------- | ------------- | -------- |
-| Mic live        | `outline`     | `Mic`    |
-| Mic muted       | `destructive` | `MicOff` |
-| Cam enabled     | `outline`     | `Video`  |
-| Cam disabled    | `destructive` | `VideoOff` |
-
-Empty device list renders a non-interactive "No microphones found" item.
-
-## BlurControl
-
-Pure UI — it owns **no** processor. `+page.svelte` owns the `BlurProcessor` and
-reacts to `blurOn` / `blurIntensity`; see `background-blur`.
-
-Props: `blurOn` and `intensity` (both `$bindable`), plus `camEnabled` and
-`disabled`. It is disabled whenever `disabled || !camEnabled`.
-
-| State                 | Variant       | Icon               |
-| --------------------- | ------------- | ------------------ |
-| Off, cam enabled      | `outline`     | `UserRound`        |
-| On, cam enabled       | `success`     | `CircleUserRound`  |
-| Cam off (any)         | `destructive` | `UserRound`        |
-
-Chevron sets intensity via a `RadioGroup` — Light / Default / Heavy — and works
-whether blur is on or off. Tooltip: "Background blur off" · "Background blur —
-Light" · "Background blur" · "Background blur — Heavy".
+- Eight spots from `previewSpot` / `previewSpotStyle` in `bubbleGeometry.ts`:
+  edges `inset` from the frame's inner box, centres on its outer box; right and
+  bottom spots anchor with CSS `right`/`bottom`.
+- The dashed slots are the bubble `SLOT_SHRINK` (8px) smaller and `SLOT_INSET`
+  (2px) further in. Shown always on Review, while dragging on Setup.
+- Size and inset follow the frame (`previewBubble`: the recorded bubble's
+  `BUBBLE_FRAC`/`PAD_FRAC`, 8px larger) unless given, as Setup gives 112/18.
+- Drag with pointer capture, snap to the nearest spot on release; sets
+  `bubblePosition` for the next take.
+- With no stream (stories) the face is a masked placeholder; `loading` dims it
+  under a spinner while blur starts.

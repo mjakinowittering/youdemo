@@ -28,6 +28,8 @@ export const CODE_MS = 10;
 export interface FakeDisplayHandle {
     /** End the screen track the way the browser's "Stop sharing" bar does. */
     stopSharing(): void;
+    /** How many times the picker has been opened. */
+    readonly calls: number;
 }
 
 declare global {
@@ -46,6 +48,7 @@ export function installFakeDisplay(
 ): void {
     const { barcode, codeMs } = opts;
     let calls = 0;
+    let picks = 0;
     const origin = performance.now();
     const tracks: MediaStreamTrack[] = [];
 
@@ -56,6 +59,9 @@ export function installFakeDisplay(
                 // stop() alone never fires 'ended'; the browser's bar does.
                 t.dispatchEvent(new Event('ended'));
             }
+        },
+        get calls() {
+            return picks;
         }
     };
 
@@ -80,6 +86,7 @@ export function installFakeDisplay(
     const realGetUserMedia = md.getUserMedia.bind(md);
 
     md.getDisplayMedia = async (constraints?: DisplayMediaStreamOptions) => {
+        picks++;
         if (opts.cancel) throw new DOMException('Permission denied', 'NotAllowedError');
         const canvas = document.createElement('canvas');
         const [width, height] = opts.sizes?.[calls++ % opts.sizes.length] ?? [

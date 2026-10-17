@@ -14,7 +14,7 @@ import {
 } from './fakeDisplay';
 
 export interface AppOptions extends FakeDisplayOptions {
-    /** Skip the first-visit welcome modal (default true). */
+    /** Mark the welcome as seen, so Setup opens as for a returning visitor (default true). */
     welcomed?: boolean;
 }
 
@@ -43,27 +43,54 @@ export class App {
         await this.page.goto('./');
     }
 
-    card(name: string | RegExp) {
-        return this.page.getByRole('button', { name });
+    button(name: string | RegExp, exact = false) {
+        return this.page.getByRole('button', { name, exact });
     }
 
-    /** Record one take: from Setup (first) or Review (resume). Ends on Review. */
-    async recordTake(seconds: number): Promise<void> {
-        const resume = this.card(/Resume recording/);
-        if (await resume.isVisible()) await resume.click();
-        else await this.card(/No screen selected/).click();
-        await expect(this.page.getByText('REC', { exact: true })).toBeVisible({ timeout: 10_000 });
+    /** Setup's one action; its picker starts the countdown. */
+    get chooseButton() {
+        return this.button('Choose what to share');
+    }
+
+    get stopButton() {
+        return this.button('Stop recording');
+    }
+
+    /** Review's heading, "2 takes, 00:04 in total". */
+    get reviewHeading() {
+        return this.page.getByRole('heading', { name: /^\d+ takes?, \d\d:\d\d in total$/ });
+    }
+
+    /** The footer's Export, which opens the dialog. */
+    get exportButton() {
+        return this.page.getByRole('button', { name: 'Export', exact: true }).first();
+    }
+
+    /**
+     * Record one take: from Setup (first) or Review (Record take N, reusing the
+     * live share unless `newShare` picks again with Change). Ends on Review.
+     */
+    async recordTake(seconds: number, newShare = false): Promise<void> {
+        const next = this.button(/^Record take \d+$/);
+        if (newShare && (await next.isVisible())) {
+            const picked = await this.pickerCalls();
+            await this.button('Change').click();
+            await expect.poll(() => this.pickerCalls()).toBe(picked + 1);
+        }
+        if (await next.isVisible()) await next.click();
+        else await this.chooseButton.click();
+        await expect(this.stopButton).toBeVisible({ timeout: 10_000 });
         await this.page.waitForTimeout(seconds * 1000);
         await this.stopButton.click();
-        await expect(this.card(/Resume recording/)).toBeVisible({ timeout: 10_000 });
+        await expect(this.reviewHeading).toBeVisible({ timeout: 10_000 });
     }
 
-    /** Review → Editor, waiting out any stitching and the thumbnail strip. */
+    /** Review → Editor, waiting out any joining and the frame strip. */
     async openEditor(): Promise<void> {
-        await this.card(/Edit recording/).click();
-        await expect(this.exportButton).toBeVisible({ timeout: 60_000 });
-        // The strip renders a partial window until it has measured its width;
-        // wait until the cell count stops changing.
+        await this.button('Edit and export').click();
+        await expect(this.exportButton).toBeEnabled({ timeout: 60_000 });
+        // The strip renders once the video's duration is known; wait until the
+        // frame count stops changing.
         let last = -1;
         await expect
             .poll(
@@ -78,40 +105,34 @@ export class App {
             .toBe(true);
     }
 
-    get stopButton() {
-        return this.page.getByRole('button', { name: 'Stop Recording' });
-    }
-
-    get exportButton() {
-        return this.page.getByRole('button', { name: 'Export & Download' });
-    }
-
-    /** Frame-strip cells in on-screen order (deleted ones are removed). */
+    /** Frames of the strip in on-screen order (cut ones are left out). */
     get cells() {
-        return this.page.locator('div[role="button"].shrink-0');
+        return this.page.getByRole('button', { name: /^Frame \d+$/ });
     }
 
-    /** The editor's "Final: m:ss" read-out, in seconds. */
+    /** The "mm:ss after cuts" label, in seconds. */
     async finalDuration(): Promise<number> {
-        const text = await this.page.getByText(/^Final: /).textContent();
-        const [, m, s] = /Final: (\d+):(\d+)/.exec(text ?? '') ?? [];
+        const text = await this.page.getByText(/after cuts$/).textContent();
+        const [, m, s] = /(\d+):(\d+) after cuts/.exec(text ?? '') ?? [];
         return Number(m) * 60 + Number(s);
     }
 
     /**
-     * Cut cells `from`..`to` (inclusive, raw cell indices). Cut later ranges
-     * first, or earlier cuts shift the on-screen positions of later cells.
+     * Cut cells `from`..`to` (inclusive, raw cell indices) in trim mode. Cut
+     * later ranges first, or earlier cuts shift the on-screen positions of
+     * later cells.
      */
     async cut(from: number, to: number): Promise<void> {
         const before = await this.cells.count();
         if (this.deleted.some((d) => d.startTime < from * SAMPLE_INTERVAL)) {
             throw new Error('cut later ranges first');
         }
-        await this.page.getByRole('button', { name: 'Cut' }).click();
+        await this.button('Trim', true).click();
         await this.cells.nth(from).click();
         await this.cells.nth(to).click();
-        await this.page.getByRole('button', { name: 'Delete' }).click();
+        await this.button(/^Remove /).click();
         await expect(this.cells).toHaveCount(before - (to - from + 1));
+        await this.button('Done trimming').click();
         this.deleted.push({
             startTime: from * SAMPLE_INTERVAL,
             endTime: (to + 1) * SAMPLE_INTERVAL
@@ -122,6 +143,10 @@ export class App {
     async exportAndDownload(): Promise<{ filename: string; bytes: Buffer }> {
         const download = this.page.waitForEvent('download', { timeout: 90_000 });
         await this.exportButton.click();
+        await this.page
+            .getByRole('alertdialog')
+            .getByRole('button', { name: 'Export', exact: true })
+            .click();
         const file = await download;
         return { filename: file.suggestedFilename(), bytes: await readFile((await file.path())!) };
     }
@@ -131,6 +156,11 @@ export class App {
         await expect.poll(() => this.page.evaluate(opfsTakeCount), { timeout: 10_000 }).toBe(count);
         const b64 = await this.page.evaluate(readOpfsTakes);
         return b64.map((s) => Buffer.from(s, 'base64'));
+    }
+
+    /** How many times the screen picker has been opened. */
+    async pickerCalls(): Promise<number> {
+        return this.page.evaluate(() => window.__e2eDisplay!.calls);
     }
 
     async opfsTakeCount(): Promise<number> {

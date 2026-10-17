@@ -527,6 +527,7 @@
         {shareLabel}
         shareStream={screenStream}
         cameraStream={processedWebcamStream ?? webcamStream}
+        {blurLoading}
         onrecord={recordNextTake}
         onchangeshare={chooseShare}
         onedit={goToEditor}

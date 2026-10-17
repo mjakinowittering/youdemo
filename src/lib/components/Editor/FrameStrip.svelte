@@ -67,11 +67,15 @@
                     <Icon icon={UndoIcon} size={16} />
                 </Button>
             </div>
-        {:else if item.thumb}
+        {:else}
+            <!-- Clickable before its thumbnail arrives; until then, a skeleton -->
             <button
                 type="button"
                 class={cn(
-                    'relative h-16 w-20 shrink-0 overflow-hidden rounded-frame border-[1.5px] border-solid border-yd-ink bg-yd-card',
+                    'relative h-16 w-20 shrink-0 overflow-hidden rounded-frame border-[1.5px] border-solid',
+                    item.thumb
+                        ? 'border-yd-ink bg-yd-card'
+                        : 'animate-skeleton border-yd-rule bg-yd-rule motion-reduce:animate-none',
                     item.current && 'outline-3 outline-offset-1 outline-yd-ink',
                     item.marked && 'border-yd-danger'
                 )}
@@ -80,21 +84,19 @@
                 aria-label="Frame {item.cell}"
                 onclick={() => onframeclick(item.cell)}
             >
-                <!-- Sized as drawn: 77×61 inside the outline -->
-                <img
-                    src={item.thumb}
-                    alt=""
-                    class="absolute top-0 left-0 h-[61px] w-[77px] object-cover"
-                    data-compare-mask
-                />
+                {#if item.thumb}
+                    <!-- Sized as drawn: 77×61 inside the outline -->
+                    <img
+                        src={item.thumb}
+                        alt=""
+                        class="absolute top-0 left-0 h-[61px] w-[77px] object-cover"
+                        data-compare-mask
+                    />
+                {/if}
                 {#if item.marked}
                     <span class="absolute inset-0 bg-yd-danger-tint opacity-72"></span>
                 {/if}
             </button>
-        {:else}
-            <div
-                class="h-16 w-20 shrink-0 animate-skeleton rounded-frame border-[1.5px] border-solid border-yd-rule bg-yd-rule motion-reduce:animate-none"
-            ></div>
         {/if}
     {/each}
 </div>

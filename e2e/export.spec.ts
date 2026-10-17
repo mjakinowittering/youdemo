@@ -44,7 +44,9 @@ function exportScenario(title: string, scenario: Scenario): void {
             testInfo.setTimeout(240_000);
             const app = await newAppPage(browser, testInfo, scenario.options);
             await app.goto();
-            for (const seconds of scenario.takes) await app.recordTake(seconds);
+            // Different screens need picking again for each take
+            const newShare = !!scenario.options?.sizes;
+            for (const seconds of scenario.takes) await app.recordTake(seconds, newShare);
             const takeFiles = await app.readTakes(scenario.takes.length);
             await app.openEditor();
             for (const [from, to] of scenario.cuts ?? []) await app.cut(from, to);

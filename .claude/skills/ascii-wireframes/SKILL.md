@@ -19,25 +19,25 @@ containing any of them drifts out of line. **Draw with printable ASCII only.**
 
 - **Every state, not just the happy one.** The state machine (`app-shell`) is where
   the surprise hides:
-    - `check` — a critical failure (no way forward) and an optional-only failure
-      ("Continue anyway")
-    - Setup with no screen picked and with a live preview; camera off; blur on
-    - the countdown overlay, and Recording with its REC badge
-    - Review, and the transient `stitching` progress
-    - the Editor at rest, in edit mode, and with a selection ready to delete
-    - Processing mid-export and with its in-place error; Done
+    - `check` — the blocking phone screen and the limited one ("Continue without
+      them")
+    - Setup on a first visit and returning; camera off; blur on
+    - the countdown, and Recording with its REC pill
+    - Review with the share live and ended, and its discard dialog
+    - the Editor joining, at rest, trimming with a selection, exporting,
+      exported and failed, and its dialogs
     - the crash-recovery entry, which skips Setup and lands in the Editor
 - **Before and after** for a change to something that exists. Label them `BEFORE` /
   `AFTER`.
-- **The neighbours.** Draw enough of what surrounds the change (the top bar, the
-  ControlBar, the frame strip) to show where it sits and what it pushes aside. Where a
+- **The neighbours.** Draw enough of what surrounds the change (the header, the
+  dock, the frame strip) to show where it sits and what it pushes aside. Where a
   thing lives is as much the design as how it looks.
 - **Real copy and real icons.** Copy lives inline in each component — use the actual
-  strings ("No screen selected", "Download started"), never lorem ipsum. Name an icon
+  strings ("Choose what to share", "Export didn't finish"), never lorem ipsum. Name an icon
   with a short ASCII word in brackets (`[mic]`, `[trash]`, `[x]`), and name the
-  **lucide** icon in a note underneath (`MicOff`, `Trash2`).
+  **Hugeicons** icon in a note underneath (`MicOff01Icon`, `Delete02Icon`).
 - **Every screen it touches.** A shared component gets drawn where it's hardest to
-  fit — usually Setup with the ControlBar and webcam bubble at a narrow width, or the
+  fit — usually Setup with the dock and webcam bubble at a narrow width, or the
   Editor's frame strip.
 
 ## How to draw
@@ -55,7 +55,7 @@ containing any of them drifts out of line. **Draw with printable ASCII only.**
   must print the same number; fix any that doesn't, then paste the checked text.
 - Put notes **below** the drawing, as plain bullets. Never write annotations inside
   the boxes, or a note wide enough to break the alignment.
-- One region per drawing. The top bar, the preview area and the ControlBar are
+- One region per drawing. The header, the stage and the dock are
   separate drawings.
 
 ## Sequence diagrams for data flows
@@ -88,8 +88,8 @@ User   +page.svelte     recorder.ts    crashStore (OPFS)   videoStitcher
 
 - A crash-store failure is swallowed: OPFS unavailable or over quota means no crash
   protection, never an error the user sees (`persistence`). Draw that, not a rejection.
-- Export runs inside `Processing` (`renderEditedVideo(Blob, DeletedRange[])`), and its
-  failure shows **in place** on that screen, not on the global `ErrorScreen`
+- Export runs as a phase of the Editor (`renderEditedVideo(Blob, DeletedRange[])`),
+  and its failure shows **in place** in the stage, not on the global `ErrorScreen`
   (`video-export`).
 
 ## Keep it light
