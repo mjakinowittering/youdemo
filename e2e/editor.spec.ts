@@ -30,6 +30,31 @@ test('cuts shorten the final duration and survive Back to review', async ({ app 
     await expect(app.button(/^Restore cut, /)).toHaveCount(1);
 });
 
+test('Play plays the recording in real time, ended by the browser bar', async ({ app }) => {
+    const { page } = app;
+    await app.chooseButton.click();
+    await expect(app.stopButton).toBeVisible({ timeout: 10_000 });
+    await page.waitForTimeout(3000);
+    await page.evaluate(() => window.__e2eDisplay!.stopSharing());
+    await expect(app.reviewHeading).toBeVisible();
+    await app.openEditor();
+    const video = page.getByLabel('Toggle play/pause').locator('video');
+    await video.evaluate((v: HTMLVideoElement) => {
+        (v as HTMLVideoElement & { seeks: number }).seeks = 0;
+        v.addEventListener('seeking', () => (v as HTMLVideoElement & { seeks: number }).seeks++);
+    });
+    await app.button('Play', true).click();
+    await expect
+        .poll(() => video.evaluate((v: HTMLVideoElement) => v.currentTime), { timeout: 3000 })
+        .toBeGreaterThan(1);
+    // Playing, not crawling forward one seek at a time
+    expect(
+        await video.evaluate(
+            (v: HTMLVideoElement) => (v as HTMLVideoElement & { seeks: number }).seeks
+        )
+    ).toBeLessThan(3);
+});
+
 test('a cut can be undone, redone and restored', async ({ app }) => {
     await app.recordTake(3);
     await app.openEditor();

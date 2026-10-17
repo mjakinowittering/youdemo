@@ -296,22 +296,39 @@
         appState = 'setup';
     }
 
-    function beep() {
+    // The countdown's beeps share one audio context, made in the click that starts
+    // the take: made later (after the picker, often with YouDemo in the background
+    // as the shared tab takes focus) it can start suspended and stay silent.
+    let countdownAudio: AudioContext | null = null;
+
+    function armBeep() {
+        void countdownAudio?.close();
         try {
-            const ctx = new AudioContext();
-            const osc = ctx.createOscillator();
-            const gain = ctx.createGain();
-            osc.connect(gain);
-            gain.connect(ctx.destination);
-            osc.frequency.value = 880;
-            gain.gain.setValueAtTime(0.3, ctx.currentTime);
-            gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.15);
-            osc.start();
-            osc.stop(ctx.currentTime + 0.15);
-            osc.onended = () => ctx.close();
+            countdownAudio = new AudioContext();
         } catch {
             // AudioContext unavailable — silent countdown
+            countdownAudio = null;
         }
+    }
+
+    function releaseBeep() {
+        void countdownAudio?.close();
+        countdownAudio = null;
+    }
+
+    function beep() {
+        const ctx = countdownAudio;
+        if (!ctx) return;
+        if (ctx.state === 'suspended') void ctx.resume();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.frequency.value = 880;
+        gain.gain.setValueAtTime(0.3, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.15);
+        osc.start();
+        osc.stop(ctx.currentTime + 0.15);
     }
 
     // 3, 2, 1 a second each with a beep, then a brief 0 before recording starts
@@ -325,7 +342,10 @@
             beep();
             if (countdownValue === 0) {
                 clearInterval(tick);
-                tick = setTimeout(startRecording, 300);
+                tick = setTimeout(() => {
+                    releaseBeep();
+                    void startRecording();
+                }, 300);
             }
         }, 1000);
     }
@@ -333,15 +353,19 @@
     /** Back to where the take was started from: Setup, or Review if takes exist. */
     function cancelCountdown() {
         clearInterval(tick);
+        releaseBeep();
         if (sharePickedForTake) stopShare();
         sharePickedForTake = false;
         appState = takes.length > 0 ? 'review' : 'setup';
     }
 
     async function chooseAndCount() {
+        armBeep();
         if (await chooseShare()) {
             sharePickedForTake = true;
             goToCountdown();
+        } else {
+            releaseBeep();
         }
     }
 
@@ -389,12 +413,17 @@
     }
 
     function recordNextTake() {
-        if (shareLabel) goToCountdown();
-        else void chooseAndCount();
+        if (!shareLabel) {
+            void chooseAndCount();
+            return;
+        }
+        armBeep();
+        goToCountdown();
     }
 
     function resetToSetup() {
         clearInterval(tick);
+        releaseBeep();
         stopShare();
         previewStream = null;
         // Keep micMuted / camEnabled / blurOn — these preferences are preserved

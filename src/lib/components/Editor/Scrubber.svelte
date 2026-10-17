@@ -29,6 +29,11 @@
         onseek,
         class: className
     }: Props = $props();
+
+    // The slider snaps any value off its 0.1 step and reports the snapped value
+    // as a change, which would seek on every time update during playback. Fed a
+    // value already on a step, it reports only the user's moves.
+    let onStep = $derived(Math.round(percent * 10) / 10);
 </script>
 
 <!-- Play/pause, the time, and the seek slider: 12 tall, ink outline, tangerine
@@ -47,7 +52,7 @@
     <span class="min-w-[110px] text-small font-semibold text-yd-ink">{time}</span>
     <Slider
         type="single"
-        value={percent}
+        value={onStep}
         max={100}
         step={0.1}
         {disabled}
