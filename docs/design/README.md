@@ -9,6 +9,7 @@ The approved V2 design: how YouDemo looks and works after the redesign.
 | `specs/journey.md`     | What changes in how the app works, screen by screen, with checks and the decisions taken                                                                  |
 | `specs/screens.md`     | How each screen is assembled, band by band                                                                                                                |
 | `specs/components.md`  | Every part, the shadcn primitive under it, and the Hugeicons it uses                                                                                      |
+| `brand/`               | Favicon, app icons and the Open Graph image, ready to drop in, with where each goes (`brand/README.md`)                                                   |
 | `tokens.json`          | The design tokens (from the YouDemo design system artifact)                                                                                               |
 
 Precedence when they disagree: the reference boards, then `journey.md`, then the
@@ -36,4 +37,4 @@ The working loop for each screen or component:
 
 - Light theme only; dark mode is separate, later work.
 - The floating capture control was explored and dropped.
-- Favicon, app icon and Open Graph image are unchanged for now.
+- Favicon, app icons and Open Graph image: see `brand/`.

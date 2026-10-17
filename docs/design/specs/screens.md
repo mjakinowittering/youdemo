@@ -91,10 +91,16 @@ right-aligned with it, top 174.
 
 - **Breadcrumb**: link "Back to review" with a left chevron, "/" and "Edit"
   (small, ink, 600), spacer, ghost "New recording" with a plus.
-- **Stage**: the video frame 533×300 centred (ink outline, radius 10). The
-  exported board puts the Notice 24 from each side, above the video, gap 12.
-  Joining, exporting and failed replace the video with an in-stage Card (440, or
-  520 for the failure; padding 24; gap 14; `shadow-panel`).
+- **Stage**: the video frame centred (ink outline, radius 10, and the webcam
+  bubble's hard `4px 4px 0` ink shadow, so a dark row along the bottom of a
+  window share merges into a deliberately heavy edge). The frame takes the
+  recording's own aspect ratio: its height is the stage minus 83 above and below
+  (at most the stage width minus 24 either side), and its width follows from the
+  ratio. The boards draw the 16:9 default, 533×300. Recording and Review frames
+  have no shadow. The exported board puts the Notice 24 from each side, above
+  the video, gap 24 (the frame's hard shadow needs the room). Joining, exporting
+  and failed replace the video with an in-stage Card (440, or 520 for the
+  failure; padding 24; gap 14; `shadow-panel`).
 - **Timeline band**, top to bottom:
     - scrubber row: padding 12 24 0, gap 14: play icon button, time (min-width
       110, small, ink, 600), slider (12 tall, ink outline, tangerine fill, 22px

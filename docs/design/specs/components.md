@@ -35,36 +35,36 @@ screens land; leave them unless nothing imports them.
 <HugeiconsIcon icon={Mic01Icon} size={20} strokeWidth={1.5} />
 ```
 
-| Where                                              | Hugeicons                                          |
-| -------------------------------------------------- | -------------------------------------------------- |
-| Choose what to share, share row, setup placeholder | `ComputerScreenShareIcon`                          |
-| Mic / Muted                                        | `Mic01Icon` / `MicOff01Icon`                       |
-| Camera / Camera off                                | `Video01Icon` / `VideoOffIcon`                     |
-| Blur on / Blur off                                 | `BlurIcon` / `UserIcon`                            |
-| Dock chevrons                                      | `ArrowDown01Icon`                                  |
-| Back to review / Continue                          | `ArrowLeft01Icon` / `ArrowRight01Icon`             |
-| Play, Pause, Stop recording                        | `PlayIcon`, `PauseIcon`, `StopIcon`                |
-| Record take N                                      | `RecordIcon`                                       |
-| Trim, Edit and export, setup feature row           | `ScissorIcon`                                      |
-| Undo, Redo, cut restore                            | `UndoIcon`, `RedoIcon`, `UndoIcon`                 |
-| Discard, Remove                                    | `Delete02Icon`                                     |
-| Export, setup feature row                          | `Download04Icon`                                   |
-| Zoom out / in                                      | `SearchMinusIcon` / `SearchAddIcon`                |
-| Joining, Exporting                                 | `Loading03Icon`                                    |
-| Exported, Available                                | `CheckmarkCircle02Icon`                            |
-| Not available, Dismiss                             | `Cancel01Icon`                                     |
-| Errors                                             | `Alert02Icon`                                      |
-| Your recording is safe                             | `SecurityCheckIcon`                                |
-| Reload YouDemo, Try again                          | `RefreshIcon`                                      |
-| Copy link, Copy error                              | `Copy01Icon`                                       |
-| Send the link                                      | `Share08Icon`                                      |
-| Phone → computer                                   | `SmartphoneIcon`, `ArrowRight01Icon`, `LaptopIcon` |
-| Drag to move                                       | `Move01Icon`                                       |
-| Check your framing                                 | `ViewIcon`                                         |
-| New recording                                      | `PlusSignIcon`                                     |
-| Take rows                                          | `VideoReplayIcon`                                  |
-| Menu tick, Done trimming                           | `Tick02Icon`                                       |
-| Dock note                                          | `InformationCircleIcon`                            |
+| Where                                                                | Hugeicons                                                                        |
+| -------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
+| Choose what to share, share row, setup placeholder                   | `ComputerScreenShareIcon`                                                        |
+| Mic / Muted                                                          | `Mic01Icon` / `MicOff01Icon`                                                     |
+| Camera / Camera off                                                  | `Video01Icon` / `VideoOffIcon`                                                   |
+| Blur on / Blur off                                                   | `BlurIcon` / `UserIcon`                                                          |
+| Dock chevrons                                                        | `ArrowDown01Icon`                                                                |
+| Back to review / Continue                                            | `ArrowLeft01Icon` / `ArrowRight01Icon`                                           |
+| Play, Pause, Stop recording                                          | `PlayIcon`, `PauseIcon`, `StopIcon`                                              |
+| Record take N                                                        | `RecordIcon`                                                                     |
+| Trim, Edit and export, setup feature row                             | `ScissorIcon`                                                                    |
+| Undo, Redo, cut restore                                              | `UndoIcon`, `RedoIcon`, `UndoIcon`                                               |
+| Discard, Remove                                                      | `Delete02Icon`                                                                   |
+| Export, setup feature row                                            | `Download04Icon`                                                                 |
+| Zoom out / in                                                        | `SearchMinusIcon` / `SearchAddIcon`                                              |
+| Joining, Exporting (spins, 1.6 s a turn; 3.2 s under reduced motion) | `LoaderPinwheel` from `@lucide/svelte` at stroke 1.5: the one non-Hugeicons icon |
+| Exported, Available                                                  | `CheckmarkCircle02Icon`                                                          |
+| Not available, Dismiss                                               | `Cancel01Icon`                                                                   |
+| Errors                                                               | `Alert02Icon`                                                                    |
+| Your recording is safe                                               | `SecurityCheckIcon`                                                              |
+| Reload YouDemo, Try again                                            | `RefreshIcon`                                                                    |
+| Copy link, Copy error                                                | `Copy01Icon`                                                                     |
+| Send the link                                                        | `Share08Icon`                                                                    |
+| Phone → computer                                                     | `SmartphoneIcon`, `ArrowRight01Icon`, `LaptopIcon`                               |
+| Drag to move                                                         | `Move01Icon`                                                                     |
+| Check your framing                                                   | `ViewIcon`                                                                       |
+| New recording                                                        | `PlusSignIcon`                                                                   |
+| Take rows                                                            | `VideoReplayIcon`                                                                |
+| Menu tick, Done trimming                                             | `Tick02Icon`                                                                     |
+| Dock note                                                            | `InformationCircleIcon`                                                          |
 
 ## Parts
 

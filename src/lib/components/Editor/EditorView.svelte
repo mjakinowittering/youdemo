@@ -163,7 +163,7 @@
 
     <section
         data-section="stage"
-        class="relative flex min-h-0 flex-1 flex-col items-center justify-center gap-3 bg-yd-sand"
+        class="relative flex min-h-0 flex-1 flex-col items-center justify-center gap-6 bg-yd-sand"
     >
         {#if joining}
             <ProgressCard title={joiningTitle} {progress} note={progressNote} />

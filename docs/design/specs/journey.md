@@ -24,7 +24,8 @@ V2: check → setup → countdown → recording → review → editor
 
 - "YouDemo" as plain `ink` text, no icon. No theme toggle.
 - `app.html` no longer sets `class="dark"`; `ydTheme` is ignored for now.
-- The favicon and Open Graph image stay as they are (see Out of scope).
+- The favicon, app icons and Open Graph image are replaced; see
+  `../brand/README.md`.
 
 Check: the header matches `components/app-header` in every screen board.
 
@@ -188,8 +189,15 @@ same number. Every control is disabled (dashed). With no cuts there is nothing
 to do: the file downloads straight away, with no Exporting card. When done, the
 file downloads automatically (`youdemo-YYYY-MM-DD-HHMMSS.webm`, as now) and the
 Editor returns to `ready` with the **Exported** notice above the video
-(`screens/editor-exported`), dismissible. Cuts stay. **The crash store is no
-longer cleared on export**; it is cleared by Discard and New recording only.
+(`screens/editor-exported`), 24px above the frame. **It has no timeout.** It
+stays until it stops being true: it closes when you dismiss it (×) or when you
+change the edit (a cut, Undo, Redo or restoring a cut), because the downloaded
+file then no longer matches what's on screen. Playing, scrubbing, zooming and
+entering trim mode leave it alone. The tab title "Exported | YouDemo" follows
+the same rule, then returns to the editing title. The notice is `role="status"`,
+announced once; focus doesn't move to it or away from where it was. Cuts stay.
+**The crash store is no longer cleared on export**; it is cleared by Discard and
+New recording only.
 
 **Export failed.** `screens/editor-export-failed`: a card in the stage, "Export
 didn't finish", the reason, "Your takes and cuts are still here.", Technical
@@ -225,7 +233,6 @@ is a background tab. Recording, review and editing titles stay as they are.
 - Dark mode and the theme toggle.
 - The choppy-export playback bug.
 - The floating capture control (dropped).
-- Favicon, app icon and Open Graph image.
 
 ## Decisions
 
