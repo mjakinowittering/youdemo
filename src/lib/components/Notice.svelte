@@ -31,7 +31,7 @@
         className
     )}
 >
-    <Icon {icon} size={title ? 24 : 22} class={title ? 'size-6' : 'size-[22px]'} />
+    <Icon {icon} size={title ? 24 : 22} class={title ? 'size-6' : 'size-5.5'} />
     {#if title}
         <div>
             <p class="text-row text-[17px]">{title}</p>

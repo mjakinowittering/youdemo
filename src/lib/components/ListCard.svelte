@@ -26,7 +26,7 @@
     <ul
         aria-label={label}
         class={cn(
-            '[&>li]:flex [&>li]:items-center [&>li]:gap-3.5 [&>li]:px-[18px] [&>li]:py-3.5 [&>li+li]:border-t [&>li+li]:border-solid [&>li+li]:border-yd-hairline',
+            '[&>li]:flex [&>li]:items-center [&>li]:gap-3.5 [&>li]:px-4.5 [&>li]:py-3.5 [&>li+li]:border-t [&>li+li]:border-solid [&>li+li]:border-yd-hairline',
             footer && 'min-h-0 flex-1 overflow-y-auto'
         )}
     >

@@ -57,7 +57,7 @@
     <!-- Screen capture or recording is missing: in practice, a phone -->
     <section
         data-section="stage"
-        class="mx-auto flex w-full max-w-[390px] flex-1 flex-col gap-[22px] px-5 pt-8 pb-6"
+        class="mx-auto flex w-full max-w-97.5 flex-1 flex-col gap-5.5 px-5 pt-8 pb-6"
     >
         <div class="flex items-center gap-2.5">
             <Icon icon={SmartphoneIcon} size={32} />
@@ -114,7 +114,7 @@
 {:else if !allPass}
     <!-- Camera or audio mixing is missing: say which, in words, and carry on -->
     <section data-section="stage" class="flex min-h-0 flex-1 bg-yd-sand">
-        <div class="m-auto flex w-140 flex-col gap-[22px]">
+        <div class="m-auto flex w-140 flex-col gap-5.5">
             <Pill variant="sand" class="self-start">Browser check</Pill>
             <h1 class="text-screen text-balance">Some features aren't available in this browser</h1>
             <p class="text-lead text-yd-muted">
