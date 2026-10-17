@@ -1,0 +1,339 @@
+{
+    "version": 1,
+    "storybookIndex": "index.json",
+    "screens": [
+        {
+            "name": "phone-not-supported",
+            "label": "Phone \u00b7 not supported",
+            "width": 390,
+            "height": 844,
+            "story": {
+                "title": "Visual/Screens",
+                "name": "Phone not supported"
+            },
+            "sections": ["header", "stage"]
+        },
+        {
+            "name": "limited-support",
+            "label": "Limited support",
+            "width": 1280,
+            "height": 800,
+            "story": {
+                "title": "Visual/Screens",
+                "name": "Limited support"
+            },
+            "sections": ["header", "stage"]
+        },
+        {
+            "name": "setup-first-visit",
+            "label": "Setup \u00b7 first visit",
+            "width": 1280,
+            "height": 800,
+            "story": {
+                "title": "Visual/Screens",
+                "name": "Setup first visit"
+            },
+            "sections": ["header", "stage", "dock"]
+        },
+        {
+            "name": "setup-returning",
+            "label": "Setup \u00b7 returning",
+            "width": 1280,
+            "height": 800,
+            "story": {
+                "title": "Visual/Screens",
+                "name": "Setup returning"
+            },
+            "sections": ["header", "stage", "dock"]
+        },
+        {
+            "name": "countdown",
+            "label": "Countdown",
+            "width": 1280,
+            "height": 800,
+            "story": {
+                "title": "Visual/Screens",
+                "name": "Countdown"
+            },
+            "sections": ["header", "stage", "dock"]
+        },
+        {
+            "name": "recording",
+            "label": "Recording",
+            "width": 1280,
+            "height": 800,
+            "story": {
+                "title": "Visual/Screens",
+                "name": "Recording"
+            },
+            "sections": ["header", "stage", "dock"]
+        },
+        {
+            "name": "review",
+            "label": "Review",
+            "width": 1280,
+            "height": 800,
+            "story": {
+                "title": "Visual/Screens",
+                "name": "Review"
+            },
+            "sections": ["header", "stage", "dock"]
+        },
+        {
+            "name": "review-discard-dialog",
+            "label": "Review \u00b7 discard dialog",
+            "width": 1280,
+            "height": 800,
+            "story": {
+                "title": "Visual/Screens",
+                "name": "Review discard dialog"
+            },
+            "sections": ["header", "stage", "dock", "dialog"]
+        },
+        {
+            "name": "editor-joining",
+            "label": "Editor \u00b7 joining takes",
+            "width": 1280,
+            "height": 960,
+            "story": {
+                "title": "Visual/Screens",
+                "name": "Editor joining takes"
+            },
+            "sections": ["header", "breadcrumb", "stage", "timeline", "footer"]
+        },
+        {
+            "name": "editor",
+            "label": "Editor",
+            "width": 1280,
+            "height": 960,
+            "story": {
+                "title": "Visual/Screens",
+                "name": "Editor"
+            },
+            "sections": ["header", "breadcrumb", "stage", "timeline", "footer"]
+        },
+        {
+            "name": "editor-trimming",
+            "label": "Editor \u00b7 trimming",
+            "width": 1280,
+            "height": 960,
+            "story": {
+                "title": "Visual/Screens",
+                "name": "Editor trimming"
+            },
+            "sections": ["header", "breadcrumb", "stage", "timeline", "footer"]
+        },
+        {
+            "name": "editor-export-dialog",
+            "label": "Editor \u00b7 export dialog",
+            "width": 1280,
+            "height": 960,
+            "story": {
+                "title": "Visual/Screens",
+                "name": "Editor export dialog"
+            },
+            "sections": ["header", "breadcrumb", "stage", "timeline", "footer", "dialog"]
+        },
+        {
+            "name": "editor-exporting",
+            "label": "Editor \u00b7 exporting",
+            "width": 1280,
+            "height": 960,
+            "story": {
+                "title": "Visual/Screens",
+                "name": "Editor exporting"
+            },
+            "sections": ["header", "breadcrumb", "stage", "timeline", "footer"]
+        },
+        {
+            "name": "editor-exported",
+            "label": "Editor \u00b7 exported",
+            "width": 1280,
+            "height": 960,
+            "story": {
+                "title": "Visual/Screens",
+                "name": "Editor exported"
+            },
+            "sections": ["header", "breadcrumb", "stage", "timeline", "footer"]
+        },
+        {
+            "name": "editor-discard-dialog",
+            "label": "Editor \u00b7 discard dialog",
+            "width": 1280,
+            "height": 960,
+            "story": {
+                "title": "Visual/Screens",
+                "name": "Editor discard dialog"
+            },
+            "sections": ["header", "breadcrumb", "stage", "timeline", "footer", "dialog"]
+        },
+        {
+            "name": "editor-export-failed",
+            "label": "Editor \u00b7 export failed",
+            "width": 1280,
+            "height": 960,
+            "story": {
+                "title": "Visual/Screens",
+                "name": "Editor export failed"
+            },
+            "sections": ["header", "breadcrumb", "stage", "timeline", "footer"]
+        },
+        {
+            "name": "error",
+            "label": "Error",
+            "width": 1280,
+            "height": 800,
+            "story": {
+                "title": "Visual/Screens",
+                "name": "Error"
+            },
+            "sections": ["header", "stage"]
+        }
+    ],
+    "components": [
+        {
+            "name": "app-header",
+            "label": "AppHeader",
+            "width": 960,
+            "story": {
+                "title": "Visual/Components",
+                "name": "AppHeader"
+            }
+        },
+        {
+            "name": "breadcrumb",
+            "label": "Breadcrumb",
+            "width": 960,
+            "story": {
+                "title": "Visual/Components",
+                "name": "Breadcrumb"
+            }
+        },
+        {
+            "name": "button",
+            "label": "Button",
+            "width": 960,
+            "story": {
+                "title": "Visual/Components",
+                "name": "Button"
+            }
+        },
+        {
+            "name": "capture-dock",
+            "label": "CaptureDock",
+            "width": 960,
+            "story": {
+                "title": "Visual/Components",
+                "name": "CaptureDock"
+            }
+        },
+        {
+            "name": "pill",
+            "label": "Pill",
+            "width": 960,
+            "story": {
+                "title": "Visual/Components",
+                "name": "Pill"
+            }
+        },
+        {
+            "name": "card",
+            "label": "Card",
+            "width": 960,
+            "story": {
+                "title": "Visual/Components",
+                "name": "Card"
+            }
+        },
+        {
+            "name": "progress",
+            "label": "Progress",
+            "width": 960,
+            "story": {
+                "title": "Visual/Components",
+                "name": "Progress"
+            }
+        },
+        {
+            "name": "skeleton",
+            "label": "Skeleton",
+            "width": 960,
+            "story": {
+                "title": "Visual/Components",
+                "name": "Skeleton"
+            }
+        },
+        {
+            "name": "notice",
+            "label": "Notice",
+            "width": 960,
+            "story": {
+                "title": "Visual/Components",
+                "name": "Notice"
+            }
+        },
+        {
+            "name": "alert-dialog",
+            "label": "AlertDialog",
+            "width": 960,
+            "story": {
+                "title": "Visual/Components",
+                "name": "AlertDialog"
+            }
+        },
+        {
+            "name": "status-list",
+            "label": "StatusList",
+            "width": 960,
+            "story": {
+                "title": "Visual/Components",
+                "name": "StatusList"
+            }
+        },
+        {
+            "name": "timeline",
+            "label": "Timeline",
+            "width": 960,
+            "story": {
+                "title": "Visual/Components",
+                "name": "Timeline"
+            }
+        },
+        {
+            "name": "editor-toolbar",
+            "label": "EditorToolbar",
+            "width": 960,
+            "story": {
+                "title": "Visual/Components",
+                "name": "EditorToolbar"
+            }
+        },
+        {
+            "name": "webcam-bubble",
+            "label": "WebcamBubble",
+            "width": 960,
+            "story": {
+                "title": "Visual/Components",
+                "name": "WebcamBubble"
+            }
+        },
+        {
+            "name": "dropdown-menu",
+            "label": "DropdownMenu",
+            "width": 960,
+            "story": {
+                "title": "Visual/Components",
+                "name": "DropdownMenu"
+            }
+        },
+        {
+            "name": "tooltip",
+            "label": "Tooltip",
+            "width": 960,
+            "story": {
+                "title": "Visual/Components",
+                "name": "Tooltip"
+            }
+        }
+    ]
+}
