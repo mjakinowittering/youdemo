@@ -29,6 +29,7 @@
         "@hugeicons/svelte": "^1.1.5",
         "@ianvs/prettier-plugin-sort-imports": "^4.7.1",
         "@internationalized/date": "^3.12.1",
+        "@lucide/svelte": "^1.59.0",
         "@playwright/test": "^1.63.0",
         "@storybook/addon-a11y": "^10.4.6",
         "@storybook/addon-docs": "^10.4.6",

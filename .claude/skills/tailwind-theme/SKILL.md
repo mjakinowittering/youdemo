@@ -66,9 +66,11 @@ Registered as theme tokens so `animate-*` utilities exist — not CSS classes:
 | `--animate-skeleton`  | skeleton blocks and frames (opacity 1 → 0.55, 1.4s)         |
 | `--animate-drain`     | the countdown arc, from `--from` to `--to` per second       |
 | `--animate-ping-once` | the play/pause flash on the Editor's video                  |
+| `--animate-pinwheel` / `-slow` | the joining and exporting spinner (1.6s a turn; 3.2s) |
 
 Everything stops under `prefers-reduced-motion` (`motion-reduce:animate-none`,
-`motion-reduce:transition-none`). The 200ms footer swap in trim mode is a Svelte
+`motion-reduce:transition-none`), except the spinner, which slows to
+`animate-pinwheel-slow` so a long job still reads as running. The 200ms footer swap in trim mode is a Svelte
 `fly` with zero duration under reduced motion.
 
 To add one: define `--animate-<name>` plus its `@keyframes` inside the `@theme`

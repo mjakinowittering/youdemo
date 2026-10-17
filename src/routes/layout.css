@@ -138,6 +138,15 @@
     /* The countdown arc, from --from to --to (see Countdown.svelte) */
     --animate-drain: drain 1s linear;
     --animate-skeleton: skeleton 1.4s ease-in-out infinite;
+    /* The joining and exporting spinner: half speed under reduced motion */
+    --animate-pinwheel: pinwheel 1.6s linear infinite;
+    --animate-pinwheel-slow: pinwheel 3.2s linear infinite;
+
+    @keyframes pinwheel {
+        to {
+            transform: rotate(360deg);
+        }
+    }
 
     @keyframes ping-once {
         0% {

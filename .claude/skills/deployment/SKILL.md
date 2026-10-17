@@ -54,6 +54,9 @@ thing to check for a "works in dev" asset bug.
 
 - `robots.txt` — allows everything
 - `youdemo.png` — the 2400×1260 social preview image
+- `favicon.ico`, `favicon-32.png`, `apple-touch-icon.png`, `icon-192.png`,
+  `icon-512.png` — from `docs/design/brand/`, which says where each goes; the
+  SVG tab icon is `src/lib/assets/favicon.svg`, with `icon.svg` beside it
 - `mediapipe/models/selfie_segmenter.tflite` — committed (244KB)
 
 MediaPipe **WASM** is not committed; it is vendored at build time by `postbuild`
@@ -83,7 +86,9 @@ apt stalls on optional CJK fonts).
 
 `<html lang="en">` — light is the only theme for now (dark mode is later work).
 
-The head carries a `description` plus a full social-preview set:
+The head carries the `favicon.ico` and `apple-touch-icon` links (through
+`%sveltekit.assets%`; the SVG icon's link is in `+layout.svelte`), a
+`description` plus a full social-preview set:
 
 - `og:title`, `og:description`, `og:type`, `og:url`
 - `og:image` (absolute URL to `youdemo.png`), `og:image:width` (2400),

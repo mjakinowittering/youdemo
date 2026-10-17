@@ -87,6 +87,9 @@ Hugeicons Free (`@hugeicons/core-free-icons`), always through
 <Icon icon={ArrowDown01Icon} size={18} />
 ```
 
+The one exception is `ProgressCard`'s spinner, Lucide's `LoaderPinwheel` from
+`@lucide/svelte` at `strokeWidth={1.5}`, as `components.md` specifies.
+
 `Icon` wraps `HugeiconsIcon` at the set's own 1.5 stroke with round joins, as
 the design draws them, and remounts when `icon` changes (HugeiconsIcon doesn't
 redraw on a new `icon`). Sizes: 20 in buttons, 18 in links and dock chevrons,
