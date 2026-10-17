@@ -45,18 +45,21 @@ import type { DeletedRange, ExportStep } from '$lib/types.js';
 export type ExportProgress = (fraction: number, step: ExportStep) => void;
 type Report = (fraction: number) => void;
 
-// Each step's share of the bar. Differing encoder settings, seen before the
-// scan, mean a re-encode, and that dwarfs the copy. Tune from real timings.
+// Each step's share of the bar, from its share of the time: a six-minute
+// recording with one cut read in 0.31 s, copied in 0.21 s and saved in
+// 0.04 s; two one-minute takes of different sizes read in 0.2 s, re-encoded
+// in 31 s and joined in 0.07 s. Differing encoder settings, seen before the
+// scan, mean a re-encode.
 const COPY_STEPS: [ExportStep, number][] = [
-    ['reading', 0.3],
-    ['writing', 0.6],
-    ['saving', 0.1]
+    ['reading', 0.55],
+    ['writing', 0.38],
+    ['saving', 0.07]
 ];
 const REENCODE_STEPS: [ExportStep, number][] = [
-    ['reading', 0.09],
-    ['reencoding', 0.7],
-    ['writing', 0.18],
-    ['saving', 0.03]
+    ['reading', 0.01],
+    ['reencoding', 0.97],
+    ['writing', 0.015],
+    ['saving', 0.005]
 ];
 
 /** Packets between breaks for the page to repaint, in the scan and the copy. */
