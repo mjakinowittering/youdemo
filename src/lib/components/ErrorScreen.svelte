@@ -1,44 +1,55 @@
 <script lang="ts">
-    import { Alert02Icon, Copy01Icon, RefreshIcon } from '@hugeicons/core-free-icons';
+    import {
+        Alert02Icon,
+        Copy01Icon,
+        RefreshIcon,
+        SecurityCheckIcon
+    } from '@hugeicons/core-free-icons';
 
-    import Icon from '$lib/components/Icon.svelte';
+    import TechnicalDetails from '$lib/components/TechnicalDetails.svelte';
     import { Button } from '$lib/components/ui/button/index.js';
-    import * as Card from '$lib/components/ui/card/index.js';
-    import * as Empty from '$lib/components/ui/empty/index.js';
 
-    let { error = '' }: { error: string } = $props();
+    import Icon from './Icon.svelte';
+    import Notice from './Notice.svelte';
 
-    async function copyError() {
-        await navigator.clipboard.writeText(error);
+    interface Props {
+        /** What went wrong, in words. */
+        reason: string;
+        /** The error and its stack, under Technical details and for Copy error. */
+        details: string;
+        /** The crash store holds takes, so a reload brings them back. */
+        recordingSafe?: boolean;
     }
+
+    let { reason, details, recordingSafe = false }: Props = $props();
 </script>
 
-<div class="flex h-full items-center justify-center bg-black/20">
-    <Card.Root
-        class="max-w-xl flex-1 items-center justify-center border-0 ring-2 ring-foreground/25 ring-offset-4 ring-offset-transparent"
-    >
-        <Empty.Root>
-            <Empty.Media>
-                <Icon icon={Alert02Icon} size={128} class="text-destructive" />
-            </Empty.Media>
-            <Empty.Header>
-                <Empty.Title>Something went wrong</Empty.Title>
-                <Empty.Description>YouDemo ran into an unexpected error.</Empty.Description>
-            </Empty.Header>
-            <Empty.Content>
-                {#if error}
-                    <pre
-                        class="max-h-40 w-full max-w-lg overflow-auto rounded-md bg-muted p-4 text-left text-xs whitespace-pre-wrap">{error}</pre>
-                {/if}
-                <div class="flex gap-3">
-                    <Button variant="outline" onclick={copyError} size="lg">
-                        <Icon icon={Copy01Icon} class="mr-2 size-4" /> Copy error
-                    </Button>
-                    <Button onclick={() => window.location.reload()} size="lg">
-                        <Icon icon={RefreshIcon} class="mr-2 size-4" /> Reload YouDemo
-                    </Button>
-                </div>
-            </Empty.Content>
-        </Empty.Root>
-    </Card.Root>
-</div>
+<section data-section="stage" class="relative flex min-h-0 flex-1 bg-yd-sand">
+    <div class="m-auto flex w-150 flex-col gap-[22px]">
+        <Icon icon={Alert02Icon} size={48} class="text-yd-danger" />
+        <h1 class="text-screen text-balance">Something went wrong</h1>
+        <p class="text-lead text-yd-muted">{reason}</p>
+        {#if recordingSafe}
+            <Notice icon={SecurityCheckIcon} title="Your recording is safe">
+                Every take is saved in this browser as you record. Reload and YouDemo opens it in
+                the editor.
+            </Notice>
+        {/if}
+        <div class="flex items-center gap-3.5">
+            <Button variant="primary" size="lg" onclick={() => location.reload()}>
+                <Icon icon={RefreshIcon} />Reload YouDemo
+            </Button>
+            <Button
+                variant="ghost"
+                size="lg"
+                onclick={() => navigator.clipboard?.writeText(details)}
+            >
+                <Icon icon={Copy01Icon} />Copy error
+            </Button>
+        </div>
+        <TechnicalDetails
+            {details}
+            class="rounded-card border-[1.5px] border-solid border-yd-ink bg-yd-card px-[18px] py-3.5"
+        />
+    </div>
+</section>

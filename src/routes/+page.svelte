@@ -16,6 +16,7 @@
     import * as crashStore from '$lib/crashStore.js';
     import { deviceStore } from '$lib/deviceStore.svelte.js';
     import { currentCuts, emptyHistory, type CutHistory } from '$lib/editorMath.js';
+    import { errorDetails, errorReason } from '$lib/errors.js';
     import {
         DISPLAY_MEDIA_OPTIONS,
         start as recorderStart,
@@ -26,18 +27,22 @@
     import { downloadBlob } from '$lib/utils.js';
     import { renderEditedVideo, stitchSegments, takeDuration } from '$lib/videoStitcher.js';
 
-    let errorMessage = $state('');
+    // Anything unhandled pre-empts every screen with the error screen
+    let appError = $state<unknown>(null);
     let hasError = $state(false);
+    // The crash store holds takes, so the error screen can say they're safe
+    let recordingSafe = $state(false);
+
+    function showError(error: unknown) {
+        appError = error;
+        hasError = true;
+        crashStore.loadSegments().then((saved) => (recordingSafe = saved.length > 0));
+    }
 
     if (typeof window !== 'undefined') {
-        window.onerror = (_message, _source, _lineno, _colno, error) => {
-            errorMessage = `${_message}\n${error?.stack ?? ''}`;
-            hasError = true;
-        };
-        window.onunhandledrejection = (event) => {
-            errorMessage = `Unhandled Promise: ${event.reason?.message ?? event.reason}\n${event.reason?.stack ?? ''}`;
-            hasError = true;
-        };
+        window.onerror = (message, _source, _lineno, _colno, error) =>
+            showError(error ?? new Error(String(message)));
+        window.onunhandledrejection = (event) => showError(event.reason);
     }
 
     let appState = $state<AppState>('check');
@@ -437,9 +442,7 @@
             editorVideoUrl = URL.createObjectURL(editorBlob);
             editorPhase = 'ready';
         } catch (err) {
-            errorMessage =
-                err instanceof Error ? `${err.message}\n${err.stack ?? ''}` : String(err);
-            hasError = true;
+            showError(err);
         }
     }
 
@@ -476,7 +479,7 @@
 </svelte:head>
 
 {#if hasError}
-    <ErrorScreen error={errorMessage} />
+    <ErrorScreen reason={errorReason(appError)} details={errorDetails(appError)} {recordingSafe} />
 {:else if appState === 'check'}
     <BrowserCheck onpass={handleBrowserPass} />
 {:else if appState === 'setup'}

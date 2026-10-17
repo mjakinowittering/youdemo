@@ -12,6 +12,22 @@ function messageOf(error: unknown): string {
     return error instanceof Error ? error.message : String(error);
 }
 
+/** What went wrong, for the error screen; recognised errors are explained. */
+export function errorReason(error: unknown): string {
+    switch (nameOf(error)) {
+        case 'NotReadableError':
+            return "YouDemo couldn't start your camera. Another app might be using it.";
+        case 'NotAllowedError':
+            return "YouDemo wasn't allowed to use your camera or microphone.";
+        case 'NotFoundError':
+            return "YouDemo couldn't find a camera or microphone.";
+        case 'QuotaExceededError':
+            return "This device doesn't have enough space left for YouDemo.";
+        default:
+            return 'YouDemo ran into an unexpected error.';
+    }
+}
+
 /** Why an export didn't finish. */
 export function exportFailureReason(error: unknown): string {
     const text = `${nameOf(error)} ${messageOf(error)}`.toLowerCase();

@@ -3,6 +3,7 @@
 
     import BrowserCheck from '$lib/components/BrowserCheck.svelte';
     import EditorView from '$lib/components/Editor/EditorView.svelte';
+    import ErrorScreen from '$lib/components/ErrorScreen.svelte';
     import Countdown from '$lib/components/Recorder/Countdown.svelte';
     import Recording from '$lib/components/Recorder/Recording.svelte';
     import Review from '$lib/components/Recorder/Review.svelte';
@@ -23,6 +24,8 @@
     const url = 'https://mjakinowittering.github.io/youdemo/';
     const takes = [42, 36];
     const file = 'youdemo-2026-10-09-201512.webm';
+    const cameraError =
+        'NotReadableError: Could not start video source\n    at armCamera (+page.svelte:205:41)';
 
     // The Editor as drawn: playhead 00:16 of 01:18, one earlier cut of 1.4 s.
     // Display values as on the boards, even where they don't add up (journey.md,
@@ -250,6 +253,18 @@
                     details: 'RangeError: Array buffer allocation failed'
                 }}
                 {video}
+            />
+        </ScreenFrame>
+    {/snippet}
+</Story>
+
+<Story name="Error">
+    {#snippet template()}
+        <ScreenFrame>
+            <ErrorScreen
+                reason="YouDemo couldn't start your camera. Another app might be using it."
+                details={cameraError}
+                recordingSafe
             />
         </ScreenFrame>
     {/snippet}
