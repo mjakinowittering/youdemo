@@ -54,6 +54,17 @@ Things that would make YouDemo even better — contributions welcome.
       starts. Catch it in the effect, turn `blurOn` off and tell the user blur
       isn't available. Because blur is a privacy control, the fix must never
       record an unblurred background while the button says blur is on
+- [ ] **Investigate a slow Stop on long takes** — in the E2E fixtures, stopping
+      a six-minute take once took more than 10 s to show Review's "1 take, 06:00
+      in total" heading (`recordTake` in `e2e/fixtures/app.ts` gives up at 10
+      s); two reruns took 0.2 s and under the timeout. `stopRecording` in
+      `+page.svelte` switches to `review` at once, but the take only lands once
+      `stop()` in `recorder.ts` resolves — after `MediaRecorder` flushes and
+      `fixWebmDuration` reads the whole blob (~225 MB at 5 Mbps) into memory and
+      parses it. Until then Review shows no take. Reproduce first: record and
+      stop a six-minute take several times, logging Stop → Review and keeping a
+      trace when it is slow, then find which step stalls. Out of scope: the
+      export, which takes about half a second for the same take
 
 ### Features
 
