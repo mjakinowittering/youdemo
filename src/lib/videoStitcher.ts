@@ -27,7 +27,8 @@ import {
     type RemuxPlan,
     type TrackPackets
 } from '$lib/remuxPlan.js';
-import type { DeletedRange } from '$lib/types.js';
+import { stagedProgress } from '$lib/stagedProgress.js';
+import type { DeletedRange, ExportStep } from '$lib/types.js';
 
 /*
  * Export by copying packets. Joins and cuts copy the recorded video and audio
@@ -40,24 +41,55 @@ import type { DeletedRange } from '$lib/types.js';
  * rule: the `video-export` skill.
  */
 
-interface Source {
+/** The whole job's 0–1 fraction, and the step it is on. */
+export type ExportProgress = (fraction: number, step: ExportStep) => void;
+type Report = (fraction: number) => void;
+
+// Each step's share of the bar. Differing encoder settings, seen before the
+// scan, mean a re-encode, and that dwarfs the copy. Tune from real timings.
+const COPY_STEPS: [ExportStep, number][] = [
+    ['reading', 0.3],
+    ['writing', 0.6],
+    ['saving', 0.1]
+];
+const REENCODE_STEPS: [ExportStep, number][] = [
+    ['reading', 0.09],
+    ['reencoding', 0.7],
+    ['writing', 0.18],
+    ['saving', 0.03]
+];
+
+/** Packets between breaks for the page to repaint, in the scan and the copy. */
+const YIELD_PACKETS = 200;
+/** Frames between breaks while re-encoding, each far slower than a packet. */
+const YIELD_FRAMES = 30;
+
+/**
+ * A macrotask break, so the progress bar repaints mid-job. An awaited resolved
+ * promise is only a microtask, which never lets the page paint.
+ */
+function yieldToBrowser(): Promise<void> {
+    const { scheduler } = globalThis as { scheduler?: { yield?: () => Promise<void> } };
+    if (scheduler?.yield) return scheduler.yield();
+    return new Promise((resolve) => setTimeout(resolve, 0));
+}
+
+/** A recording's tracks, read without touching its packets. */
+interface Tracks {
     video: InputVideoTrack;
     audio: InputAudioTrack | null;
-    packets: TrackPackets;
     /** Equal for two sources exactly when their packets can share one file. */
     config: string;
+    /** Seconds, from the file's metadata; 0 when it has none. */
+    duration: number;
+    size: number;
 }
 
-async function metadata(track: InputVideoTrack | InputAudioTrack): Promise<PacketMeta[]> {
-    const out: PacketMeta[] = [];
-    const sink = new EncodedPacketSink(track);
-    for await (const p of sink.packets(undefined, undefined, { metadataOnly: true })) {
-        out.push({ ts: p.timestamp, dur: p.duration, key: p.type === 'key' });
-    }
-    return out;
+interface Source extends Tracks {
+    packets: TrackPackets;
 }
 
-async function open(blob: Blob): Promise<Source> {
+async function tracks(blob: Blob): Promise<Tracks> {
     const input = new Input({ source: new BlobSource(blob), formats: ALL_FORMATS });
     const video = await input.getPrimaryVideoTrack();
     if (!video) throw new Error('Recording has no video track');
@@ -67,7 +99,6 @@ async function open(blob: Blob): Promise<Source> {
     return {
         video,
         audio,
-        packets: { video: await metadata(video), audio: audio ? await metadata(audio) : [] },
         config: JSON.stringify([
             v?.codec,
             v?.codedWidth,
@@ -75,8 +106,57 @@ async function open(blob: Blob): Promise<Source> {
             a?.codec,
             a?.sampleRate,
             a?.numberOfChannels
-        ])
+        ]),
+        duration: (await input.getDurationFromMetadata()) ?? 0,
+        size: blob.size
     };
+}
+
+/** Every packet's timing, reported by timestamp against the duration. */
+async function metadata(
+    track: InputVideoTrack | InputAudioTrack,
+    duration: number,
+    report: Report
+): Promise<PacketMeta[]> {
+    const out: PacketMeta[] = [];
+    const sink = new EncodedPacketSink(track);
+    for await (const p of sink.packets(undefined, undefined, { metadataOnly: true })) {
+        out.push({ ts: p.timestamp, dur: p.duration, key: p.type === 'key' });
+        if (duration > 0) report(p.timestamp / duration);
+        if (out.length % YIELD_PACKETS === 0) await yieldToBrowser();
+    }
+    report(1);
+    return out;
+}
+
+async function scan(t: Tracks, report: Report): Promise<Source> {
+    const part = stagedProgress<'video' | 'audio'>(
+        t.audio
+            ? [
+                  ['video', 1],
+                  ['audio', 1]
+              ]
+            : [['video', 1]],
+        report
+    );
+    const video = await metadata(t.video, t.duration, part.video);
+    const audio = t.audio ? await metadata(t.audio, t.duration, part.audio) : [];
+    return { ...t, packets: { video, audio } };
+}
+
+/** Scan each recording in turn, sharing `report` by file size. */
+async function scanAll(all: Tracks[], report: Report): Promise<Source[]> {
+    const per = stagedProgress(
+        all.map((t, i): [string, number] => [String(i), t.size]),
+        report
+    );
+    const out: Source[] = [];
+    for (const [i, t] of all.entries()) out.push(await scan(t, per[String(i)]));
+    return out;
+}
+
+async function open(blob: Blob, report: Report): Promise<Source> {
+    return scan(await tracks(blob), report);
 }
 
 /**
@@ -86,7 +166,12 @@ async function open(blob: Blob): Promise<Source> {
  * machine allows, not in real time. (Mediabunny's `Conversion` would be
  * shorter, but it drops one frame in six of the recorder's output.)
  */
-async function reencode(source: Source, width: number, height: number): Promise<Blob> {
+async function reencode(
+    source: Source,
+    width: number,
+    height: number,
+    report: Report
+): Promise<Blob> {
     const target = new BufferTarget();
     const output = new Output({ format: new WebMOutputFormat(), target });
     const videoOut = new VideoSampleSource({
@@ -115,6 +200,9 @@ async function reencode(source: Source, width: number, height: number): Promise<
     const scale = Math.min(width / source.video.displayWidth, height / source.video.displayHeight);
     const w = source.video.displayWidth * scale;
     const h = source.video.displayHeight * scale;
+    // The scan counted the frames exactly
+    const frames = Math.max(1, source.packets.video.length);
+    let done = 0;
     for await (const sample of new VideoSampleSink(source.video).samples()) {
         ctx.fillStyle = '#000';
         ctx.fillRect(0, 0, width, height);
@@ -126,6 +214,8 @@ async function reencode(source: Source, width: number, height: number): Promise<
         await videoOut.add(frame);
         frame.close();
         sample.close();
+        report(++done / frames);
+        if (done % YIELD_FRAMES === 0) await yieldToBrowser();
     }
     await output.finalize();
     return new Blob([target.buffer!], { type: 'video/webm' });
@@ -135,14 +225,56 @@ async function reencode(source: Source, width: number, height: number): Promise<
  * Re-encode every source once so they share the first one's size and key
  * every cell — for takes of different screen sizes, or takes recorded before
  * the recorder keyed every cell. Costs a generation of quality; can't drop
- * frames.
+ * frames. Each take is re-encoded, then scanned again.
  */
-async function normalise(sources: Source[]): Promise<Source[]> {
+async function normalise(sources: Source[], report: Report): Promise<Source[]> {
     const { displayWidth, displayHeight } = sources[0].video;
+    const per = stagedProgress(
+        sources.map((s, i): [string, number] => [String(i), s.packets.video.length + 1]),
+        report
+    );
     const out: Source[] = [];
-    for (const source of sources)
-        out.push(await open(await reencode(source, displayWidth, displayHeight)));
+    for (const [i, source] of sources.entries()) {
+        const take = stagedProgress(
+            [
+                ['encode', 0.9],
+                ['read', 0.1]
+            ],
+            per[String(i)]
+        );
+        const blob = await reencode(source, displayWidth, displayHeight, take.encode);
+        out.push(await open(blob, take.read));
+    }
     return out;
+}
+
+/**
+ * Read the recordings, re-encoding them first if they can't be copied as they
+ * are. Returns them with the reporters for the steps still to come.
+ */
+async function prepare(
+    blobs: Blob[],
+    onProgress: ExportProgress = () => {}
+): Promise<{ sources: Source[]; steps: Record<ExportStep, Report> }> {
+    const all = await Promise.all(blobs.map(tracks));
+    const differ = new Set(all.map((t) => t.config)).size > 1;
+    let done = 0;
+    let steps = stagedProgress(differ ? REENCODE_STEPS : COPY_STEPS, (f, step) => {
+        done = f;
+        onProgress(f, step);
+    });
+    let sources = await scanAll(all, steps.reading);
+    if (needsNormalising(sources.map((s) => ({ ...s.packets, config: s.config })))) {
+        if (!differ) {
+            // Too few keyframes only shows in the scan: lay out the rest again
+            const from = done;
+            steps = stagedProgress(REENCODE_STEPS.slice(1), (f, step) =>
+                onProgress(from + (1 - from) * f, step)
+            );
+        }
+        sources = await normalise(sources, steps.reencoding);
+    }
+    return { sources, steps };
 }
 
 /** Packets of one source's track that the plan keeps, restamped, in decode order. */
@@ -164,7 +296,7 @@ async function* placed(
 async function write(
     sources: Source[],
     plan: RemuxPlan,
-    onProgress?: (fraction: number) => void
+    steps: Record<'writing' | 'saving', Report>
 ): Promise<Blob> {
     const target = new BufferTarget();
     const output = new Output({ format: new WebMOutputFormat(), target });
@@ -211,44 +343,43 @@ async function write(
                 videoMeta = undefined;
                 nextV = await v.next();
             }
-            onProgress?.(++written / total);
+            steps.writing(++written / total);
+            if (written % YIELD_PACKETS === 0) await yieldToBrowser();
         }
     }
+    steps.saving(0);
     await output.finalize();
-    return new Blob([target.buffer!], { type: 'video/webm' });
+    const blob = new Blob([target.buffer!], { type: 'video/webm' });
+    steps.saving(1);
+    return blob;
 }
 
 /** Join recorded takes into one WebM, back to back. One take is returned as is. */
-export async function stitchSegments(
-    blobs: Blob[],
-    onProgress?: (fraction: number) => void
-): Promise<Blob> {
+export async function stitchSegments(blobs: Blob[], onProgress?: ExportProgress): Promise<Blob> {
     if (blobs.length <= 1) return blobs[0];
-    let sources = await Promise.all(blobs.map(open));
-    if (needsNormalising(sources.map((s) => ({ ...s.packets, config: s.config })))) {
-        sources = await normalise(sources);
-    }
-    return write(sources, joinPlan(sources.map((s) => s.packets)), onProgress);
+    const { sources, steps } = await prepare(blobs, onProgress);
+    return write(sources, joinPlan(sources.map((s) => s.packets)), steps);
 }
 
 /**
  * Drop `deletedRanges` from `source`, closing the gaps. Each kept stretch
  * starts on the keyframe nearest its start — within ~0.1 s of the cut, as the
- * recorder keys every 0.2 s cell. Everything deleted → `source` unchanged.
+ * recorder keys every 0.2 s cell. No cuts, or everything deleted → `source`
+ * unchanged.
  */
 export async function renderEditedVideo(
     source: Blob,
     deletedRanges: DeletedRange[],
-    onProgress?: (fraction: number) => void
+    onProgress?: ExportProgress
 ): Promise<Blob> {
     if (!deletedRanges || deletedRanges.length === 0) return source;
-    let opened = await open(source);
-    if (needsNormalising([{ ...opened.packets, config: opened.config }])) {
-        [opened] = await normalise([opened]);
-    }
+    const {
+        sources: [opened],
+        steps
+    } = await prepare([source], onProgress);
     const plan = cutPlan(opened.packets, deletedRanges);
     if (plan.video.length === 0) return source;
-    return write([opened], plan, onProgress);
+    return write([opened], plan, steps);
 }
 
 /** A take's length in seconds, read from its WebM (crash recovery has no clock). */

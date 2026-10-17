@@ -200,6 +200,7 @@
                 phase="joining"
                 progress={64}
                 joiningTitle="Joining 2 takes"
+                progressNote="The timeline fills in once they're joined."
                 {video}
             />
         </ScreenFrame>
@@ -237,7 +238,7 @@
                 {...editor}
                 phase="exporting"
                 progress={64}
-                exportingNote="Applying your cut. Editing unlocks when the file is saved."
+                progressNote="Applying your cut. Editing unlocks when the file is saved."
                 {video}
             />
         </ScreenFrame>

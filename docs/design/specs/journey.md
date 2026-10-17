@@ -123,9 +123,10 @@ with the take listed.
 
 **Opening.** One take: straight to `ready`. Several: `joining` first. The Editor
 mounts at once with skeleton controls (`screens/editor-joining`) and a card in
-the stage, "Joining N takes" with a progress bar and percentage, and "The
-timeline fills in once they're joined." The breadcrumb and footer are disabled.
-Then `ready`.
+the stage, "Joining N takes" with a progress bar and percentage, and a line for
+the step it is on: "Reading your takes…", "Re-encoding to match your takes…"
+(only when the takes differ), then "The timeline fills in once they're joined."
+The breadcrumb and footer are disabled. Then `ready`.
 
 **Breadcrumb row.** "Back to review" (link) returns to Review with cuts kept; "/
 Edit" marks the step; **New recording** on the right (hidden while trimming)
@@ -179,10 +180,14 @@ Neither acts directly:
   Discard deletes takes, cuts and the crash store, then Setup.
 
 **Exporting.** `screens/editor-exporting`: the stage shows a card with
-"Exporting", progress and "Applying your cut. Editing unlocks when the file is
-saved." Every control is disabled (dashed). When done, the file downloads
-automatically (`youdemo-YYYY-MM-DD-HHMMSS.webm`, as now) and the Editor returns
-to `ready` with the **Exported** notice above the video
+"Exporting", progress and a line for the step it is on: "Reading your
+recording…", "Re-encoding to match your takes…" (only when needed), "Applying
+your cut. Editing unlocks when the file is saved.", then "Saving…". The bar only
+moves forward and shows 100% only once the file exists; the tab title shows the
+same number. Every control is disabled (dashed). With no cuts there is nothing
+to do: the file downloads straight away, with no Exporting card. When done, the
+file downloads automatically (`youdemo-YYYY-MM-DD-HHMMSS.webm`, as now) and the
+Editor returns to `ready` with the **Exported** notice above the video
 (`screens/editor-exported`), dismissible. Cuts stay. **The crash store is no
 longer cleared on export**; it is cleared by Discard and New recording only.
 

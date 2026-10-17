@@ -24,7 +24,7 @@
         stop as recorderStop
     } from '$lib/recorder.js';
     import { titleFor } from '$lib/titles.js';
-    import type { AppState, EditorPhase, Take } from '$lib/types.js';
+    import type { AppState, EditorPhase, ExportStep, Take } from '$lib/types.js';
     import { downloadBlob } from '$lib/utils.js';
     import { renderEditedVideo, stitchSegments, takeDuration } from '$lib/videoStitcher.js';
 
@@ -76,8 +76,10 @@
     // Single combined source for the Editor + export. Built (joined) from
     // `takes` on entering the Editor and cached until the takes change.
     let editorBlob = $state<Blob | null>(null);
-    // The Editor's phase and the progress of joining or exporting (0–100)
+    // The Editor's phase, and the step and progress of joining or exporting
+    // (0–100, rounded down so 100 shows only once the file exists)
     let editorPhase = $state<EditorPhase>('ready');
+    let editorStep = $state<ExportStep>('reading');
     let editorProgress = $state(0);
     // The cuts, with undo and redo. Owned here so they survive Back to review.
     let cutHistory = $state<CutHistory>(emptyHistory());
@@ -437,12 +439,24 @@
         exportedFile = null;
         exportError = null;
         editorPhase = 'ready';
-        editorProgress = 0;
+        resetProgress();
         countdownValue = COUNTDOWN_FROM;
         recordingElapsed = 0;
         discardOpen = false;
         crashStore.clear();
         appState = 'setup';
+    }
+
+    function resetProgress() {
+        editorStep = 'reading';
+        editorProgress = 0;
+    }
+
+    // Called per packet: state changes only when the step or the whole percent
+    // does, so the Editor and the title redraw at most about a hundred times.
+    function reportProgress(fraction: number, step: ExportStep) {
+        editorStep = step;
+        editorProgress = Math.floor(fraction * 100);
     }
 
     async function goToEditor() {
@@ -459,10 +473,10 @@
         try {
             if (takes.length > 1) {
                 editorPhase = 'joining';
-                editorProgress = 0;
+                resetProgress();
                 editorBlob = await stitchSegments(
                     takes.map((t) => t.blob),
-                    (f) => (editorProgress = Math.round(f * 100))
+                    reportProgress
                 );
             } else {
                 editorBlob = takes[0].blob;
@@ -484,15 +498,19 @@
     // recording clear it.
     async function exportVideo(filename: string) {
         if (!editorBlob) return;
-        editorPhase = 'exporting';
-        editorProgress = 0;
         exportedFile = null;
+        const cuts = currentCuts(cutHistory);
+        // No cuts: the joined recording is the file, so there is nothing to show
+        if (cuts.length === 0) {
+            downloadBlob(editorBlob, filename);
+            exportedFile = filename;
+            editorPhase = 'ready';
+            return;
+        }
+        editorPhase = 'exporting';
+        resetProgress();
         try {
-            const blob = await renderEditedVideo(
-                editorBlob,
-                currentCuts(cutHistory),
-                (f) => (editorProgress = Math.round(f * 100))
-            );
+            const blob = await renderEditedVideo(editorBlob, cuts, reportProgress);
             downloadBlob(blob, filename);
             exportedFile = filename;
             editorPhase = 'ready';
@@ -566,6 +584,7 @@
     <Editor
         videoUrl={editorVideoUrl}
         phase={editorPhase}
+        step={editorStep}
         progress={editorProgress}
         takeCount={takes.length}
         bind:history={cutHistory}

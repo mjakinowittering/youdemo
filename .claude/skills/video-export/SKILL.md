@@ -16,6 +16,7 @@ drop frames or lose quality; the output has a real duration and a seek index
 ```ts
 stitchSegments(blobs, onProgress): Promise<Blob>       // takes back to back
 renderEditedVideo(source, deletedRanges, onProgress)   // drop the deleted ranges
+// onProgress(fraction 0–1, step: 'reading' | 'reencoding' | 'writing' | 'saving')
 ```
 
 `stitchSegments` returns `blobs[0]` unchanged for a single take;
@@ -75,6 +76,21 @@ this section first and raise it explicitly.
 It runs on the main thread. A Web Worker would only matter if the export
 progress bar stutters on a long recording — measure first.
 
+## Progress
+
+Every step reports, not just the copy: the scan of every packet's timing
+(`metadata`, by timestamp against the file's metadata duration), the re-encode
+(per frame, against the scan's exact frame count), the copy (per packet), and
+saving (`finalize` and the Blob). `stagedProgress` (`src/lib/stagedProgress.ts`,
+unit-tested) gives each step its share by weight and keeps the fraction
+monotonic, reaching exactly 1 only when the Blob exists; its reporters nest, to
+split a step by take. The weights (`COPY_STEPS`, `REENCODE_STEPS`) are picked
+before the scan from the encoder settings alone, since differing settings mean
+a re-encode; too few keyframes only shows after the scan, and then the rest is
+laid out again. The long loops `yieldToBrowser()` (`scheduler.yield()`, else
+`setTimeout(0)`) so the bar repaints — an awaited resolved promise is only a
+microtask, and never lets the page paint.
+
 ## In the Editor
 
 There is no separate processing or download screen: joining and exporting are
@@ -85,7 +101,11 @@ phases of the Editor, run by `+page.svelte` (`app-shell`).
 - **Export** confirms in a dialog (length after cuts, number of cuts, file
   name), then `renderEditedVideo(editorBlob, cuts, onProgress)` with the stage
   showing "Exporting" and its percentage and every control disabled. No cuts →
-  the joined recording as is.
+  `+page.svelte` downloads the joined recording as is, with no exporting phase.
+- `+page.svelte` keeps the step and the percentage, rounded down, so the
+  number only changes on a whole percent and the bar never shows 100% early;
+  the tab title uses the same number. `Editor.svelte` turns the step into the
+  line under the bar (wording: `docs/design/specs/journey.md` § Editor).
 - The file downloads straight away through `downloadBlob(blob, filename)` in
   `utils.ts`; the name is `exportFilename()` (format in `CLAUDE.md`'s
   branding rule; local time, with seconds), fixed when the dialog opened. The

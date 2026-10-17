@@ -29,7 +29,7 @@
         type StripItem
     } from '$lib/editorMath.js';
     import { errorDetails, exportFailureReason } from '$lib/errors.js';
-    import type { EditorPhase } from '$lib/types.js';
+    import type { EditorPhase, ExportStep } from '$lib/types.js';
     import { exportFilename } from '$lib/utils.js';
 
     import EditorView from './EditorView.svelte';
@@ -39,6 +39,8 @@
         /** The joined recording; null while takes are still being joined. */
         videoUrl: string | null;
         phase: EditorPhase;
+        /** Joining or exporting: the step it is on, and progress 0–100. */
+        step?: ExportStep;
         progress?: number;
         takeCount: number;
         /** The cuts, with undo and redo; owned by +page.svelte so they survive Back. */
@@ -56,6 +58,7 @@
     let {
         videoUrl,
         phase,
+        step = 'reading',
         progress = 0,
         takeCount,
         history = $bindable(),
@@ -258,15 +261,23 @@
     let discardBody = $derived(
         `${takeCount === 1 ? 'The take' : takeCount === 2 ? 'Both takes' : `All ${takeCount} takes`}${cuts.length ? ` and your ${cutWord}` : ''} ${takeCount === 1 && !cuts.length ? 'is' : 'are'} deleted from this browser, including the copy kept in case it crashes. This can't be undone.`
     );
+    // The line under the joining or exporting bar, for the step it is on
+    let progressNote = $derived.by(() => {
+        if (step === 'reading')
+            return phase === 'joining' ? 'Reading your takes…' : 'Reading your recording…';
+        if (step === 'reencoding') return 'Re-encoding to match your takes…';
+        if (phase === 'joining') return "The timeline fills in once they're joined.";
+        return step === 'writing'
+            ? `Applying your ${cutWord}. Editing unlocks when the file is saved.`
+            : 'Saving…';
+    });
 </script>
 
 <EditorView
     {phase}
     {progress}
     joiningTitle="Joining {takeCount} takes"
-    exportingNote={cuts.length
-        ? `Applying your ${cutWord}. Editing unlocks when the file is saved.`
-        : 'Saving your recording. Editing unlocks when the file is saved.'}
+    {progressNote}
     {exportedFile}
     failure={phase === 'failed'
         ? { reason: exportFailureReason(exportError), details: errorDetails(exportError) }

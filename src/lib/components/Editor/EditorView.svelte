@@ -39,8 +39,8 @@
         progress?: number;
         /** "Joining 2 takes" */
         joiningTitle?: string;
-        /** "Applying your cut. …" */
-        exportingNote?: string;
+        /** The line under the joining or exporting bar: the step it is on. */
+        progressNote?: string;
         /** The file just saved: shows the Exported notice. */
         exportedFile?: string | null;
         /** Export failed: why, and the technical details. */
@@ -100,7 +100,7 @@
         phase,
         progress = 0,
         joiningTitle = '',
-        exportingNote = '',
+        progressNote = '',
         exportedFile = null,
         failure = null,
         video,
@@ -166,13 +166,9 @@
         class="relative flex min-h-0 flex-1 flex-col items-center justify-center gap-3 bg-yd-sand"
     >
         {#if joining}
-            <ProgressCard
-                title={joiningTitle}
-                {progress}
-                note="The timeline fills in once they're joined."
-            />
+            <ProgressCard title={joiningTitle} {progress} note={progressNote} />
         {:else if exporting}
-            <ProgressCard title="Exporting" {progress} note={exportingNote} />
+            <ProgressCard title="Exporting" {progress} note={progressNote} />
         {:else if phase === 'failed' && failure}
             <ExportFailedCard reason={failure.reason} details={failure.details} {onretry} />
         {:else if exportedFile}
