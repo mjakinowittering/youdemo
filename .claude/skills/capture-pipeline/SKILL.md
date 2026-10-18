@@ -39,18 +39,33 @@ starting (`videoReady()`).
 compositing + encode is the main cause of renderer crashes ("white screen") mid
 recording.
 
+**A window share loses its shadow margin.** Sharing one window can bring the
+window's see-through shadow with it, which the opaque canvas records as black
+bands (deeper below, as GNOME draws them). When the track's `displaySurface`
+is `'window'`, `measureMargins()` reads one frame through `blackMargins()`
+(`windowCrop.ts`, unit-tested) at start and again on the video's `resize`; the
+canvas is sized to the window without them and `drawFrame()` draws only the
+inner rect, so the bubble sits inside the window. An edge is cropped only where
+every pixel of a line is near-black, and never once the band reaches 12% of the
+frame (that's content). Measuring reads pixels, so it never runs per frame.
+The E2E fake can share a window with a margin (`windowMargins`).
+
 **Bitrates:** `videoBitsPerSecond: 5_000_000`, `audioBitsPerSecond: 128_000`.
 `VIDEO_BITS_PER_SECOND` is exported: export's re-encode fallback reuses it.
 
-**A keyframe on every editor cell** — `videoKeyFrameIntervalCount` is one less
-than `KEYFRAME_EVERY`, which is `SAMPLE_INTERVAL × FRAME_RATE` (6 frames = 0.2 s).
-Export cuts by copying packets, and a copied stretch must start on a keyframe;
-Chrome's default is one keyframe at the start, which would make every cut snap
-to 0 or force a re-encode. Chrome counts the frames *between* keyframes (5 gives
-a key every 6th frame), and a duration (`videoKeyFrameIntervalDuration: 200`)
-rounds up to 7-frame groups. The option isn't in TypeScript's DOM typings yet,
-hence the intersection type. The E2E export suite checks the spacing. See
-`video-export`.
+**A keyframe on every editor cell, by time** —
+`videoKeyFrameIntervalDuration: KEYFRAME_AFTER_MS`, half a frame short of
+`SAMPLE_INTERVAL` (≈183 ms). Export cuts by copying packets, and a copied
+stretch must start on a keyframe; Chrome's default is one keyframe at the start,
+which would make every cut snap to 0 or force a re-encode. Chrome keys the first
+frame at least that long after the last keyframe (`now >= last + duration`), so
+at 30 fps it's every 6th frame (0.2 s); a full 200 ms misses the 6th frame by a
+hair and makes 7-frame groups. **Never a count** (`videoKeyFrameIntervalCount`):
+when the machine falls behind and frames come late, 6 frames span more than a
+cell and the keys drift apart — on the CI runner up to 0.46 s. Chrome takes one
+of the two options, not both. The option isn't in TypeScript's DOM typings yet,
+hence the intersection type. The E2E export suite checks that no frame sits a
+cell or more after its keyframe (`maxKeyframeLag`). See `video-export`.
 
 **Codec probe** — first supported wins:
 
@@ -84,7 +99,7 @@ remove it.
 
 Mute is a graph operation, not a track flag: `setMicMuted()` connects/disconnects
 `_micNode` from the destination. (In practice mute is fixed at `start()` because
-the ControlBar is disabled mid-recording — see `capture-screens`.)
+the dock is locked mid-recording — see `capture-screens`.)
 
 ## Webcam bubble compositing
 
@@ -112,19 +127,21 @@ as the frame; the preview passes its letterboxed rect. Covered by
 track itself — not a clone, and no audio, so the preview can't echo. `+page.svelte`
 keeps it as `previewStream` for the Recording screen; it ends with the recorder.
 
-`DISPLAY_MEDIA_OPTIONS` is the one screen-picker request (Setup and Resume):
+`DISPLAY_MEDIA_OPTIONS` is the one screen-picker request (`chooseShare()` in
+`+page.svelte`, from Setup and Review):
 `selfBrowserSurface: 'exclude'` keeps the YouDemo tab out of the picker so the
 preview isn't recorded inside itself. A whole-screen share with YouDemo visible
 still mirrors — accepted.
 
 ## Stream ownership & teardown
 
-- **The recorder owns** the screen stream and the mic stream it acquires. Both are
-  stopped immediately in `stop()`, before the recorder finishes flushing, so the
-  browser's sharing indicator clears promptly.
-- **The recorder does not own the webcam.** The raw stream comes in through
-  `options` and is deliberately *not* stopped in `cleanup()` — `+page.svelte`
-  releases it (`releaseCamera()`), which is what lets a resume reuse it.
+- **The recorder owns only the mic stream** it acquires, stopped in `stop()`.
+- **It does not own the share or the webcam.** Both come in through `options`
+  and are deliberately *not* stopped: `+page.svelte` keeps them for the next
+  take (Record take N reuses a live share) and stops them on reset or on
+  entering the Editor (`app-shell`).
+- `stop()` resolves with the `Take`: the duration-fixed blob and its length in
+  seconds, which Review lists.
 - `recorder.ts` only ever calls `getUserMedia` for the **mic**. It must never open
   a second camera capture: it's wasteful and some webcams reject a concurrent open.
 - When `processedWebcamStream` (blurred) is present it is drawn in preference to

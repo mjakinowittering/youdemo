@@ -13,7 +13,7 @@ silently so a locked-down browser still runs the app.
 The rule (the regex) lives in `CLAUDE.md`; it covers `localStorage` and
 `sessionStorage` alike.
 
-Valid: `ydTheme`, `ydWelcomed`, `ydWebcamDeviceId`.
+Valid: `ydWelcomed`, `ydBlurOn`, `ydWebcamDeviceId`.
 Invalid: `theme`, `youdemo_welcomed`, `yd_theme`, `ydtheme`.
 
 `/storage-audit` (`.claude/commands/storage-audit.md`) audits and fixes violations.
@@ -22,8 +22,7 @@ Invalid: `theme`, `youdemo_welcomed`, `yd_theme`, `ydtheme`.
 
 | Key                | Written by                            | Value                          |
 | ------------------ | ------------------------------------- | ------------------------------ |
-| `ydTheme`          | `+layout.svelte`                      | `'dark'` \| `'light'`          |
-| `ydWelcomed`       | `WelcomeModal.svelte`                 | `'true'` once dismissed        |
+| `ydWelcomed`       | `+page.svelte`                        | `'true'` once a take starts    |
 | `ydMicMuted`       | `+page.svelte`                        | `'true'` \| `'false'`          |
 | `ydCamEnabled`     | `+page.svelte`                        | `'true'` \| `'false'`          |
 | `ydBlurOn`         | `+page.svelte`                        | `'true'` \| `'false'`          |
@@ -80,21 +79,21 @@ normally — never let a storage failure surface to the user.
 
 Rather than eagerly maintaining one combined file. Each Stop writes only the new
 take, and a take already on disk is never rewritten, so a crash mid-write can
-only lose the take being written. Takes are joined **once**, at Editor entry (the
-existing `stitching` step) — a lossless packet copy, see `video-export`.
+only lose the take being written. Takes are joined **once**, as the Editor opens
+(its `joining` phase) — a lossless packet copy, see `video-export`.
 
 ### Wiring in `+page.svelte`
 
 | Moment                              | Call                                        |
 | ----------------------------------- | ------------------------------------------- |
-| Stop (`stopRecording`)              | `saveSegment(segments.length - 1, blob)`    |
+| Stop (`stopRecording`), or the share ending mid-take | `saveSegment(takes.length - 1, take.blob)` |
 | Browser check passes                | `loadSegments()` → if any, jump to Editor   |
-| Export completes                    | `clear()`                                   |
+| The error screen opens              | `loadSegments()` → "Your recording is safe" |
 | Full reset (`resetToSetup`)         | `clear()`                                   |
 
-Recovery skips setup entirely: recovered takes become `segments` and
-`goToEditor()` stitches them if there's more than one. Clearing on export and on
-reset is deliberate — the recording has been downloaded or intentionally
-discarded, so recovery is no longer wanted.
+Recovery skips setup entirely: recovered takes become `takes` (each timed with
+Mediabunny, `takeDuration`) and the Editor joins them if there's more than one.
+**Export does not clear the store**: the takes and cuts stay until Discard or
+New recording (a full reset), the only times recovery is no longer wanted.
 
 `tests/crashStore.spec.ts` covers this module.

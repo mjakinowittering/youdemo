@@ -1,0 +1,830 @@
+<!doctype html>
+<html lang="en-GB">
+    <head>
+        <meta charset="utf-8" />
+        <title>YouDemo · Error</title>
+        <meta name="viewport" content="width=1280" />
+        <style>
+            @font-face {
+                font-family: Figtree;
+                src: url(../fonts/figtree-latin-wght-normal.woff2) format('woff2');
+                font-weight: 300 900;
+                font-style: normal;
+                font-display: block;
+            }
+            html,
+            body {
+                margin: 0;
+                background: #f8f5ef;
+            }
+            *,
+            *::before,
+            *::after {
+                animation: none !important;
+                transition: none !important;
+                caret-color: transparent !important;
+            }
+            /* YouDemo V2: light-only tokens and components, in Matthew Akino-Wittering's design language. */
+
+            .yd2 {
+                --base: #f8f5ef;
+                --sand: #f7f0e3;
+                --card: #fdfbf7;
+                --ink: #17151f;
+                --muted: #46434f;
+                --rule: #e7e3dc;
+                --hairline: #d9d6e0;
+                --accent: #f07a2e;
+                --accent-tint: #fde3cf;
+                --danger: #b42318;
+                --danger-tint: #fbe4e1;
+                --success-tint: #d8ecd5;
+                --rec: #e5484d;
+                --scrim: rgba(23, 21, 31, 0.45);
+                --font-sans: Figtree, ui-sans-serif, system-ui, sans-serif;
+                --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+                --shadow-offset: 0 4px 0 #17151f;
+                --shadow-offset-sm: 0 3px 0 #17151f;
+                --shadow-offset-press: 0 2px 0 #17151f;
+                --shadow-panel: 8px 8px 0 #17151f;
+            }
+            .yd2,
+            .yd2 * {
+                box-sizing: border-box;
+            }
+            .yd2 {
+                font-family: var(--font-sans);
+                font-size: 16px;
+                line-height: 1.5;
+                color: var(--ink);
+                background: var(--base);
+                -webkit-font-smoothing: antialiased;
+                font-variant-numeric: tabular-nums;
+            }
+            .yd2 h1,
+            .yd2 h2,
+            .yd2 h3,
+            .yd2 p,
+            .yd2 ul {
+                margin: 0;
+            }
+            .yd2 ul {
+                padding: 0;
+                list-style: none;
+            }
+            .i {
+                display: block;
+                flex-shrink: 0;
+            }
+
+            /* type */
+            .t-display {
+                font-size: 40px;
+                line-height: 1.15;
+                font-weight: 800;
+                letter-spacing: -0.03em;
+                text-wrap: balance;
+            }
+            .t-screen {
+                font-size: 28px;
+                line-height: 1.2;
+                font-weight: 800;
+                letter-spacing: -0.02em;
+                text-wrap: balance;
+            }
+            .t-card {
+                font-size: 22px;
+                line-height: 1.3;
+                font-weight: 800;
+                letter-spacing: -0.02em;
+            }
+            .t-row {
+                font-size: 19px;
+                line-height: 1.5;
+                font-weight: 700;
+                letter-spacing: -0.01em;
+            }
+            .t-lead {
+                font-size: 18.5px;
+                line-height: 1.5;
+                color: var(--muted);
+            }
+            .t-body {
+                font-size: 16px;
+                line-height: 1.5;
+                color: var(--muted);
+            }
+            .t-small {
+                font-size: 14px;
+                line-height: 1.5;
+                color: var(--muted);
+            }
+            .t-meta {
+                font-size: 12.5px;
+                line-height: 1.5;
+                font-weight: 700;
+                letter-spacing: 0.06em;
+                text-transform: uppercase;
+                color: var(--muted);
+            }
+            .t-ink {
+                color: var(--ink);
+            }
+            .t-danger {
+                color: var(--danger);
+            }
+
+            /* bands and rules */
+            .band {
+                background: var(--base);
+            }
+            .band--sand {
+                background: var(--sand);
+            }
+            .rule-b {
+                border-bottom: 1.5px solid var(--ink);
+            }
+            .rule-t {
+                border-top: 1.5px solid var(--ink);
+            }
+
+            /* header */
+            .hdr {
+                height: 64px;
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                padding: 0 24px;
+                background: var(--base);
+                border-bottom: 1.5px solid var(--ink);
+            }
+            .brand {
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                font-size: 19px;
+                font-weight: 800;
+                letter-spacing: -0.02em;
+                color: var(--ink);
+                text-decoration: none;
+            }
+
+            /* buttons */
+            .b {
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                gap: 8px;
+                min-height: 44px;
+                padding: 0 18px;
+                border: 1.5px solid var(--ink);
+                border-radius: 10px;
+                background: var(--card);
+                color: var(--ink);
+                font: 600 15px/1.5 var(--font-sans);
+                white-space: nowrap;
+                cursor: pointer;
+                box-shadow: var(--shadow-offset);
+                transition:
+                    transform 0.12s,
+                    box-shadow 0.12s;
+                text-decoration: none;
+                margin-bottom: 4px;
+            }
+            .b:hover {
+                transform: translateY(2px);
+                box-shadow: var(--shadow-offset-press);
+            }
+            .b:focus-visible {
+                outline: 2px solid var(--ink);
+                outline-offset: 2px;
+            }
+            .b--primary {
+                background: var(--accent);
+            }
+            .b--danger {
+                background: var(--danger);
+                color: var(--card);
+            }
+            .b--danger-ghost {
+                color: var(--danger);
+            }
+            .b--icon {
+                width: 44px;
+                padding: 0;
+            }
+            .b--wide {
+                width: 100%;
+            }
+            .b--lg {
+                min-height: 52px;
+                padding: 0 24px;
+                font-size: 16px;
+                font-weight: 700;
+            }
+            .b[disabled],
+            .b.is-disabled {
+                background: var(--base);
+                border-style: dashed;
+                border-color: var(--muted);
+                color: var(--muted);
+                box-shadow: none;
+                cursor: not-allowed;
+                transform: none;
+            }
+            .b[aria-pressed='true'].is-ink {
+                background: var(--ink);
+                color: var(--card);
+            }
+            .b.is-off {
+                background: var(--danger-tint);
+                color: var(--danger);
+            }
+            .b.is-on {
+                background: var(--success-tint);
+            }
+            .link {
+                display: inline-flex;
+                align-items: center;
+                gap: 6px;
+                min-height: 44px;
+                color: var(--ink);
+                font-weight: 600;
+                font-size: 15px;
+                text-decoration: underline;
+                text-decoration-color: var(--accent);
+                text-decoration-thickness: 2.5px;
+                text-underline-offset: 4px;
+                background: none;
+                border: 0;
+                padding: 0;
+                cursor: pointer;
+                font-family: var(--font-sans);
+            }
+            .link:hover {
+                text-decoration-thickness: 4px;
+            }
+            .split {
+                display: inline-flex;
+                align-items: stretch;
+                border-radius: 10px;
+                box-shadow: var(--shadow-offset);
+                margin-bottom: 4px;
+            }
+            .split > .b {
+                box-shadow: none;
+                margin: 0;
+            }
+            .split > .b:first-child {
+                border-top-right-radius: 0;
+                border-bottom-right-radius: 0;
+            }
+            .split > .b:last-child {
+                border-left-width: 0;
+                border-top-left-radius: 0;
+                border-bottom-left-radius: 0;
+                padding: 0 10px;
+            }
+            .split.is-disabled {
+                box-shadow: none;
+            }
+            .row {
+                display: flex;
+                align-items: center;
+                gap: 14px;
+            }
+            .row--wrap {
+                flex-wrap: wrap;
+            }
+            .spacer {
+                flex: 1;
+            }
+
+            /* surfaces */
+            .card {
+                background: var(--card);
+                border: 1.5px solid var(--ink);
+                border-radius: 16px;
+            }
+            .card--panel {
+                border-radius: 20px;
+            }
+            .card--lift {
+                box-shadow: var(--shadow-panel);
+            }
+            .pill {
+                display: inline-flex;
+                align-items: center;
+                gap: 6px;
+                height: 28px;
+                padding: 0 12px;
+                border: 1.5px solid var(--ink);
+                border-radius: 9999px;
+                font-size: 12px;
+                line-height: 1;
+                font-weight: 700;
+                letter-spacing: 0.06em;
+                text-transform: uppercase;
+                background: var(--card);
+                color: var(--ink);
+                white-space: nowrap;
+            }
+            .pill--sand {
+                background: var(--sand);
+            }
+            .pill--on {
+                background: var(--success-tint);
+            }
+            .pill--off {
+                background: var(--danger-tint);
+                color: var(--danger);
+                border-color: var(--danger);
+            }
+            .pill--rec {
+                background: var(--ink);
+                color: var(--card);
+                border-color: var(--ink);
+            }
+            .dot {
+                width: 9px;
+                height: 9px;
+                border-radius: 9999px;
+                background: var(--rec);
+            }
+
+            /* dock */
+            .dock {
+                display: inline-flex;
+                align-items: flex-start;
+                gap: 14px;
+                padding: 12px 14px 8px;
+                background: var(--card);
+                border: 1.5px solid var(--ink);
+                border-radius: 20px;
+            }
+
+            /* progress, skeleton */
+            .prog {
+                position: relative;
+                height: 12px;
+                border: 1.5px solid var(--ink);
+                border-radius: 9999px;
+                background: var(--card);
+                overflow: hidden;
+            }
+            .prog > span {
+                position: absolute;
+                inset: 0 auto 0 0;
+                background: var(--accent);
+                border-right: 1.5px solid var(--ink);
+            }
+            .sk {
+                background: var(--rule);
+                border-radius: 10px;
+                animation: yd2-pulse 1.4s ease-in-out infinite;
+            }
+            @keyframes yd2-pulse {
+                0%,
+                100% {
+                    opacity: 1;
+                }
+                50% {
+                    opacity: 0.55;
+                }
+            }
+            @media (prefers-reduced-motion: reduce) {
+                .sk {
+                    animation: none;
+                }
+                .b {
+                    transition: none;
+                }
+            }
+
+            /* video frame */
+            .frame {
+                border: 1.5px solid var(--ink);
+                border-radius: 10px;
+                overflow: hidden;
+                background: var(--card);
+            }
+
+            /* webcam bubble */
+            .bubble {
+                border-radius: 9999px;
+                overflow: hidden;
+                border: 2px solid var(--ink);
+                box-shadow: 4px 4px 0 var(--ink);
+                background: var(--card);
+            }
+            .slot {
+                border-radius: 9999px;
+                border: 2px dashed var(--ink);
+                background: rgba(253, 251, 247, 0.6);
+            }
+
+            /* timeline */
+            .tl {
+                display: flex;
+                gap: 3px;
+            }
+            .cell {
+                position: relative;
+                width: 80px;
+                height: 64px;
+                flex-shrink: 0;
+                border-radius: 8px;
+                border: 1.5px solid var(--ink);
+                overflow: hidden;
+                background: var(--card);
+            }
+            .cell.is-current {
+                outline: 3px solid var(--ink);
+                outline-offset: 1px;
+            }
+            .cell.is-cut {
+                border-color: var(--danger);
+            }
+            .cell.is-cut::after {
+                content: '';
+                position: absolute;
+                inset: 0;
+                background: var(--danger-tint);
+                opacity: 0.72;
+            }
+            .cell.is-sk {
+                border-color: var(--rule);
+                background: var(--rule);
+            }
+            .cutmark {
+                position: relative;
+                width: 3px;
+                flex-shrink: 0;
+                background: var(--danger);
+                border-radius: 2px;
+                margin: 0 4px;
+            }
+            .cutmark > .b {
+                position: absolute;
+                left: 50%;
+                top: -22px;
+                transform: translateX(-50%);
+                min-height: 30px;
+                height: 30px;
+                width: 30px;
+                padding: 0;
+                border-radius: 9999px;
+                box-shadow: var(--shadow-offset-press);
+            }
+            .ov {
+                position: relative;
+                height: 32px;
+                border: 1.5px solid var(--ink);
+                border-radius: 10px;
+                background: var(--card);
+                overflow: hidden;
+            }
+            .ov > .win {
+                position: absolute;
+                top: 0;
+                bottom: 0;
+                background: var(--accent-tint);
+                border-left: 2px solid var(--ink);
+                border-right: 2px solid var(--ink);
+            }
+            .ov > .cut {
+                position: absolute;
+                top: 0;
+                bottom: 0;
+                width: 4px !important;
+                margin-left: -2px;
+                background: var(--danger);
+            }
+            .ov > .head {
+                position: absolute;
+                top: -1px;
+                bottom: -1px;
+                width: 2px;
+                background: var(--ink);
+            }
+            .range {
+                -webkit-appearance: none;
+                appearance: none;
+                height: 12px;
+                border: 1.5px solid var(--ink);
+                border-radius: 9999px;
+                background:
+                    linear-gradient(var(--accent), var(--accent)) 0 / var(--p, 15%) 100% no-repeat,
+                    var(--card);
+            }
+            .range::-webkit-slider-thumb {
+                -webkit-appearance: none;
+                width: 22px;
+                height: 22px;
+                border-radius: 9999px;
+                background: var(--card);
+                border: 2px solid var(--ink);
+                box-shadow: 0 2px 0 var(--ink);
+            }
+
+            /* dialog */
+            .scrim {
+                position: absolute;
+                inset: 0;
+                background: var(--scrim);
+                display: grid;
+                place-items: center;
+            }
+            .dialog {
+                width: 480px;
+                max-width: calc(100% - 48px);
+                padding: 28px;
+                display: flex;
+                flex-direction: column;
+                gap: 18px;
+                background: var(--card);
+                border: 1.5px solid var(--ink);
+                border-radius: 20px;
+                box-shadow: var(--shadow-panel);
+            }
+            .dl {
+                display: grid;
+                grid-template-columns: auto 1fr;
+                gap: 6px 18px;
+                padding: 14px 16px;
+                background: var(--base);
+                border: 1.5px solid var(--ink);
+                border-radius: 14px;
+            }
+            .dl dt {
+                font-size: 12.5px;
+                font-weight: 700;
+                letter-spacing: 0.06em;
+                text-transform: uppercase;
+                color: var(--muted);
+            }
+            .dl dd {
+                margin: 0;
+                font-size: 15px;
+                font-weight: 600;
+                color: var(--ink);
+                overflow-wrap: anywhere;
+            }
+
+            /* notices */
+            .notice {
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                padding: 10px 12px 10px 16px;
+                border: 1.5px solid var(--ink);
+                border-radius: 14px;
+                background: var(--success-tint);
+            }
+            .notice--danger {
+                background: var(--danger-tint);
+            }
+
+            /* tooltip & menu */
+            .tip {
+                position: relative;
+                display: inline-flex;
+                padding: 6px 12px;
+                border-radius: 10px;
+                background: var(--ink);
+                color: var(--card);
+                font-size: 14px;
+                font-weight: 600;
+            }
+            .menu {
+                min-width: 220px;
+                padding: 6px;
+                background: var(--card);
+                border: 1.5px solid var(--ink);
+                border-radius: 14px;
+                box-shadow: var(--shadow-offset);
+            }
+            .menu li {
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                min-height: 44px;
+                padding: 0 12px;
+                border-radius: 10px;
+                font-size: 15px;
+            }
+            .menu li.is-sel {
+                background: var(--accent-tint);
+                font-weight: 600;
+            }
+
+            /* status list */
+            .status {
+                border: 1.5px solid var(--ink);
+                border-radius: 16px;
+                background: var(--card);
+                overflow: hidden;
+            }
+            .status li {
+                display: flex;
+                align-items: center;
+                gap: 14px;
+                padding: 14px 18px;
+            }
+            .status li + li {
+                border-top: 1px solid var(--hairline);
+            }
+        </style>
+    </head>
+    <body>
+        <div
+            data-compare="root"
+            class="yd2"
+            style="
+                width: 1280px;
+                height: 800px;
+                position: relative;
+                overflow: hidden;
+                display: flex;
+                flex-direction: column;
+            "
+        >
+            <header data-section="header" class="hdr">
+                <a class="brand" href="#" style="gap: 12px"
+                    ><svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        viewBox="0 0 16 16"
+                        width="32"
+                        height="32"
+                        class="i"
+                        aria-hidden="true"
+                    >
+                        <rect x="2" y="2" width="13" height="13" rx="3.5" fill="var(--ink)" />
+                        <rect
+                            x="1.5"
+                            y="1.5"
+                            width="12"
+                            height="12"
+                            rx="3"
+                            fill="var(--card)"
+                            stroke="var(--ink)"
+                            stroke-width="1"
+                        />
+                        <polygon
+                            points="6.5,4.5 6.5,10.5 11,7.5"
+                            fill="var(--accent)"
+                            stroke="var(--ink)"
+                            stroke-width="1"
+                            stroke-linejoin="round"
+                        /></svg
+                    >YouDemo</a
+                >
+                <div class="row"></div>
+            </header>
+            <main
+                data-section="stage"
+                class="band--sand"
+                style="flex: 1; min-height: 0; position: relative; display: flex"
+            >
+                <div
+                    style="
+                        margin: auto;
+                        width: 600px;
+                        display: flex;
+                        flex-direction: column;
+                        gap: 22px;
+                    "
+                >
+                    <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="48"
+                        height="48"
+                        class="i"
+                        aria-hidden="true"
+                        style="color: var(--danger)"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                    >
+                        <path
+                            d="M13.9248 21H10.0752C5.44476 21 3.12955 21 2.27636 19.4939C1.42317 17.9879 2.60736 15.9914 4.97574 11.9985L6.90057 8.75333C9.17559 4.91778 10.3131 3 12 3C13.6869 3 14.8244 4.91777 17.0994 8.75332L19.0243 11.9985C21.3926 15.9914 22.5768 17.9879 21.7236 19.4939C20.8704 21 18.5552 21 13.9248 21Z"
+                            stroke="currentColor"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="1.5"
+                        ></path>
+                        <path
+                            d="M12 9V13"
+                            stroke="currentColor"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="1.5"
+                        ></path>
+                        <path
+                            d="M12.125 16.75H12M12.25 16.75C12.25 16.8881 12.1381 17 12 17C11.8619 17 11.75 16.8881 11.75 16.75C11.75 16.6119 11.8619 16.5 12 16.5C12.1381 16.5 12.25 16.6119 12.25 16.75Z"
+                            stroke="currentColor"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="1.5"
+                        ></path>
+                    </svg>
+                    <h1 class="t-screen">Something went wrong</h1>
+                    <p class="t-lead">
+                        YouDemo couldn't start your camera. Another app might be using it.
+                    </p>
+                    <div class="notice" style="align-items: flex-start; padding: 16px">
+                        <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            width="24"
+                            height="24"
+                            class="i"
+                            aria-hidden="true"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                        >
+                            <path
+                                d="M18.7088 3.49534C16.8165 2.55382 14.5009 2 12 2C9.4991 2 7.1835 2.55382 5.29116 3.49534C4.36318 3.95706 3.89919 4.18792 3.4496 4.91378C3 5.63965 3 6.34248 3 7.74814V11.2371C3 16.9205 7.54236 20.0804 10.173 21.4338C10.9067 21.8113 11.2735 22 12 22C12.7265 22 13.0933 21.8113 13.8269 21.4338C16.4576 20.0804 21 16.9205 21 11.2371L21 7.74814C21 6.34249 21 5.63966 20.5504 4.91378C20.1008 4.18791 19.6368 3.95706 18.7088 3.49534Z"
+                                stroke="currentColor"
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                stroke-width="1.5"
+                            ></path>
+                            <path
+                                d="M9 11.5C9 11.5 10.4079 11.7519 11 13.5C11 13.5 12.5 10.5 15 9.5"
+                                stroke="currentColor"
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                stroke-width="1.5"
+                            ></path>
+                        </svg>
+                        <div>
+                            <p class="t-row" style="font-size: 17px">Your recording is safe</p>
+                            <p class="t-body">
+                                Every take is saved in this browser as you record. Reload and
+                                YouDemo opens it in the editor.
+                            </p>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <button class="b b--primary b--lg">
+                            <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                width="20"
+                                height="20"
+                                class="i"
+                                aria-hidden="true"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                            >
+                                <path
+                                    d="M20.0092 2V5.13219C20.0092 5.42605 19.6418 5.55908 19.4537 5.33333C17.6226 3.2875 14.9617 2 12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22C17.5228 22 22 17.5228 22 12"
+                                    stroke="currentColor"
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    stroke-width="1.5"
+                                ></path></svg
+                            >Reload YouDemo</button
+                        ><button class="b b--lg">
+                            <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                width="20"
+                                height="20"
+                                class="i"
+                                aria-hidden="true"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                            >
+                                <path
+                                    d="M7.5 14.5C7.5 11.2002 7.5 9.55025 8.52513 8.52513C9.55025 7.5 11.2002 7.5 14.5 7.5C17.7998 7.5 19.4497 7.5 20.4749 8.52513C21.5 9.55025 21.5 11.2002 21.5 14.5C21.5 17.7998 21.5 19.4497 20.4749 20.4749C19.4497 21.5 17.7998 21.5 14.5 21.5C11.2002 21.5 9.55025 21.5 8.52513 20.4749C7.5 19.4497 7.5 17.7998 7.5 14.5Z"
+                                    stroke="currentColor"
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    stroke-width="1.5"
+                                ></path>
+                                <path
+                                    d="M7.5 16.5C6.10355 16.5 5.40533 16.5 4.84402 16.3036C3.83866 15.9518 3.0482 15.1613 2.69641 14.156C2.5 13.5947 2.5 12.8964 2.5 11.5V9.5C2.5 6.20017 2.5 4.55025 3.52513 3.52513C4.55025 2.5 6.20017 2.5 9.5 2.5H11.5C12.8964 2.5 13.5947 2.5 14.156 2.69641C15.1613 3.0482 15.9518 3.83866 16.3036 4.84402C16.5 5.40533 16.5 6.10355 16.5 7.5"
+                                    stroke="currentColor"
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    stroke-width="1.5"
+                                ></path></svg
+                            >Copy error
+                        </button>
+                    </div>
+                    <details class="card" style="padding: 14px 18px">
+                        <summary class="link" style="min-height: 32px">Technical details</summary>
+                        <pre
+                            style="
+                                margin: 10px 0 0;
+                                font: 12.5px/1.5 var(--font-mono);
+                                color: var(--muted);
+                                white-space: pre-wrap;
+                            "
+                        >
+NotReadableError: Could not start video source
+    at armCamera (+page.svelte:205:41)</pre>
+                    </details>
+                </div>
+            </main>
+        </div>
+    </body>
+</html>

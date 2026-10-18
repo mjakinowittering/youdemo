@@ -1,6 +1,6 @@
 ---
 name: video-export
-description: Lossless video export — videoStitcher.ts (stitchSegments, renderEditedVideo) copying recorded packets with Mediabunny, the pure remuxPlan.ts, the re-encode fallback, the Processing screen, the Done screen and download filename, plus the history of why ffmpeg.wasm and the real-time canvas replay were removed. Load when changing export, combining segments, applying trims, export progress, or before ever proposing ffmpeg/WASM transcoding or a real-time replay.
+description: Lossless video export — videoStitcher.ts (stitchSegments, renderEditedVideo) copying recorded packets with Mediabunny, the pure remuxPlan.ts, the re-encode fallback, the Editor's joining and exporting phases, the download and its filename, plus the history of why ffmpeg.wasm and the real-time canvas replay were removed. Load when changing export, combining segments, applying trims, export progress, or before ever proposing ffmpeg/WASM transcoding or a real-time replay.
 ---
 
 # Export (`src/lib/videoStitcher.ts`)
@@ -16,6 +16,7 @@ drop frames or lose quality; the output has a real duration and a seek index
 ```ts
 stitchSegments(blobs, onProgress): Promise<Blob>       // takes back to back
 renderEditedVideo(source, deletedRanges, onProgress)   // drop the deleted ranges
+// onProgress(fraction 0–1, step: 'reading' | 'reencoding' | 'writing' | 'saving')
 ```
 
 `stitchSegments` returns `blobs[0]` unchanged for a single take;
@@ -25,7 +26,8 @@ is cut.
 ## How a cut lands
 
 A copied stretch must start on a keyframe, so **cuts depend on the recorder
-keying every editor cell** (every 6 frames = 0.2 s — see `capture-pipeline`).
+keying every editor cell** (no frame a cell or more after its keyframe —
+see `capture-pipeline`).
 `cutPlan` starts each kept range on the keyframe **nearest** its start (within
 ~0.1 s, either way) and ends it exactly; audio follows the same snapped ranges so
 the tracks stay in sync. `joinPlan` places each take where the previous one ends
@@ -35,9 +37,10 @@ unit-tested in `tests/remuxPlan.spec.ts`.
 ## The re-encode fallback
 
 `needsNormalising` flags takes that can't be copied: encoder settings that
-differ (a resume picked a different-sized screen) or keyframes too sparse to cut
-on (takes recovered from OPFS that were recorded before the recorder keyed every
-cell). Then **every** take is re-encoded once, first — at the first take's size,
+differ (Change picked a different-sized screen) or keyframes too sparse to cut
+on: `maxKeyframeLag`, the longest a frame sits after its keyframe, over two
+cells (takes recovered from OPFS that were recorded before the recorder keyed
+every cell). A stall with no frames in it doesn't count. Then **every** take is re-encoded once, first — at the first take's size,
 letterboxed, keyed every cell, audio copied — and the copy path runs as usual.
 
 The re-encode decodes each frame (`VideoSampleSink`), redraws it on an opaque
@@ -72,37 +75,45 @@ only re-encode is the fallback's, through the browser's native encoder. If you
 are tempted to reintroduce ffmpeg, WASM transcoding or a real-time replay, read
 this section first and raise it explicitly.
 
-It runs on the main thread. A Web Worker would only matter if the Processing
+It runs on the main thread. A Web Worker would only matter if the export
 progress bar stutters on a long recording — measure first.
 
-## Processing.svelte
+## Progress
 
-Runs the pipeline in `onMount` with a `cancelled` guard, then calls
-`oncomplete(blob)` after a 300ms pause on "Done!".
+Every step reports, not just the copy: the scan of every packet's timing
+(`metadata`, by timestamp against the file's metadata duration), the re-encode
+(per frame, against the scan's exact frame count), the copy (per packet), and
+saving (`finalize` and the Blob). `stagedProgress` (`src/lib/stagedProgress.ts`,
+unit-tested) gives each step its share by weight and keeps the fraction
+monotonic, reaching exactly 1 only when the Blob exists; its reporters nest, to
+split a step by take. The weights (`COPY_STEPS`, `REENCODE_STEPS`) are picked
+before the scan from the encoder settings alone, since differing settings mean
+a re-encode; too few keyframes only shows after the scan, and then the rest is
+laid out again. The long loops `yieldToBrowser()` (`scheduler.yield()`, else
+`setTimeout(0)`) so the bar repaints — an awaited resolved promise is only a
+microtask, and never lets the page paint.
 
-1. `source = segments[0]`.
-2. `segments.length > 1` → `stitchSegments` (status "Combining recordings…").
-   The Editor normally passes a single already-combined blob, so this is a safety
-   net — see `app-shell`.
-3. `deletedRanges.length > 0` → `renderEditedVideo` (status "Applying edits…"),
-   progress reset to 0 first.
-4. No cuts → `source` is the final file, unmodified.
+## In the Editor
 
-UI is an `Empty` inside a card: `Film` icon at 128px, the status as title, a
-`Progress` bar (`class="*:bg-indigo-500"`) and a percentage. Failure swaps in a
-`TriangleAlert` and the message in monospace — export errors are shown in place,
-not routed to the global `ErrorScreen`.
+There is no separate processing or download screen: joining and exporting are
+phases of the Editor, run by `+page.svelte` (`app-shell`).
 
-`progress` is `$bindable` so `+page.svelte` can put it in the document title.
-
-## Done.svelte
-
-- **Auto-downloads on mount** via a synthesised `<a download>` click, revoking the
-  object URL on teardown. A `null` blob is a no-op — which is what lets it render
-  safely in Storybook.
-- Filename (format in `CLAUDE.md`'s branding rule) is built by `exportFilename()` in
-  `src/lib/utils.ts` (pure, unit-tested in `tests/utils.spec.ts`). Local time, not
-  UTC, so the stamp matches the user's clock; the seconds keep same-day exports
-  from colliding.
-- `Empty` with a 128px `CircleCheck`, title "Download started", and two buttons:
-  "Back to Editor" (indigo) and "New Recording" (outline).
+- **Joining** (`stitchSegments`) on entering the Editor with several takes;
+  the Editor shows "Joining N takes" with progress over skeleton controls.
+- **Export** confirms in a dialog (length after cuts, number of cuts, file
+  name), then `renderEditedVideo(editorBlob, cuts, onProgress)` with the stage
+  showing "Exporting" and its percentage and every control disabled. No cuts →
+  `+page.svelte` downloads the joined recording as is, with no exporting phase.
+- `+page.svelte` keeps the step and the percentage, rounded down, so the
+  number only changes on a whole percent and the bar never shows 100% early;
+  the tab title uses the same number. `Editor.svelte` turns the step into the
+  line under the bar (wording: `docs/design/specs/journey.md` § Editor).
+- The file downloads straight away through `downloadBlob(blob, filename)` in
+  `utils.ts`; the name is `exportFilename()` (format in `CLAUDE.md`'s
+  branding rule; local time, with seconds), fixed when the dialog opened. The
+  Editor then shows the dismissible Exported notice. **The crash store is
+  kept**; only Discard and New recording clear it.
+- **Failure** shows in place, never through the global `ErrorScreen`: the
+  export-failed card with the reason in words (`exportFailureReason` in
+  `errors.ts`), Technical details, **Try again** and **Copy error**. Takes and
+  cuts are untouched.

@@ -1,88 +1,54 @@
 <script lang="ts">
-    import ChevronDown from '@lucide/svelte/icons/chevron-down';
-    import CircleUserRound from '@lucide/svelte/icons/circle-user-round';
-    import UserRound from '@lucide/svelte/icons/user-round';
+    import { BlurIcon, UserIcon } from '@hugeicons/core-free-icons';
 
-    import { buttonVariants, type ButtonVariant } from '$lib/components/ui/button/button.svelte';
-    import { Button } from '$lib/components/ui/button/index.js';
-    import * as DropdownMenu from '$lib/components/ui/dropdown-menu/index.js';
-    import * as Tooltip from '$lib/components/ui/tooltip/index.js';
+    import MenuOptions from '$lib/components/MenuOptions.svelte';
 
     import type { BlurIntensity } from '$lib/blurProcessor.js';
-    import { cn } from '$lib/utils.js';
+
+    import DockControl from './DockControl.svelte';
 
     interface Props {
         blurOn?: boolean;
         intensity?: BlurIntensity;
-        camEnabled?: boolean;
         disabled?: boolean;
     }
 
     let {
         blurOn = $bindable(false),
         intensity = $bindable<BlurIntensity>('default'),
-        camEnabled = false,
         disabled = false
     }: Props = $props();
 
-    let blurDisabled = $derived(disabled || !camEnabled);
+    const intensities: { value: BlurIntensity; label: string }[] = [
+        { value: 'light', label: 'Light' },
+        { value: 'default', label: 'Default' },
+        { value: 'heavy', label: 'Heavy' }
+    ];
 
-    let variant = $derived<ButtonVariant>(
-        !camEnabled ? 'destructive' : blurOn ? 'success' : 'outline'
-    );
-
-    let tooltipText = $derived(
+    let tooltip = $derived(
         !blurOn
             ? 'Background blur off'
-            : intensity === 'light'
-              ? 'Background blur — Light'
-              : intensity === 'heavy'
-                ? 'Background blur — Heavy'
-                : 'Background blur'
+            : intensity === 'default'
+              ? 'Background blur'
+              : `Background blur — ${intensities.find((i) => i.value === intensity)?.label}`
     );
 </script>
 
-<Tooltip.Root>
-    <Tooltip.Trigger>
-        {#snippet child({ props })}
-            <div {...props} class="flex">
-                <Button
-                    {variant}
-                    size="lg"
-                    class="rounded-r-none border-r-0"
-                    onclick={() => (blurOn = !blurOn)}
-                    disabled={blurDisabled}
-                    aria-label={blurOn ? 'Disable background blur' : 'Enable background blur'}
-                >
-                    {#if blurOn && camEnabled}
-                        <CircleUserRound />
-                    {:else}
-                        <UserRound />
-                    {/if}
-                </Button>
-                <DropdownMenu.Root>
-                    <DropdownMenu.Trigger
-                        class={cn(buttonVariants({ variant, size: 'lg' }), 'rounded-l-none px-2')}
-                        disabled={blurDisabled}
-                        aria-label="Select blur intensity"
-                    >
-                        <ChevronDown class="size-3" />
-                    </DropdownMenu.Trigger>
-                    <DropdownMenu.Content>
-                        <DropdownMenu.RadioGroup
-                            value={intensity}
-                            onValueChange={(v) => (intensity = v as BlurIntensity)}
-                        >
-                            <DropdownMenu.RadioItem value="light">Light</DropdownMenu.RadioItem>
-                            <DropdownMenu.RadioItem value="default">Default</DropdownMenu.RadioItem>
-                            <DropdownMenu.RadioItem value="heavy">Heavy</DropdownMenu.RadioItem>
-                        </DropdownMenu.RadioGroup>
-                    </DropdownMenu.Content>
-                </DropdownMenu.Root>
-            </div>
-        {/snippet}
-    </Tooltip.Trigger>
-    <Tooltip.Content>
-        <p>{tooltipText}</p>
-    </Tooltip.Content>
-</Tooltip.Root>
+<DockControl
+    icon={blurOn ? BlurIcon : UserIcon}
+    label={blurOn ? 'Blur on' : 'Blur off'}
+    tone={blurOn ? 'on' : 'plain'}
+    action={blurOn ? 'Disable background blur' : 'Enable background blur'}
+    menuLabel="Select blur intensity"
+    {tooltip}
+    {disabled}
+    ontoggle={() => (blurOn = !blurOn)}
+>
+    {#snippet menu()}
+        <MenuOptions
+            options={intensities}
+            value={intensity}
+            onselect={(value) => (intensity = value)}
+        />
+    {/snippet}
+</DockControl>

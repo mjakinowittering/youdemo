@@ -35,16 +35,16 @@ skill is more detailed, the skill wins on the _how_.
 
 | Skill               | Load when working on…                                                               |
 | ------------------- | ----------------------------------------------------------------------------------- |
-| `tailwind-theme`    | colours, classes, animations, dark mode, `layout.css`                               |
-| `shadcn-ui`         | shadcn primitives, empty states, tooltips, cards, icons                             |
-| `app-shell`         | the state machine, `+page`/`+layout`, titles, errors, welcome/check                 |
-| `capture-screens`   | Setup / Countdown / Recording / Review, ControlBar, Mic/Cam/Blur                    |
+| `tailwind-theme`    | colours, type, shape, classes, animations, `layout.css` tokens                      |
+| `shadcn-ui`         | shadcn primitives, buttons, dialogs, tooltips, menus, cards, Hugeicons              |
+| `app-shell`         | the state machine, `+page`/`+layout`, titles, errors, browser check                 |
+| `capture-screens`   | Setup / Countdown / Recording / Review, the capture dock, Mic/Cam/Blur              |
 | `capture-pipeline`  | `recorder.ts`, canvas compositing, MediaRecorder, bubble geometry                   |
 | `background-blur`   | background blur, MediaPipe, WASM assets                                             |
-| `editor-timeline`   | the Editor, playback, seeking, trimming, frame strip, `editorMath`                  |
-| `video-export`      | export, stitching, `videoStitcher.ts`, Processing, Done                             |
+| `editor-timeline`   | the Editor, playback, seeking, trimming, undo, zoom, frame strip, `editorMath`      |
+| `video-export`      | export, joining takes, `videoStitcher.ts`, the Editor's export phases               |
 | `persistence`       | localStorage, `deviceStore`, OPFS crash recovery                                    |
-| `testing`           | stories, Vitest, Playwright E2E, testability                                        |
+| `testing`           | stories, `npm run compare`, Vitest, Playwright E2E, testability                     |
 | `deployment`        | build, GitHub Pages, base paths, CI/deploy workflows, meta/OG tags                  |
 | `ascii-wireframes`  | any change a user will see, before it's built; a data flow worth a sequence diagram |
 | `branch-and-commit` | branching, staging, commit messages, pushing, PRs                                   |
@@ -55,21 +55,22 @@ skill is more detailed, the skill wins on the _how_.
 ## Stack
 
 SvelteKit + `adapter-static` · Svelte 5 runes · TypeScript · Tailwind v4
-(CSS-first) · shadcn-svelte · `@lucide/svelte` · canvas + `MediaRecorder` ·
+(CSS-first) · shadcn-svelte · Hugeicons · Figtree · canvas + `MediaRecorder` ·
 fix-webm-duration · Mediabunny · `@mediapipe/tasks-vision` · Vitest (3
-projects) + Storybook + Playwright E2E · ESLint + Prettier · npm · GitHub Pages.
+projects) + Storybook + a pixel compare against the design boards + Playwright
+E2E · ESLint + Prettier · npm · GitHub Pages.
 
 ## App Structure
 
 ```
 src/
   routes/
-    +layout.svelte          # Shell — top bar, theme toggle, Tooltip.Provider
+    +layout.svelte          # AppShell (header band + main), Tooltip.Provider
     +layout.ts              # ssr = false, prerender = true
     +page.svelte            # Root — owns the state machine and all app state
     +error.svelte           # SvelteKit error page
-    layout.css              # Tailwind v4 theme tokens + custom animations
-  app.html                  # dark by default, meta/OG/Twitter tags
+    layout.css              # Tailwind v4 design tokens (yd-*) + animations
+  app.html                  # meta/OG/Twitter tags
   lib/
     recorder.ts             # Canvas compositor, MediaRecorder, audio mixer
     videoStitcher.ts        # Lossless export: stitchSegments + renderEditedVideo
@@ -77,36 +78,45 @@ src/
     blurProcessor.ts        # MediaPipe selfie-segmentation background blur
     crashStore.ts           # OPFS crash recovery, one file per take
     deviceStore.svelte.ts   # Rune store: selected mic/cam ids, persisted
-    editorMath.ts           # Pure timeline/edit maths (unit-tested, no DOM)
-    titles.ts               # Every document title string
+    editorMath.ts           # Pure timeline maths: cuts, undo, zoom, strip layout (unit-tested)
     bubbleGeometry.ts       # Webcam bubble size + positions, shared by preview and recorder
-    types.ts                # AppState, DeletedRange
-    utils.ts                # cn(), exportFilename()
+    share.ts                # Send or copy the link from a phone (unit-tested)
+    errors.ts               # Errors in words for the error screen and export card
+    titles.ts               # Every document title string
+    types.ts                # AppState, EditorPhase, Take, DeletedRange
+    utils.ts                # cn(), tv, exportFilename(), downloadBlob()
     index.ts  assets/
     components/
-      BrowserCheck.svelte  ErrorScreen.svelte  WelcomeModal.svelte
+      AppShell.svelte  AppHeader.svelte  BrowserCheck.svelte  ErrorScreen.svelte
+      Icon.svelte  Pill.svelte  Notice.svelte  ConfirmDialog.svelte  …  # design parts
+      styles.ts             # Shared class lists for floating parts (tooltip, menu)
       Recorder/
         Setup.svelte  Countdown.svelte  Recording.svelte  Review.svelte
-        WebcamBubble.svelte  ControlBar.svelte
-        Control/            # MicControl, CamControl, BlurControl
+        WebcamBubble.svelte  WebcamBubbleFace.svelte  CaptureDock.svelte  DockBand.svelte
+        Control/            # DockControl, MicControl, CamControl, BlurControl
       Editor/
-        Editor.svelte       # Shell — owns state, composes the five below
-        VideoPlayer.svelte  Scrubber.svelte  EditorToolbar.svelte
-        FrameStrip.svelte  EditorFooter.svelte
-        Processing.svelte  Done.svelte
+        Editor.svelte       # Container — playback, zoom, trim, thumbnails, maths
+        EditorView.svelte   # The screen drawn from props, every phase
+        Scrubber  EditorToolbar  OverviewBar  FrameStrip  TimelineLabels  …
       ui/                   # shadcn-svelte generated — do not hand-edit
-  stories/                  # Storybook, mirrors the component folders
+  stories/Visual/           # Components + Screens stories, one per design board
+docs/design/                # The approved V2 design: boards, specs, tokens
 tests/                      # Vitest node specs
 e2e/                        # Playwright E2E: fixtures/, lib/ (export checks), *.spec.ts
 .storybook/                 # main.ts, preview.ts
-scripts/copy-mediapipe-wasm.js  serve-build.js
+scripts/compare.mjs  copy-mediapipe-wasm.js  serve-build.js
 ```
 
 ## State Machine (`+page.svelte`)
 
 ```
-check → setup → countdown → recording → review → [stitching] → editor → processing → done
+check → setup → countdown → recording → review → editor
+                    ↑ cancel │                 │ ↑
+                    └────────┘   Record take N └ Back to review
 ```
+
+The Editor moves through its own phases (`joining`, `ready`, `exporting`,
+`failed`) without unmounting.
 
 Full transition table, camera lifecycle and reset contract: **`app-shell`**.
 
@@ -144,17 +154,19 @@ Full transition table, camera lifecycle and reset contract: **`app-shell`**.
 
 **UI**
 
-- **indigo-500** is the accent everywhere; **red/destructive** signals
-  destruction (details: **`tailwind-theme`**).
+- **The design in `docs/design/` is the source of truth for how it looks**: its
+  boards, then `specs/journey.md`, then the other specs. Tangerine (`yd-accent`)
+  is the one accent and is never text; **danger** signals destruction (details:
+  **`tailwind-theme`**). Light only for now.
 - **No hand-written CSS.** Tailwind classes only; the exceptions are `@theme`
   token definitions and SVG-only properties.
-- shadcn-svelte primitives used as-is; **shadcn `Empty`** for every empty state
-  (**`shadcn-ui`**).
+- shadcn-svelte primitives, restyled through the tokens and their variants
+  (**`shadcn-ui`**); icons are Hugeicons through `Icon.svelte`.
 - **No global keyboard shortcuts** — no `document`/`window` keydown listeners,
   no shortcuts panel, no `?` button. Element-level `onkeydown` handlers for
   Enter/Space activation on clickable non-buttons are required for a11y and are
   not shortcuts.
-- Branding: **YouDemo**, `MonitorPlay` icon, download filename
+- Branding: the **YouDemo** wordmark in Figtree, no icon; download filename
   `youdemo-YYYY-MM-DD-HHMMSS.webm`.
 
 ---
@@ -164,7 +176,12 @@ Full transition table, camera lifecycle and reset contract: **`app-shell`**.
 - **Plan against the current `develop`** — check `git status`, then
   `git switch develop && git pull --ff-only` before exploring for a plan.
 - **Draw before building** — any change a user will see gets an ASCII wireframe
-  the user approves first (**`ascii-wireframes`**).
+  the user approves first (**`ascii-wireframes`**), unless an approved board in
+  `docs/design/reference/` already draws it.
+- **Match the boards** — a screen or part with a board gets a `Visual/Screens`
+  or `Visual/Components` story; `npm run compare -- <name>` until it reports
+  0.00, and the whole `npm run compare` exits 0 before handing over
+  (**`testing`**).
 - **One branch per plan**, `feature/…` or `bug/…`, cut off `develop` as the
   plan's first step; PRs target `develop` with an explicit `--base develop`
   (**`branch-and-commit`**).

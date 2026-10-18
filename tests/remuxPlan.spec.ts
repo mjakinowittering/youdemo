@@ -4,7 +4,7 @@ import {
     cutPlan,
     joinPlan,
     keptRanges,
-    maxKeyframeGap,
+    maxKeyframeLag,
     needsNormalising,
     takeEnd,
     type PacketMeta,
@@ -25,6 +25,14 @@ function take(seconds: number, keyEvery = 6): TrackPackets {
         audio.push({ ts: i * AUDIO, dur: AUDIO, key: true });
     }
     return { video, audio };
+}
+
+/** The take with a half-second stall after 1 s: no frames, then a keyframe, as the recorder keys by time. */
+function stalled(t: TrackPackets): TrackPackets {
+    const video = t.video.map((p) => (p.ts < 1 ? p : { ...p, ts: p.ts + 0.5 }));
+    const resumed = video.findIndex((p) => p.ts >= 1.5);
+    video[resumed] = { ...video[resumed], key: true };
+    return { ...t, video };
 }
 
 function isIncreasing(ts: number[]): boolean {
@@ -178,13 +186,17 @@ describe('cutPlan', () => {
     });
 });
 
-describe('maxKeyframeGap', () => {
-    it('is the keyframe spacing for a recorder take', () => {
-        expect(maxKeyframeGap(take(3).video)).toBeCloseTo(0.2);
+describe('maxKeyframeLag', () => {
+    it('is five frames for a recorder take', () => {
+        expect(maxKeyframeLag(take(3).video)).toBeCloseTo(5 * FRAME);
     });
 
-    it('includes the stretch after the last keyframe', () => {
-        expect(maxKeyframeGap(take(2, 1000).video)).toBeCloseTo(2);
+    it('is the whole take after its only keyframe', () => {
+        expect(maxKeyframeLag(take(2, 1000).video)).toBeCloseTo(2 - FRAME);
+    });
+
+    it('leaves out a stall with no frames in it', () => {
+        expect(maxKeyframeLag(stalled(take(3)).video)).toBeCloseTo(5 * FRAME);
     });
 });
 
@@ -201,5 +213,9 @@ describe('needsNormalising', () => {
 
     it('is true when a take has sparse keyframes', () => {
         expect(needsNormalising([cfg(take(2)), cfg(take(2, 1000))])).toBe(true);
+    });
+
+    it('is false when a well-keyed take stalled', () => {
+        expect(needsNormalising([cfg(take(2)), cfg(stalled(take(3)))])).toBe(false);
     });
 });

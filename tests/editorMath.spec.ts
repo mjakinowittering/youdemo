@@ -1,19 +1,33 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+    addCut,
+    canRedo,
+    canUndo,
     CELL_STRIDE,
     computeCellCount,
     computeDeletedCells,
     computeEffectiveCurrentTime,
     computeEffectiveDuration,
-    computeTimestampLabels,
-    computeVirtualWindow,
     computeVisibleCells,
+    currentCuts,
+    CUT_STRIDE,
     effectiveToRawTime,
+    emptyHistory,
+    entriesInView,
+    exportedFileShown,
     formatTime,
+    frameAt,
+    overviewGeometry,
+    redo,
     resolveSeekTarget,
+    restoreCut,
     SAMPLE_INTERVAL,
-    selectionToRange
+    selectionToRange,
+    stripLayout,
+    undo,
+    ZOOM_LEVELS,
+    zoomLabel
 } from '$lib/editorMath.js';
 import type { DeletedRange } from '$lib/types.js';
 
@@ -31,6 +45,13 @@ describe('formatTime', () => {
 });
 
 describe('computeEffectiveDuration', () => {
+    it('counts a cut only within the recording', () => {
+        // The last frame's cell ends at 3.2 s in a 3.115 s recording
+        expect(computeEffectiveDuration(3.115, [{ startTime: 2.2, endTime: 3.2 }])).toBeCloseTo(
+            2.2
+        );
+    });
+
     it('returns the full duration when nothing is deleted', () => {
         expect(computeEffectiveDuration(10, [])).toBe(10);
     });
@@ -77,6 +98,13 @@ describe('effectiveToRawTime', () => {
 
     it('clamps to the duration', () => {
         expect(effectiveToRawTime(100, [], 10)).toBe(10);
+    });
+
+    it('maps a time on a cut start to the kept frame after the cut', () => {
+        // The opening two seconds cut: effective 0 is raw 2, not inside the cut
+        expect(effectiveToRawTime(0, [{ startTime: 0, endTime: 2 }], 10)).toBe(2);
+        // Exactly where a mid cut starts: the frame after it
+        expect(effectiveToRawTime(1, [{ startTime: 1, endTime: 3 }], 10)).toBe(3);
     });
 });
 
@@ -127,36 +155,6 @@ describe('computeDeletedCells / computeVisibleCells', () => {
     });
 });
 
-describe('computeVirtualWindow', () => {
-    it('clamps to the available range with a 5-cell overscan', () => {
-        const { posStart, posEnd } = computeVirtualWindow(0, 400, 100);
-        expect(posStart).toBe(0);
-        expect(posEnd).toBe(Math.min(99, Math.ceil(400 / CELL_STRIDE) + 5));
-    });
-
-    it('offsets the window when scrolled', () => {
-        const scrollLeft = 20 * CELL_STRIDE;
-        const { posStart } = computeVirtualWindow(scrollLeft, 400, 100);
-        expect(posStart).toBe(15); // floor(20) - 5
-    });
-});
-
-describe('computeTimestampLabels', () => {
-    it('produces roughly 8 evenly spaced labels', () => {
-        const visible = Array.from({ length: 80 }, (_, i) => i);
-        const labels = computeTimestampLabels(visible);
-        expect(labels.length).toBeGreaterThan(0);
-        expect(labels[0]).toEqual({ visibleIndex: 0, label: '00:00' });
-        // spacing is a constant stride
-        const stride = labels[1].visibleIndex - labels[0].visibleIndex;
-        expect(stride).toBe(Math.max(1, Math.round(visible.length / 8)));
-    });
-
-    it('handles an empty strip', () => {
-        expect(computeTimestampLabels([])).toEqual([]);
-    });
-});
-
 describe('selectionToRange', () => {
     it('spans from the first cell start to just past the last cell', () => {
         const range = selectionToRange(new Set([3, 4, 5]));
@@ -168,5 +166,170 @@ describe('selectionToRange', () => {
         const range = selectionToRange(new Set([5, 3, 4]));
         expect(range.startTime).toBeCloseTo(0.6);
         expect(range.endTime).toBeCloseTo(1.2);
+    });
+});
+
+describe('zoom', () => {
+    it('has three levels, most detailed first', () => {
+        expect(ZOOM_LEVELS).toEqual([0.2, 1, 5]);
+    });
+
+    it('names a level as seconds a frame', () => {
+        expect(zoomLabel(0.2)).toBe('0.2 s a frame');
+        expect(zoomLabel(5)).toBe('5 s a frame');
+    });
+});
+
+describe('cut history', () => {
+    const a = { startTime: 1, endTime: 2 };
+    const b = { startTime: 5, endTime: 6 };
+
+    it('starts with no cuts and nothing to undo or redo', () => {
+        const h = emptyHistory();
+        expect(currentCuts(h)).toEqual([]);
+        expect(canUndo(h)).toBe(false);
+        expect(canRedo(h)).toBe(false);
+    });
+
+    it('undoes and redoes cuts in order', () => {
+        const h = addCut(addCut(emptyHistory(), b), a);
+        expect(currentCuts(h)).toEqual([a, b]);
+        const back = undo(h);
+        expect(currentCuts(back)).toEqual([b]);
+        expect(canRedo(back)).toBe(true);
+        expect(currentCuts(redo(back))).toEqual([a, b]);
+    });
+
+    it('drops what could be redone once a new cut is made', () => {
+        const h = addCut(undo(addCut(emptyHistory(), a)), b);
+        expect(currentCuts(h)).toEqual([b]);
+        expect(canRedo(h)).toBe(false);
+    });
+
+    it('stays put when there is nothing to step to', () => {
+        const h = emptyHistory();
+        expect(undo(h)).toBe(h);
+        expect(redo(h)).toBe(h);
+    });
+
+    it('merges a cut with any it overlaps or touches', () => {
+        const h = addCut(addCut(emptyHistory(), a), { startTime: 2, endTime: 3 });
+        expect(currentCuts(h)).toEqual([{ startTime: 1, endTime: 3 }]);
+    });
+
+    it('restores a cut as an undoable step', () => {
+        const cut = addCut(addCut(emptyHistory(), a), b);
+        const restored = restoreCut(cut, 0);
+        expect(currentCuts(restored)).toEqual([b]);
+        expect(currentCuts(undo(restored))).toEqual([a, b]);
+    });
+});
+
+describe('exportedFileShown', () => {
+    const a = { startTime: 1, endTime: 2 };
+    const b = { startTime: 5, endTime: 6 };
+    const name = 'youdemo-2026-10-17-215000.webm';
+    const exportedAt = (h: ReturnType<typeof emptyHistory>) => ({ name, edits: h.edits });
+
+    it('names the file while the edit is the one exported', () => {
+        const h = addCut(emptyHistory(), a);
+        expect(exportedFileShown(exportedAt(h), h)).toBe(name);
+    });
+
+    it('closes once dismissed', () => {
+        expect(exportedFileShown(null, emptyHistory())).toBeNull();
+    });
+
+    it('closes on a cut', () => {
+        const h = addCut(emptyHistory(), a);
+        expect(exportedFileShown(exportedAt(h), addCut(h, b))).toBeNull();
+    });
+
+    it('closes on Undo, Redo and restoring a cut', () => {
+        const h = addCut(addCut(emptyHistory(), a), b);
+        const back = undo(h);
+        expect(exportedFileShown(exportedAt(h), back)).toBeNull();
+        expect(exportedFileShown(exportedAt(h), restoreCut(h, 0))).toBeNull();
+        expect(exportedFileShown(exportedAt(back), redo(back))).toBeNull();
+    });
+
+    it('stays closed when Undo then Redo returns to the exported cuts', () => {
+        const h = addCut(emptyHistory(), a);
+        expect(exportedFileShown(exportedAt(h), redo(undo(h)))).toBeNull();
+    });
+
+    it('stays open when Undo or Redo has nothing to step to', () => {
+        const h = emptyHistory();
+        expect(exportedFileShown(exportedAt(h), redo(undo(h)))).toBe(name);
+    });
+});
+
+describe('stripLayout', () => {
+    it('lays a frame every interval, a stride apart', () => {
+        const { entries, width } = stripLayout(1, [], 0.2);
+        expect(entries.map((e) => e.kind === 'frame' && e.cell)).toEqual([0, 1, 2, 3, 4]);
+        expect(entries.map((e) => e.x)).toEqual([0, 1, 2, 3, 4].map((i) => i * CELL_STRIDE));
+        expect(width).toBe(5 * CELL_STRIDE - 3);
+    });
+
+    it('leaves out cut frames and marks the cut where it was made', () => {
+        const { entries } = stripLayout(2, [{ startTime: 0.4, endTime: 1 }], 0.2);
+        expect(entries.map((e) => (e.kind === 'cut' ? `cut ${e.seconds}` : e.cell))).toEqual([
+            0,
+            1,
+            'cut 0.6',
+            5,
+            6,
+            7,
+            8,
+            9
+        ]);
+        const marker = entries[2];
+        expect(entries[3].x - marker.x).toBe(CUT_STRIDE);
+    });
+
+    it('keys every zoom level by 0.2 s cell', () => {
+        const { entries } = stripLayout(10, [], 5);
+        expect(entries.map((e) => e.kind === 'frame' && e.base)).toEqual([0, 25]);
+    });
+
+    it('marks a cut at the very end', () => {
+        const { entries } = stripLayout(1, [{ startTime: 0.6, endTime: 1 }], 0.2);
+        expect(entries.at(-1)?.kind).toBe('cut');
+    });
+});
+
+describe('entriesInView', () => {
+    it('keeps the frames overlapping the view', () => {
+        const { entries } = stripLayout(20, [], 0.2);
+        const view = entriesInView(entries, 10 * CELL_STRIDE, 3 * CELL_STRIDE, 0);
+        expect(view.map((e) => e.kind === 'frame' && e.cell)).toEqual([10, 11, 12, 13]);
+    });
+});
+
+describe('frameAt', () => {
+    it('finds the frame showing at a time, skipping cut ones', () => {
+        const { entries } = stripLayout(2, [{ startTime: 0.4, endTime: 1 }], 0.2);
+        expect(frameAt(entries, 0.3)).toMatchObject({ cell: 1 });
+        expect(frameAt(entries, 1.1)).toMatchObject({ cell: 5 });
+    });
+});
+
+describe('overviewGeometry', () => {
+    it('places the window, cuts and playhead on the kept timeline', () => {
+        const cuts = [{ startTime: 2, endTime: 4 }];
+        const g = overviewGeometry(1000, 250, 500, cuts, 10, 6);
+        expect(g.windowStart).toBe(25);
+        expect(g.windowWidth).toBe(50);
+        // 8 s kept: the cut sits at 2 s, the playhead at 6 − 2 = 4 s
+        expect(g.cuts).toEqual([25]);
+        expect(g.playhead).toBe(50);
+    });
+
+    it('fills the bar when the strip fits', () => {
+        expect(overviewGeometry(400, 0, 800, [], 10, 0)).toMatchObject({
+            windowStart: 0,
+            windowWidth: 100
+        });
     });
 });

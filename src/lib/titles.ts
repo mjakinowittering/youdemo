@@ -5,7 +5,7 @@
  * the only place a title string is spelled out — no component writes
  * `document.title` itself.
  */
-import type { AppState } from '$lib/types.js';
+import type { AppState, EditorPhase } from '$lib/types.js';
 
 export const APP_NAME = 'YouDemo';
 
@@ -16,8 +16,11 @@ export interface TitleContext {
     count?: number;
     /** Recording: seconds elapsed. */
     elapsed?: number;
-    /** Stitching / processing: 0–100. */
+    /** Editor: which phase, and its progress (0–100) while joining or exporting. */
+    phase?: EditorPhase;
     progress?: number;
+    /** Editor: the Exported notice is showing. */
+    exported?: boolean;
 }
 
 /** Seconds → `mm:ss`. Also drives the on-screen REC badge in `Recording`. */
@@ -37,7 +40,14 @@ function suffixed(text: string): string {
 }
 
 export function titleFor(state: AppState, ctx: TitleContext = {}): string {
-    const { hasError = false, count = 3, elapsed = 0, progress = 0 } = ctx;
+    const {
+        hasError = false,
+        count = 3,
+        elapsed = 0,
+        phase = 'ready',
+        progress = 0,
+        exported = false
+    } = ctx;
 
     if (hasError) return suffixed('Something went wrong');
 
@@ -47,18 +57,15 @@ export function titleFor(state: AppState, ctx: TitleContext = {}): string {
         case 'setup':
             return suffixed('Ready to record');
         case 'countdown':
-            return suffixed(`${count}…`);
+            // The number leads, so it survives a truncated tab
+            return suffixed(`${count}`);
         case 'recording':
             return suffixed(`● REC ${formatElapsed(elapsed)}`);
         case 'review':
             return suffixed('Review recording');
-        case 'stitching':
-            return suffixed(`Combining… ${progress}%`);
         case 'editor':
-            return suffixed('Editing');
-        case 'processing':
-            return suffixed(`Exporting… ${progress}%`);
-        case 'done':
-            return suffixed('Download ready');
+            if (phase === 'joining') return suffixed(`Joining takes… ${progress}%`);
+            if (phase === 'exporting') return suffixed(`Exporting… ${progress}%`);
+            return suffixed(exported ? 'Exported' : 'Editing');
     }
 }

@@ -1,4 +1,4 @@
-import { computeEffectiveDuration } from '../src/lib/editorMath';
+import { computeEffectiveDuration, SAMPLE_INTERVAL } from '../src/lib/editorMath';
 import type { DeletedRange } from '../src/lib/types';
 
 import { expect, newAppPage, test, type AppOptions } from './fixtures/app';
@@ -7,7 +7,7 @@ import {
     longestFreeze,
     losslessShare,
     maxFrameGap,
-    maxKeyframeGap,
+    maxKeyframeLag,
     takeLength
 } from './lib/checks';
 import { Inspector, type Inspection } from './lib/inspect';
@@ -39,12 +39,15 @@ function exportScenario(title: string, scenario: Scenario): void {
         let takes: Inspection[];
         let deleted: DeletedRange[];
         let filename: string;
+        let titles: string[];
 
         test.beforeAll(async ({ browser }, testInfo) => {
             testInfo.setTimeout(240_000);
             const app = await newAppPage(browser, testInfo, scenario.options);
             await app.goto();
-            for (const seconds of scenario.takes) await app.recordTake(seconds);
+            // Different screens need picking again for each take
+            const newShare = !!scenario.options?.sizes;
+            for (const seconds of scenario.takes) await app.recordTake(seconds, newShare);
             const takeFiles = await app.readTakes(scenario.takes.length);
             await app.openEditor();
             for (const [from, to] of scenario.cuts ?? []) await app.cut(from, to);
@@ -54,11 +57,24 @@ function exportScenario(title: string, scenario: Scenario): void {
             if (scenario.slowExport) {
                 await cdp.send('Emulation.setCPUThrottlingRate', { rate: scenario.slowExport });
             }
+            // Every title the tab shows while exporting, as it changes
+            await app.page.evaluate(() => {
+                const seen: string[] = [];
+                (window as unknown as { __titles: string[] }).__titles = seen;
+                new MutationObserver(() => seen.push(document.title)).observe(document.head, {
+                    subtree: true,
+                    childList: true,
+                    characterData: true
+                });
+            });
             const started = Date.now();
             const file = await app.exportAndDownload();
             const exportMs = Date.now() - started;
             await cdp.send('Emulation.setCPUThrottlingRate', { rate: 1 });
             filename = file.filename;
+            titles = await app.page.evaluate(
+                () => (window as unknown as { __titles: string[] }).__titles
+            );
 
             const inspector = await Inspector.open(await app.page.context().newPage());
             takes = [];
@@ -71,7 +87,7 @@ function exportScenario(title: string, scenario: Scenario): void {
                     takeFrameGap: Math.max(...takes.map(maxFrameGap)),
                     longestFreeze: longestFreeze(exported),
                     lossless: losslessShare(exported, takes),
-                    keyframeGap: Math.max(...takes.map(maxKeyframeGap)),
+                    keyframeLag: Math.max(...takes.map(maxKeyframeLag)),
                     exportMs,
                     content: checkContent(exported, takes, deleted),
                     frames: exported.frames.length,
@@ -81,9 +97,22 @@ function exportScenario(title: string, scenario: Scenario): void {
             await app.page.context().close();
         });
 
+        test('shows export progress only when there is work, and it never goes back', () => {
+            const percents = titles
+                .map((t) => /^Exporting… (\d+)%/.exec(t)?.[1])
+                .filter((p) => p !== undefined)
+                .map(Number);
+            if (!scenario.cuts?.length) {
+                expect(percents).toEqual([]);
+                return;
+            }
+            expect(percents.length).toBeGreaterThan(0);
+            expect(percents).toEqual([...percents].sort((a, b) => a - b));
+        });
+
         test('the takes have a keyframe on every editor cell', () => {
             // Cuts copy from the keyframe nearest the cut; see recorder.ts.
-            for (const take of takes) expect(maxKeyframeGap(take)).toBeLessThan(0.22);
+            for (const take of takes) expect(maxKeyframeLag(take)).toBeLessThan(SAMPLE_INTERVAL);
         });
 
         test('plays, with the edited duration', () => {

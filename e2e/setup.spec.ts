@@ -1,7 +1,7 @@
 import { expect, test } from './fixtures/app';
 
 test('opens ready to record', async ({ app }) => {
-    await expect(app.card(/No screen selected/)).toBeVisible();
+    await expect(app.chooseButton).toBeVisible();
     await expect(app.page).toHaveTitle('Ready to record | YouDemo');
 });
 
@@ -9,17 +9,16 @@ test.describe('cancelling the screen picker', () => {
     test.use({ appOptions: { cancel: true } });
 
     test('stays on setup with no error', async ({ app }) => {
-        await app.card(/No screen selected/).click();
-        await expect(app.card(/No screen selected/)).toBeVisible();
+        await app.chooseButton.click();
+        await expect(app.chooseButton).toBeVisible();
         await expect(app.page.getByText('Could not capture screen')).toBeHidden();
-        await expect(app.page.getByText('REC', { exact: true })).toBeHidden();
+        await expect(app.page.getByRole('timer')).toHaveCount(0);
     });
 });
 
 test('mic, camera and blur toggles survive a reload', async ({ app }) => {
     const { page } = app;
     await page.getByRole('button', { name: 'Mute microphone' }).click();
-    // Blur first: its toggle is disabled while the camera is off.
     await page.getByRole('button', { name: 'Enable background blur' }).click();
     await page.getByRole('button', { name: 'Disable camera' }).click();
     await page.reload();

@@ -1,114 +1,86 @@
 ---
 name: editor-timeline
-description: The Editor screen and its sub-components (VideoPlayer, Scrubber, EditorToolbar, FrameStrip, EditorFooter) plus the pure timeline math in editorMath.ts — effective duration/time, deleted ranges, cut selection, frame-strip cells, thumbnails and virtualization. Load when changing playback, seeking, trimming, the frame strip, or anything about how cuts are represented.
+description: The Editor — Editor.svelte (container) over EditorView (the screen from props) and its parts (VideoPlayer, Scrubber, EditorToolbar, OverviewBar, FrameStrip, TimelineLabels, EditorFooter) — plus the pure maths in editorMath.ts: effective time, the undoable cut history, zoom levels, strip layout, overview geometry. Load when changing playback, seeking, trimming, undo/redo, zoom, the frame strip, thumbnails, or how cuts are represented.
 ---
 
 # Editor & timeline
 
-`src/lib/components/Editor/Editor.svelte` is a **shell**: it owns all state and
-composes five presentational children, top to bottom.
+Boards: `docs/design/reference/screens/editor*`; behaviour:
+`docs/design/specs/journey.md` section 7.
 
-| Component           | Role                                                     |
-| ------------------- | -------------------------------------------------------- |
-| `VideoPlayer`       | `<video>`, click-to-toggle, deleted-span skipping         |
-| `Scrubber`          | play/pause, `mm:ss / mm:ss`, range input                  |
-| `EditorToolbar`     | Cut · Delete · "Final: <effectiveDuration>"               |
-| `FrameStrip`        | thumbnail cells, timestamp labels                         |
-| `EditorFooter`      | Back to Review · Discard · Export & Download              |
+## Container and view
 
-It receives one `videoUrl` — the single combined recording (`editorBlob`), see
-`app-shell`. Callbacks out: `onback`, `ondiscard`, `onexport(deletedRanges,
-totalDuration)`.
+- **`EditorView.svelte`** draws the whole screen — breadcrumb, stage, timeline
+  band, footer and the three dialogs — **from props only**, for every phase
+  (`joining`, `ready`, `exporting`, `failed`). The video comes in as a snippet.
+  The Editor stories render it with the boards' numbers as drawn, even where
+  they don't add up (journey.md, Decisions 4).
+- **`Editor.svelte`** is the container: it owns playback (bound to the
+  `<video>` in `VideoPlayer`), trim mode and selection, zoom, strip panning,
+  thumbnails and the dialogs' open state, and works out every display value
+  through `editorMath.ts`. The cut history, phase and export state come from
+  `+page.svelte` (`app-shell`).
 
-## The math lives in `editorMath.ts`
+## The maths lives in `editorMath.ts`
 
-**All timeline maths is pure and already extracted** — no DOM, no video element —
-so it is unit-testable in node (`tests/editorMath.spec.ts`). Do not reimplement any
-of it inside a component; import it.
+Pure, no DOM, unit-tested in `tests/editorMath.spec.ts`. Don't reimplement any
+of it in a component.
 
-| Export                       | Purpose                                                   |
-| ---------------------------- | --------------------------------------------------------- |
-| `computeEffectiveDuration`   | raw duration − sum of deleted spans                       |
-| `computeEffectiveCurrentTime`| raw playhead → kept timeline                              |
-| `effectiveToRawTime`         | inverse — used when the scrubber seeks                    |
-| `resolveSeekTarget`          | snap a time out of a deleted span to the span's end       |
-| `computeCellCount`           | cells for a duration                                      |
-| `computeDeletedCells`        | original cell indices inside deleted spans                |
-| `computeVisibleCells`        | surviving original indices, in order                      |
-| `computeVirtualWindow`       | rendered position range for the current scroll            |
-| `computeTimestampLabels`     | ~8 labels across the visible strip                        |
-| `selectionToRange`           | selected cells → `DeletedRange`                           |
-| `formatTime`                 | `mm:ss`                                                   |
-| Constants                    | `FRAME_RATE` 30, `SAMPLE_INTERVAL` 0.2, `CELL_WIDTH` 80, `CELL_HEIGHT` 64, `CELL_GAP` 3, `CELL_STRIDE` |
+| Export                                   | Purpose                                           |
+| ---------------------------------------- | ------------------------------------------------- |
+| `computeEffectiveDuration` / `…CurrentTime` | raw → kept timeline                            |
+| `effectiveToRawTime`                     | kept → raw (a time on a cut's start maps past it) |
+| `resolveSeekTarget`                      | snap out of a cut to its end                      |
+| `selectionToRange`                       | selected cells at an interval → `DeletedRange`   |
+| `CutHistory`, `emptyHistory`, `currentCuts`, `addCut`, `restoreCut`, `undo`, `redo`, `canUndo`, `canRedo` | the undoable cuts; `addCut` merges overlaps |
+| `ZOOM_LEVELS` (0.2, 1, 5), `zoomLabel`   | seconds a frame                                   |
+| `stripLayout`                            | frames and cut markers with x positions           |
+| `entriesInView`, `frameAt`               | virtualising, the playhead's frame                |
+| `overviewGeometry`                       | the overview bar's window, cuts and playhead in % |
+| `formatTime`, `StripItem`, `StripEntry`, constants | `CELL_STRIDE` 83, `CUT_STRIDE` 14 …     |
 
-The shell wires them into `$derived` — `cellCount`, `currentCell`, `deletedCells`,
-`visibleCells`, `effectiveDuration`, `effectiveCurrentTime`, `canDelete`.
-
-Everything downstream is driven by `effectiveDuration` / `effectiveCurrentTime`,
-**never** raw `video.duration` / `video.currentTime`.
+Everything shown runs off effective (kept) time, never raw `video.duration`.
 
 ## Cuts are non-destructive
 
-Trimming never touches the blob. `deletedRanges: DeletedRange[]` (from
-`types.ts`) is the whole representation; it is handed to `Processing` at export,
-where the kept ranges are re-rendered. See `video-export`.
+Trimming never touches the blob. The cuts are a `DeletedRange[]` at the head of
+the history; export copies the kept ranges (`video-export`). Restoring a cut
+and Remove are history steps, so both undo.
 
-## VideoPlayer
+## Timeline band
 
-- Click (or Enter/Space) anywhere on the video toggles play/pause and flashes a
-  96px `Play`/`Pause` in `text-indigo-500` using the `animate-ping-once` token,
-  cleared after 600ms. See `tailwind-theme`.
-- `paused`, `currentTime` and `duration` are `$bindable`, bound straight to the
-  `<video>` — the shell reads them as its source of truth.
-- **Deleted-span skipping** happens in a `timeupdate` listener: it calls
-  `resolveSeekTarget`, returns immediately if nothing changed, and otherwise jumps.
-  A span that runs to the end pauses and parks just before it. The jump is wrapped
-  in `requestAnimationFrame` with a `Math.abs(videoEl.currentTime - pos) < 0.1`
-  guard so a user seek that lands mid-frame isn't overridden.
+- **Scrubber**: play/pause, "mm:ss / mm:ss", and a shadcn `Slider` styled as
+  the board's native range (the root is the bordered track, with the range
+  input's 2px margin).
+- **EditorToolbar**: Trim (a `Toggle`; "Trimming" when pressed), Undo + Redo,
+  then the zoom group, or in trim mode "Select the frames to remove" and
+  **Remove N s**.
+- **OverviewBar**: the whole kept recording; click or drag pans the strip.
+- **FrameStrip**: the row of frames (80×64, every one a button, a skeleton
+  until its thumbnail arrives) and cut markers with a round restore button. It
+  doesn't clip or scroll itself: the Editor wraps it in an `overflow-hidden`
+  band, pans it with `offset` (a transform) and virtualises with `leading`.
+  Wheel input pans.
+- **TimelineLabels**: start and middle of the view, "mm:ss after cuts".
 
-## FrameStrip
+## Trim mode
 
-Cells are `CELL_WIDTH × CELL_HEIGHT` with `CELL_GAP` spacing (`CELL_STRIDE` is the
-sum). Cell state is a **border plus an absolutely-positioned tint overlay**:
+Click a frame to anchor, another to select the range. Remove cuts it and
+stays in trim mode. While trimming, New recording hides and the footer swaps
+Export and Discard (sliding down, 200ms, instant under reduced motion) for
+"Export and discard are hidden while you trim." and **Done trimming**.
 
-| State                | Classes                                              |
-| -------------------- | ---------------------------------------------------- |
-| Default              | `border-2 border-border rounded-md cursor-pointer`   |
-| Active (current)     | `border-indigo-500` + overlay `bg-indigo-500/30`     |
-| Selected (edit mode) | `border-red-500` + overlay `bg-red-500/20`           |
-| Collapsing           | `mr-0! w-0! opacity-0` over `transition-[width,margin,opacity] duration-250` |
-
-- **No playhead line** — the current cell's indigo border and tint mark the
-  playhead.
-- **Virtualized** — only the window from `computeVirtualWindow` (±5 cells of
-  slack) renders, behind a left spacer div, with the outer width fixed at
-  `visibleCells.length * CELL_STRIDE`.
-- Cells are keyed by **original** index while positioned by rendered index;
-  `cellRenderPos` maps between them. Keep that distinction — mixing them up
-  misplaces the current cell after a cut.
-- Missing thumbnails render an `animate-pulse` placeholder.
-- An `$effect` keeps the current cell centred while playing.
+Out of trim mode a click on a frame seeks. While playing, the strip follows
+the playhead.
 
 ## Thumbnails
 
-Generated in the shell's `onMount`: a detached `<video>` is seeked to each sample
-point and drawn to a canvas at cell size, stored as a JPEG data URL (quality 0.6)
-in a `SvelteMap`. `await setTimeout(0)` between frames yields to the main thread;
-a `cancelled` flag stops the loop on unmount. Browser-bound by nature — this is
-the one part of the Editor that isn't pure.
+Generated in the container: a detached `<video>` seeks to each frame's 0.2 s
+cell (`base`) and draws it at cell size into a JPEG data URL. The frames
+nearest the middle of the view go first, then outwards; results are flushed
+into the `SvelteMap` in batches (8, or every 150ms). Every zoom level shares
+them.
 
-## Edit mode
+## No shortcuts
 
-1. **Enter** — Cut button; it switches to the `default` variant with
-   `bg-indigo-500 text-white` and its label becomes "Selecting…".
-2. **Select** — click an anchor cell, then an end cell; the inclusive range turns
-   red. Clicking outside edit mode seeks instead.
-3. **Delete** — the destructive Delete button appears only when
-   `canDelete` (edit mode + a non-empty selection). It sets `collapsingCells`,
-   waits 250ms for the width animation, then appends `selectionToRange(...)` to
-   `deletedRanges` and clears the selection.
-4. **Auto-exit** — `editMode` returns to `false` after a deletion, every time.
-
-`deletedRanges` is append-only here; there is no un-delete.
-
-There is **no Delete-key shortcut** — see the keyboard rule in `CLAUDE.md`.
+No Delete key or other keyboard shortcut — see `CLAUDE.md`.

@@ -1,5 +1,5 @@
 import { effectiveToRawTime, resolveSeekTarget } from '../../src/lib/editorMath';
-import { maxKeyframeGap as keyframeGap } from '../../src/lib/remuxPlan';
+import { maxKeyframeLag as keyframeLag } from '../../src/lib/remuxPlan';
 import type { DeletedRange } from '../../src/lib/types';
 
 import type { Inspection } from './inspect';
@@ -62,15 +62,9 @@ function joinedFrames(takes: Inspection[]): { code: number; joined: number }[] {
     return out;
 }
 
-/** Longest stretch of a file's video without a keyframe (see remuxPlan.ts). */
-export function maxKeyframeGap(file: Inspection): number {
-    return keyframeGap(
-        file.packets.map((p, i, all) => ({
-            ts: p.ts,
-            key: p.key,
-            dur: (all[i + 1]?.ts ?? p.ts + 1 / 30) - p.ts
-        }))
-    );
+/** Longest time a frame of the file sits after its keyframe (see remuxPlan.ts). */
+export function maxKeyframeLag(file: Inspection): number {
+    return keyframeLag(file.packets.map((p) => ({ ts: p.ts, key: p.key, dur: 0 })));
 }
 
 export interface ContentReport {

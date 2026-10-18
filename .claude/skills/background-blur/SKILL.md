@@ -75,16 +75,18 @@ values.
 
 1. Keyed on `blurOn` + `webcamStream`: creates the processor and publishes
    `processedWebcamStream`; the cleanup destroys it. Because it depends on the
-   stream, cam-off, `releaseCamera()` and full reset all tear blur down for free,
-   and `armCamera()` rebuilds it. **Do not add remember/restore logic.**
+   stream, turning the camera off, changing device and leaving for the Editor all
+   tear blur down for free, and the camera coming back rebuilds it. **Do not add
+   remember/restore logic.**
 2. Keyed on `blurIntensity`: persists to `ydBlurIntensity` and calls
    `setIntensity()` on the running processor (via `untrack`, so it doesn't
    re-create anything).
 
 `blurLoading` is true from the start of creation until the processor is published,
-creation fails, or the effect is torn down. It goes to Setup only, where
-`WebcamBubble` dims the raw preview under a spinner (see `capture-screens`); no
-other screen can be mid-load.
+creation fails, or the effect is torn down. It goes to the screens with a live
+dock, Setup and Review, where `WebcamBubble` dims the raw preview under a
+spinner (see `capture-screens`); the dock is locked while counting down and
+recording, so no other screen can start a load.
 
 `startRecording()` awaits a `blurReady` promise so an in-flight processor is locked
 into the recording from the first frame.

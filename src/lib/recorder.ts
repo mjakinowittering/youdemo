@@ -2,6 +2,8 @@ import fixWebmDuration from 'fix-webm-duration';
 
 import { BUBBLE_FRAC, bubbleCoords, type BubblePosition } from '$lib/bubbleGeometry.js';
 import { FRAME_RATE, SAMPLE_INTERVAL } from '$lib/editorMath.js';
+import type { Take } from '$lib/types.js';
+import { blackMargins, NO_MARGINS, type Margins } from '$lib/windowCrop.js';
 
 export interface RecorderOptions {
     screenStream: MediaStream;
@@ -32,12 +34,14 @@ const AUDIO_BITS_PER_SECOND = 128_000;
  */
 export const DISPLAY_MEDIA_OPTIONS: DisplayMediaStreamOptions & { selfBrowserSurface: 'exclude' } =
     { video: true, audio: true, selfBrowserSurface: 'exclude' };
-// A keyframe on every editor cell (6 frames = 0.2 s), so export can cut by
-// copying packets: a copied stretch must start on a keyframe. Chrome's default
-// is a single keyframe at the start. A count, not a duration — 200 ms rounds up
-// to 7-frame groups — and Chrome counts the frames *between* keyframes, hence
-// the − 1 below.
-const KEYFRAME_EVERY = Math.round(SAMPLE_INTERVAL * FRAME_RATE);
+// A keyframe on every editor cell, so export can cut by copying packets: a
+// copied stretch must start on a keyframe. Chrome's default is a single
+// keyframe at the start. Chrome keys the first frame at least this long after
+// the last keyframe: half a frame short of a cell, so at 30 fps that's every
+// 6th frame (0.2 s) — a full 200 ms would miss the 6th by a hair and make
+// 7-frame groups. A duration, not a count: when the machine falls behind and
+// frames come late, a count would stretch the groups past a cell.
+const KEYFRAME_AFTER_MS = (SAMPLE_INTERVAL - 0.5 / FRAME_RATE) * 1000;
 
 // ─── singleton state ──────────────────────────────────────────────────────────
 
@@ -54,7 +58,6 @@ let _destination: MediaStreamAudioDestinationNode | null = null;
 let _camEnabled = false;
 let _bubblePos: BubblePosition = 'tr';
 let _recordingStartTime = 0;
-let _screenStream: MediaStream | null = null;
 let _userStream: MediaStream | null = null;
 let _canvasCaptureTrack: CanvasCaptureMediaStreamTrack | null = null;
 // Offscreen canvas the webcam bubble is masked on before being blitted to the
@@ -63,6 +66,9 @@ let _canvasCaptureTrack: CanvasCaptureMediaStreamTrack | null = null;
 let _bubbleCanvas: HTMLCanvasElement | null = null;
 let _bubbleCtx: CanvasRenderingContext2D | null = null;
 let _bubbleMask: CanvasGradient | null = null;
+// A window share's shadow margin, left out of every frame (windowCrop.ts)
+let _isWindowShare = false;
+let _margins: Margins = NO_MARGINS;
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
 
@@ -85,6 +91,22 @@ function cappedDimensions(srcW: number, srcH: number): { width: number; height: 
     };
 }
 
+// Measures the margin a window share brought with it, from the frame showing now.
+// Runs at start and when the window is resized, never per frame.
+function measureMargins(): void {
+    if (!_screenVideo || !_isWindowShare) return;
+    const w = _screenVideo.videoWidth;
+    const h = _screenVideo.videoHeight;
+    if (!w || !h) return;
+    const probe = document.createElement('canvas');
+    probe.width = w;
+    probe.height = h;
+    const ctx = probe.getContext('2d', { willReadFrequently: true });
+    if (!ctx) return;
+    ctx.drawImage(_screenVideo, 0, 0);
+    _margins = blackMargins(ctx.getImageData(0, 0, w, h).data, w, h);
+}
+
 function videoReady(video: HTMLVideoElement): Promise<void> {
     return new Promise((resolve) => {
         if (video.readyState >= 2) resolve();
@@ -98,7 +120,10 @@ function drawFrame(): void {
     const h = _canvas.height;
 
     if (_screenVideo.readyState >= 2) {
-        _ctx.drawImage(_screenVideo, 0, 0, w, h);
+        const { top, right, bottom, left } = _margins;
+        const sw = _screenVideo.videoWidth - left - right;
+        const sh = _screenVideo.videoHeight - top - bottom;
+        _ctx.drawImage(_screenVideo, left, top, sw, sh, 0, 0, w, h);
     }
 
     if (
@@ -140,14 +165,11 @@ function drawFrame(): void {
 }
 
 function cleanup(): void {
-    // The screen stream is owned by the recorder; the raw webcam stream is owned
-    // upstream (+page) and is intentionally NOT stopped here so it survives a
-    // resume. Only the mic stream acquired below belongs to the recorder.
-    if (_screenStream) {
-        _screenStream.getTracks().forEach((t) => t.stop());
-        _screenStream = null;
-    }
+    // The screen share and the raw webcam stream are owned upstream (+page) and
+    // are intentionally NOT stopped here: both outlive a take, so the next take
+    // can reuse them. Only the mic stream acquired below belongs to the recorder.
     if (_screenVideo) {
+        _screenVideo.removeEventListener('resize', measureMargins);
         _screenVideo.srcObject = null;
         _screenVideo = null;
     }
@@ -170,6 +192,8 @@ function cleanup(): void {
     _bubbleCanvas = null;
     _bubbleCtx = null;
     _bubbleMask = null;
+    _isWindowShare = false;
+    _margins = NO_MARGINS;
 }
 
 // ─── public API ───────────────────────────────────────────────────────────────
@@ -186,7 +210,6 @@ export async function start(options: RecorderOptions): Promise<MediaStream> {
     _chunks = [];
 
     // Screen video for drawImage
-    _screenStream = screenStream;
     _screenVideo = document.createElement('video');
     _screenVideo.srcObject = screenStream;
     _screenVideo.muted = true;
@@ -251,10 +274,17 @@ export async function start(options: RecorderOptions): Promise<MediaStream> {
     if (_webcamVideo) readyPromises.push(videoReady(_webcamVideo));
     await Promise.all(readyPromises);
 
+    // A window share is recorded without its shadow margin, measured again
+    // whenever the window is resized; the canvas keeps its first size
+    _isWindowShare = screenStream.getVideoTracks()[0]?.getSettings().displaySurface === 'window';
+    measureMargins();
+    _screenVideo.addEventListener('resize', measureMargins);
+
     // Size the canvas now that the screen video's intrinsic dimensions are known
+    const { top, right, bottom, left } = _margins;
     const { width, height } = cappedDimensions(
-        _screenVideo.videoWidth || 1920,
-        _screenVideo.videoHeight || 1080
+        (_screenVideo.videoWidth || 1920) - left - right,
+        (_screenVideo.videoHeight || 1080) - top - bottom
     );
     _canvas.width = width;
     _canvas.height = height;
@@ -281,11 +311,11 @@ export async function start(options: RecorderOptions): Promise<MediaStream> {
     _destination.stream.getAudioTracks().forEach((t) => canvasStream.addTrack(t));
 
     // Not yet in TypeScript's DOM typings; Chromium supports it.
-    const mediaOptions: MediaRecorderOptions & { videoKeyFrameIntervalCount: number } = {
+    const mediaOptions: MediaRecorderOptions & { videoKeyFrameIntervalDuration: number } = {
         mimeType: getSupportedMimeType(),
         videoBitsPerSecond: VIDEO_BITS_PER_SECOND,
         audioBitsPerSecond: AUDIO_BITS_PER_SECOND,
-        videoKeyFrameIntervalCount: KEYFRAME_EVERY - 1
+        videoKeyFrameIntervalDuration: KEYFRAME_AFTER_MS
     };
     _recorder = new MediaRecorder(canvasStream, mediaOptions);
     _recorder.ondataavailable = (e) => {
@@ -298,21 +328,17 @@ export async function start(options: RecorderOptions): Promise<MediaStream> {
     return new MediaStream([_canvasCaptureTrack]);
 }
 
-export function stop(): Promise<Blob> {
+/** Stops recording and resolves with the take: its WebM and duration. */
+export function stop(): Promise<Take> {
     const durationMs = Date.now() - _recordingStartTime;
     return new Promise((resolve) => {
         if (!_recorder) {
-            resolve(new Blob([], { type: 'video/webm' }));
+            resolve({ blob: new Blob([], { type: 'video/webm' }), duration: 0 });
             return;
         }
         if (_intervalId !== null) {
             clearInterval(_intervalId);
             _intervalId = null;
-        }
-        // Stop the screen stream immediately to release the browser sharing indicator.
-        if (_screenStream) {
-            _screenStream.getTracks().forEach((t) => t.stop());
-            _screenStream = null;
         }
         if (_userStream) {
             _userStream.getTracks().forEach((t) => t.stop());
@@ -322,7 +348,7 @@ export function stop(): Promise<Blob> {
             const blob = new Blob(_chunks, { type: 'video/webm' });
             const fixedBlob = await fixWebmDuration(blob, durationMs);
             cleanup();
-            resolve(fixedBlob);
+            resolve({ blob: fixedBlob, duration: durationMs / 1000 });
         };
         if (_recorder.state !== 'inactive') _recorder.stop();
         else _recorder.onstop(new Event('stop'));

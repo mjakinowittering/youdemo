@@ -1,48 +1,63 @@
 <script lang="ts">
-    import Pause from '@lucide/svelte/icons/pause';
-    import Play from '@lucide/svelte/icons/play';
+    import { PauseIcon, PlayIcon } from '@hugeicons/core-free-icons';
 
+    import Icon from '$lib/components/Icon.svelte';
     import { Button } from '$lib/components/ui/button/index.js';
+    import { Slider } from '$lib/components/ui/slider/index.js';
 
-    import { formatTime, FRAME_RATE } from '$lib/editorMath.js';
+    import { cn } from '$lib/utils.js';
 
     interface Props {
-        paused?: boolean;
-        effectiveCurrentTime?: number;
-        effectiveDuration?: number;
-        frameRate?: number;
-        ontoggleplay?: () => void;
-        onseek?: (effectiveTime: number) => void;
+        paused: boolean;
+        /** "mm:ss / mm:ss", after cuts. */
+        time: string;
+        /** Playhead along the kept timeline, 0–100. */
+        percent: number;
+        disabled?: boolean;
+        ontoggleplay: () => void;
+        /** A new playhead, 0–100 along the kept timeline. */
+        onseek: (percent: number) => void;
+        class?: string;
     }
 
     let {
-        paused = true,
-        effectiveCurrentTime = 0,
-        effectiveDuration = 0,
-        frameRate = FRAME_RATE,
+        paused,
+        time,
+        percent,
+        disabled = false,
         ontoggleplay,
-        onseek
+        onseek,
+        class: className
     }: Props = $props();
+
+    // The slider snaps any value off its 0.1 step and reports the snapped value
+    // as a change, which would seek on every time update during playback. Fed a
+    // value already on a step, it reports only the user's moves.
+    let onStep = $derived(Math.round(percent * 10) / 10);
 </script>
 
-<div class="flex items-center gap-3 border-t px-4 py-2">
-    <Button variant="ghost" size="icon-lg" onclick={() => ontoggleplay?.()}>
-        {#if paused}
-            <Play class="size-4" />
-        {:else}
-            <Pause class="size-4" />
-        {/if}
+<!-- Play/pause, the time, and the seek slider: 12 tall, ink outline, tangerine
+     fill, a 22px card thumb on a 2px ink shadow. The 2px margin is the browser's
+     own around a range input, which the design draws. -->
+<div class={cn('flex items-center gap-3.5', className)}>
+    <Button
+        variant="ghost"
+        size="icon"
+        {disabled}
+        aria-label={paused ? 'Play' : 'Pause'}
+        onclick={ontoggleplay}
+    >
+        <Icon icon={paused ? PlayIcon : PauseIcon} />
     </Button>
-    <span class="min-w-22.5 font-mono text-sm text-muted-foreground tabular-nums">
-        {formatTime(effectiveCurrentTime)} / {formatTime(effectiveDuration)}
-    </span>
-    <input
-        type="range"
-        class="flex-1 accent-indigo-500"
-        min="0"
-        max={effectiveDuration || 1}
-        step={1 / frameRate}
-        value={effectiveCurrentTime}
-        oninput={(e) => onseek?.(parseFloat(e.currentTarget.value))}
+    <span class="min-w-27.5 text-small font-semibold text-yd-ink">{time}</span>
+    <Slider
+        type="single"
+        value={onStep}
+        max={100}
+        step={0.1}
+        {disabled}
+        aria-label="Seek"
+        onValueChange={onseek}
+        class="m-0.5 h-3 flex-1 rounded-full border-[1.5px] border-solid border-yd-ink bg-yd-card **:data-[slot=slider-range]:bg-yd-accent *:data-[slot=slider-thumb]:size-5.5 *:data-[slot=slider-thumb]:border-2 *:data-[slot=slider-thumb]:border-solid *:data-[slot=slider-thumb]:border-yd-ink *:data-[slot=slider-thumb]:bg-yd-card *:data-[slot=slider-thumb]:shadow-offset-press *:data-[slot=slider-thumb]:ring-0 *:data-[slot=slider-thumb]:transition-none *:data-[slot=slider-thumb]:disabled:opacity-100 *:data-[slot=slider-track]:h-full *:data-[slot=slider-track]:bg-transparent data-disabled:opacity-100"
     />
 </div>
