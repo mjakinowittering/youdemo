@@ -53,15 +53,19 @@ The E2E fake can share a window with a margin (`windowMargins`).
 **Bitrates:** `videoBitsPerSecond: 5_000_000`, `audioBitsPerSecond: 128_000`.
 `VIDEO_BITS_PER_SECOND` is exported: export's re-encode fallback reuses it.
 
-**A keyframe on every editor cell** — `videoKeyFrameIntervalCount` is one less
-than `KEYFRAME_EVERY`, which is `SAMPLE_INTERVAL × FRAME_RATE` (6 frames = 0.2 s).
-Export cuts by copying packets, and a copied stretch must start on a keyframe;
-Chrome's default is one keyframe at the start, which would make every cut snap
-to 0 or force a re-encode. Chrome counts the frames *between* keyframes (5 gives
-a key every 6th frame), and a duration (`videoKeyFrameIntervalDuration: 200`)
-rounds up to 7-frame groups. The option isn't in TypeScript's DOM typings yet,
-hence the intersection type. The E2E export suite checks the spacing. See
-`video-export`.
+**A keyframe on every editor cell, by time** —
+`videoKeyFrameIntervalDuration: KEYFRAME_AFTER_MS`, half a frame short of
+`SAMPLE_INTERVAL` (≈183 ms). Export cuts by copying packets, and a copied
+stretch must start on a keyframe; Chrome's default is one keyframe at the start,
+which would make every cut snap to 0 or force a re-encode. Chrome keys the first
+frame at least that long after the last keyframe (`now >= last + duration`), so
+at 30 fps it's every 6th frame (0.2 s); a full 200 ms misses the 6th frame by a
+hair and makes 7-frame groups. **Never a count** (`videoKeyFrameIntervalCount`):
+when the machine falls behind and frames come late, 6 frames span more than a
+cell and the keys drift apart — on the CI runner up to 0.46 s. Chrome takes one
+of the two options, not both. The option isn't in TypeScript's DOM typings yet,
+hence the intersection type. The E2E export suite checks that no frame sits a
+cell or more after its keyframe (`maxKeyframeLag`). See `video-export`.
 
 **Codec probe** — first supported wins:
 

@@ -118,19 +118,19 @@ export function cutPlan(take: TrackPackets, deleted: DeletedRange[]): RemuxPlan 
     return plan;
 }
 
-/** Longest stretch of a track without a keyframe, including the run to its end. */
-export function maxKeyframeGap(video: PacketMeta[]): number {
-    let gap = 0;
+/**
+ * Longest time a frame sits after the keyframe before it: how far a cut can be
+ * from a keyframe where there is footage. A stall with no frames in it doesn't
+ * count — there was no frame to key.
+ */
+export function maxKeyframeLag(video: PacketMeta[]): number {
+    let lag = 0;
     let lastKey = video[0]?.ts ?? 0;
     for (const p of video) {
-        if (p.key) {
-            gap = Math.max(gap, p.ts - lastKey);
-            lastKey = p.ts;
-        }
+        if (p.key) lastKey = p.ts;
+        else lag = Math.max(lag, p.ts - lastKey);
     }
-    const last = video.at(-1);
-    if (last) gap = Math.max(gap, last.ts + last.dur - lastKey);
-    return gap;
+    return lag;
 }
 
 /**
@@ -142,6 +142,6 @@ export function maxKeyframeGap(video: PacketMeta[]): number {
  */
 export function needsNormalising(takes: (TrackPackets & { config: string })[]): boolean {
     return takes.some(
-        (t) => t.config !== takes[0].config || maxKeyframeGap(t.video) > 2 * SAMPLE_INTERVAL
+        (t) => t.config !== takes[0].config || maxKeyframeLag(t.video) > 2 * SAMPLE_INTERVAL
     );
 }

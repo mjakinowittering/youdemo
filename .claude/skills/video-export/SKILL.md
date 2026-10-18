@@ -26,7 +26,8 @@ is cut.
 ## How a cut lands
 
 A copied stretch must start on a keyframe, so **cuts depend on the recorder
-keying every editor cell** (every 6 frames = 0.2 s — see `capture-pipeline`).
+keying every editor cell** (no frame a cell or more after its keyframe —
+see `capture-pipeline`).
 `cutPlan` starts each kept range on the keyframe **nearest** its start (within
 ~0.1 s, either way) and ends it exactly; audio follows the same snapped ranges so
 the tracks stay in sync. `joinPlan` places each take where the previous one ends
@@ -37,8 +38,9 @@ unit-tested in `tests/remuxPlan.spec.ts`.
 
 `needsNormalising` flags takes that can't be copied: encoder settings that
 differ (Change picked a different-sized screen) or keyframes too sparse to cut
-on (takes recovered from OPFS that were recorded before the recorder keyed every
-cell). Then **every** take is re-encoded once, first — at the first take's size,
+on: `maxKeyframeLag`, the longest a frame sits after its keyframe, over two
+cells (takes recovered from OPFS that were recorded before the recorder keyed
+every cell). A stall with no frames in it doesn't count. Then **every** take is re-encoded once, first — at the first take's size,
 letterboxed, keyed every cell, audio copied — and the copy path runs as usual.
 
 The re-encode decodes each frame (`VideoSampleSink`), redraws it on an opaque

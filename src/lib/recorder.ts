@@ -34,12 +34,14 @@ const AUDIO_BITS_PER_SECOND = 128_000;
  */
 export const DISPLAY_MEDIA_OPTIONS: DisplayMediaStreamOptions & { selfBrowserSurface: 'exclude' } =
     { video: true, audio: true, selfBrowserSurface: 'exclude' };
-// A keyframe on every editor cell (6 frames = 0.2 s), so export can cut by
-// copying packets: a copied stretch must start on a keyframe. Chrome's default
-// is a single keyframe at the start. A count, not a duration — 200 ms rounds up
-// to 7-frame groups — and Chrome counts the frames *between* keyframes, hence
-// the − 1 below.
-const KEYFRAME_EVERY = Math.round(SAMPLE_INTERVAL * FRAME_RATE);
+// A keyframe on every editor cell, so export can cut by copying packets: a
+// copied stretch must start on a keyframe. Chrome's default is a single
+// keyframe at the start. Chrome keys the first frame at least this long after
+// the last keyframe: half a frame short of a cell, so at 30 fps that's every
+// 6th frame (0.2 s) — a full 200 ms would miss the 6th by a hair and make
+// 7-frame groups. A duration, not a count: when the machine falls behind and
+// frames come late, a count would stretch the groups past a cell.
+const KEYFRAME_AFTER_MS = (SAMPLE_INTERVAL - 0.5 / FRAME_RATE) * 1000;
 
 // ─── singleton state ──────────────────────────────────────────────────────────
 
@@ -309,11 +311,11 @@ export async function start(options: RecorderOptions): Promise<MediaStream> {
     _destination.stream.getAudioTracks().forEach((t) => canvasStream.addTrack(t));
 
     // Not yet in TypeScript's DOM typings; Chromium supports it.
-    const mediaOptions: MediaRecorderOptions & { videoKeyFrameIntervalCount: number } = {
+    const mediaOptions: MediaRecorderOptions & { videoKeyFrameIntervalDuration: number } = {
         mimeType: getSupportedMimeType(),
         videoBitsPerSecond: VIDEO_BITS_PER_SECOND,
         audioBitsPerSecond: AUDIO_BITS_PER_SECOND,
-        videoKeyFrameIntervalCount: KEYFRAME_EVERY - 1
+        videoKeyFrameIntervalDuration: KEYFRAME_AFTER_MS
     };
     _recorder = new MediaRecorder(canvasStream, mediaOptions);
     _recorder.ondataavailable = (e) => {

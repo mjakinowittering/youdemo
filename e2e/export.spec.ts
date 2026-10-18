@@ -1,4 +1,4 @@
-import { computeEffectiveDuration } from '../src/lib/editorMath';
+import { computeEffectiveDuration, SAMPLE_INTERVAL } from '../src/lib/editorMath';
 import type { DeletedRange } from '../src/lib/types';
 
 import { expect, newAppPage, test, type AppOptions } from './fixtures/app';
@@ -7,7 +7,7 @@ import {
     longestFreeze,
     losslessShare,
     maxFrameGap,
-    maxKeyframeGap,
+    maxKeyframeLag,
     takeLength
 } from './lib/checks';
 import { Inspector, type Inspection } from './lib/inspect';
@@ -87,7 +87,7 @@ function exportScenario(title: string, scenario: Scenario): void {
                     takeFrameGap: Math.max(...takes.map(maxFrameGap)),
                     longestFreeze: longestFreeze(exported),
                     lossless: losslessShare(exported, takes),
-                    keyframeGap: Math.max(...takes.map(maxKeyframeGap)),
+                    keyframeLag: Math.max(...takes.map(maxKeyframeLag)),
                     exportMs,
                     content: checkContent(exported, takes, deleted),
                     frames: exported.frames.length,
@@ -112,7 +112,7 @@ function exportScenario(title: string, scenario: Scenario): void {
 
         test('the takes have a keyframe on every editor cell', () => {
             // Cuts copy from the keyframe nearest the cut; see recorder.ts.
-            for (const take of takes) expect(maxKeyframeGap(take)).toBeLessThan(0.22);
+            for (const take of takes) expect(maxKeyframeLag(take)).toBeLessThan(SAMPLE_INTERVAL);
         });
 
         test('plays, with the edited duration', () => {
