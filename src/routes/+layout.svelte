@@ -1,59 +1,20 @@
 <script lang="ts">
     import './layout.css';
 
-    import MonitorPlay from '@lucide/svelte/icons/monitor-play';
-    import Moon from '@lucide/svelte/icons/moon';
-    import Sun from '@lucide/svelte/icons/sun';
-
-    import { Button } from '$lib/components/ui/button';
+    import AppShell from '$lib/components/AppShell.svelte';
     import * as Tooltip from '$lib/components/ui/tooltip/index.js';
 
     import favicon from '$lib/assets/favicon.svg';
 
     let { children } = $props();
-
-    let dark = $state((localStorage.getItem('ydTheme') ?? 'dark') === 'dark');
-
-    $effect(() => {
-        document.documentElement.classList.toggle('dark', dark);
-        localStorage.setItem('ydTheme', dark ? 'dark' : 'light');
-    });
-
-    function toggleTheme() {
-        dark = !dark;
-    }
 </script>
 
 <svelte:head>
-    <link rel="icon" href={favicon} />
+    <link rel="icon" href={favicon} type="image/svg+xml" />
 </svelte:head>
 
 <Tooltip.Provider>
-    <div class="flex h-screen flex-col">
-        <header class="flex h-14 items-center justify-between border-b px-4">
-            <span class="flex items-center text-sm font-semibold tracking-wide">
-                <MonitorPlay class="mr-2 text-indigo-500" size={20} />
-                YouDemo
-            </span>
-            <div class="flex items-center gap-1">
-                <Button
-                    variant="ghost"
-                    size="icon-lg"
-                    class="hover:text-indigo-500"
-                    onclick={toggleTheme}
-                    aria-label="Toggle theme"
-                >
-                    {#if dark}
-                        <Sun class="size-4" />
-                    {:else}
-                        <Moon class="size-4" />
-                    {/if}
-                </Button>
-            </div>
-        </header>
-
-        <main class="flex-1 overflow-auto">
-            {@render children()}
-        </main>
-    </div>
+    <AppShell class="h-screen">
+        {@render children()}
+    </AppShell>
 </Tooltip.Provider>

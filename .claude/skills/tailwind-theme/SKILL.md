@@ -1,94 +1,89 @@
 ---
 name: tailwind-theme
-description: Tailwind v4 CSS-first theming for YouDemo — the indigo-500 accent system, red/destructive semantics, theme tokens and custom animations in layout.css, and the dark-mode toggle. Load when styling any component, picking a colour or class, adding an animation, defining a theme token, or touching layout.css / +layout.svelte.
+description: Tailwind v4 CSS-first theming for YouDemo's V2 design — the yd- design tokens (colour, type, shadows, radii) in layout.css, how shadcn's variables map onto them, the tangerine accent and danger semantics, the button press and other motion, and why cn() knows the custom utilities. Load when styling any component, picking a colour, type style or class, adding an animation, defining a token, or touching layout.css.
 ---
 
 # Tailwind v4 theming
 
 **Tailwind utility classes are always preferred over hand-written CSS.**
-Configuration is CSS-first — there is no `tailwind.config.js`.
+Configuration is CSS-first — there is no `tailwind.config.js`. Everything lives
+in **`src/routes/layout.css`**, imported by `+layout.svelte` and by
+`.storybook/preview.ts` so stories render with the real tokens.
 
-All theme configuration lives in **`src/routes/layout.css`** (not `app.css`),
-imported by `src/routes/+layout.svelte`. `.storybook/preview.ts` imports the same
-file so stories render with the real tokens.
+The values come from the approved design: `docs/design/specs/foundations.md`
+(how to use them) and `docs/design/tokens.json`. **Light only**; dark mode is
+later, separate work. Where a board's `.html` and a token disagree, the board
+wins — read exact values from the board, never estimate from the PNG.
 
-## Accent colour: indigo-500
+## Tokens (`@theme static`)
 
-`indigo-500` is the primary accent for the entire application.
+Prefixed `yd-` so they never collide with shadcn's own `card`, `muted` and
+`accent`. `static` emits every variable so the shadcn mapping can point at them.
 
-| Element                     | Class                                          |
-| --------------------------- | ---------------------------------------------- |
-| Primary action buttons      | `bg-indigo-500 hover:bg-indigo-600 text-white` |
-| Active frame cell in Editor | `border-indigo-500` + `bg-indigo-500/30` tint  |
-| Cut button active state     | `bg-indigo-500 text-white`                     |
-| Progress bars               | `accent-indigo-500` or `bg-indigo-500`         |
-| Webcam bubble ring          | `ring-2 ring-indigo-500`                       |
-| Countdown number            | `text-indigo-500`                              |
-| Play/pause flash icon       | `text-indigo-500`                              |
-| MonitorPlay brand icon      | `text-indigo-500`                              |
+| Kind    | Utilities                                                                                       |
+| ------- | ----------------------------------------------------------------------------------------------- |
+| Colour  | `yd-base` page/bands · `yd-sand` the stage · `yd-card` raised surfaces · `yd-ink` text, outlines, shadows · `yd-muted` body copy · `yd-rule` skeletons · `yd-hairline` dividers in a card · `yd-accent` tangerine · `yd-accent-tint` · `yd-danger` · `yd-danger-tint` · `yd-success-tint` · `yd-rec` the REC dot · `yd-scrim` |
+| Type    | `text-display` 40 · `text-screen` 28 · `text-dialog` 22 · `text-row` 19 · `text-lead` 18.5 · `text-body` 16 · `text-button` 15 · `text-small` 14 · `text-meta` 12.5 · `text-pill` 12 · `text-wordmark` 19 (each carries its line height, and weight/tracking where the design sets them) |
+| Shadow  | `shadow-offset` (0 4px 0) · `shadow-offset-sm` · `shadow-offset-press` (0 2px 0) · `shadow-panel` (8px 8px 0) · `shadow-bubble` (4px 4px 0) — all hard ink, never blurred |
+| Radius  | `rounded-frame` 8 · `rounded-control` 10 · `rounded-notice` 14 · `rounded-card` 16 · `rounded-panel` 20 |
+| Font    | `font-sans` Figtree Variable · `font-mono` system monospace (Technical details only) |
 
-**Use the literal `indigo-500` utilities — not `bg-primary`.** `layout.css` sets
-`--color-primary: #6366f1` early in its `@theme inline` block but reassigns
-`--color-primary: var(--primary)` later in the same block, so `bg-primary`
-resolves to the shadcn primary (warm near-black in light mode, near-white in
-dark), not indigo. Only `--ring` is genuinely indigo — the focus ring.
+Headings using `text-screen` or `text-display` also take **`text-balance`**, as
+the design's do. The root sets `tabular-nums`.
 
-## Selection / destructive colour: red
+## Colour rules
 
-When frames are selected for deletion in the Editor, red signals destructive
-intent:
+- **Tangerine (`yd-accent`) is the one accent and is never text** (2.6:1 on
+  base). Primary fills, progress fills, the countdown arc, the overview window
+  edge, link underlines. Text on it is ink.
+- **Danger signals destruction**: Stop, Discard, Remove, cut markers, frames
+  marked for removal, off toggles (`danger-tint` ground, `danger` text).
+- Every raised surface is `yd-card` outlined in 1.5px `yd-ink`.
+- Disabled is never faded: `base` fill, dashed `muted` outline, `muted` text,
+  no shadow (built into `buttonVariants`; see `shadcn-ui`).
 
-| Element              | Class                               |
-| -------------------- | ----------------------------------- |
-| Selected frame cells | `border-red-500` + `bg-red-500/20` tint |
-| Delete button        | shadcn `destructive` variant        |
+## shadcn's variables
 
-What stays red/destructive: Discard button · Mute button (when muted) · Cam-off
-button (when disabled) · Delete button in Editor · selected frames in edit mode ·
-REC dot.
+`:root` points shadcn's variables at the tokens so the primitives pick the
+palette up: `--background` → base, `--foreground` → ink, `--card`/`--popover`
+→ card, `--primary` → accent (foreground ink), `--destructive` → danger,
+`--border`/`--input`/`--ring` → ink, `--muted-foreground` → muted, `--accent` →
+accent-tint. Prefer the `yd-` utilities in new markup.
 
-## Theme tokens
+## `cn()` and `tv` know the custom utilities
 
-`layout.css` layers, in order:
-
-1. `@import` — `tailwindcss`, `tw-animate-css`, `shadcn-svelte/tailwind.css`,
-   `@fontsource-variable/inter`
-2. `@custom-variant dark (&:is(.dark *))` and `@plugin '@tailwindcss/typography'`
-3. `:root` — light mode. A **warm "sandy" palette**: neutrals carry a low-chroma
-   warm hue (~83) in oklch so surfaces read ivory/beige rather than clinical grey.
-4. `.dark` — dark mode, neutral greys.
-5. `@theme inline` — maps the CSS custom properties to `--color-*` tokens so
-   Tailwind generates the utilities, plus `--font-sans: 'Inter Variable'` and the
-   `--radius-*` scale derived from `--radius: 0.625rem`.
-6. `@theme` — custom animations (below).
-7. `@layer base` — global border/ring, `bg-background text-foreground` on body,
-   `font-sans` on html.
-
-There is a non-standard `--success` token (and `--color-success`) alongside the
-shadcn defaults; the `success` button variant used by `BlurControl` depends on it.
+`src/lib/utils.ts` extends tailwind-merge with the type, shadow and radius
+names. Without it `text-button` reads as a colour and is dropped beside
+`text-yd-ink`. Restyle primitives through `cn()` (or the shared `tv`), never by
+concatenating class strings.
 
 ## Custom animations
 
-Registered as v4 theme tokens so `animate-*` utilities are generated and the
-linter recognises them — this is how animation is done here, **not** hand-written
-CSS classes:
+Registered as theme tokens so `animate-*` utilities exist — not CSS classes:
 
-| Token                | Utility              | Used by                              |
-| -------------------- | -------------------- | ------------------------------------ |
-| `--animate-ping-once` | `animate-ping-once` | play/pause flash icon                |
-| `--animate-rec-pulse` | `animate-rec-pulse` | REC dot                              |
-| `--animate-deplete`   | `animate-deplete`   | countdown ring (`stroke-dashoffset`) |
+| Token                 | Used by                                                    |
+| --------------------- | ---------------------------------------------------------- |
+| `--animate-skeleton`  | skeleton blocks and frames (opacity 1 → 0.55, 1.4s)         |
+| `--animate-drain`     | the countdown arc, from `--from` to `--to` per second       |
+| `--animate-ping-once` | the play/pause flash on the Editor's video                  |
+| `--animate-pinwheel` / `-slow` | the joining and exporting spinner (1.6s a turn; 3.2s) |
 
-To add one: define `--animate-<name>` plus its `@keyframes` **inside** the
-`@theme` block in `layout.css`.
+Everything stops under `prefers-reduced-motion` (`motion-reduce:animate-none`,
+`motion-reduce:transition-none`), except the spinner, which slows to
+`animate-pinwheel-slow` so a long job still reads as running. The 200ms footer swap in trim mode is a Svelte
+`fly` with zero duration under reduced motion.
 
-## Dark mode
+To add one: define `--animate-<name>` plus its `@keyframes` inside the `@theme`
+block.
 
-- Default is dark — `src/app.html` ships `<html lang="en" class="dark">`.
-- The toggle lives in the top bar of `src/routes/+layout.svelte` (`Sun`/`Moon`,
-  ghost icon button).
-- Implementation: `$effect` toggles `class="dark"` on
-  `document.documentElement` and writes `localStorage` key **`ydTheme`**
-  (`'dark'` | `'light'`). See the `persistence` skill for the key convention.
-- In Storybook the theme is driven by the toolbar switcher, which applies `dark`
-  to `<html>` — story shells must not hard-code a `dark` class. See `testing`.
+## Pixel-exact gotchas
+
+These came out of matching the boards with `npm run compare` (see `testing`):
+
+- A `<button>`'s figures are proportional in the design (its `font` shorthand
+  resets them), so buttons carry `normal-nums`; a link-style button's line
+  height is the browser's `normal` (`leading-[normal]`, not `leading-normal`).
+- Chrome draws 1.5px borders as 1px at 1×, so a box drawn inside one (a
+  thumbnail, a preview) is sized explicitly as the board does, not `size-full`.
+- `position: fixed` and `contain: layout` both repaint an element on its own
+  pixel grid; anything at a fractional position then lands a pixel off.

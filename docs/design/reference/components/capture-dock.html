@@ -1,0 +1,1107 @@
+<!doctype html>
+<html lang="en-GB">
+    <head>
+        <meta charset="utf-8" />
+        <title>YouDemo · CaptureDock</title>
+        <meta name="viewport" content="width=960" />
+        <style>
+            @font-face {
+                font-family: Figtree;
+                src: url(../fonts/figtree-latin-wght-normal.woff2) format('woff2');
+                font-weight: 300 900;
+                font-style: normal;
+                font-display: block;
+            }
+            html,
+            body {
+                margin: 0;
+                background: #f8f5ef;
+            }
+            *,
+            *::before,
+            *::after {
+                animation: none !important;
+                transition: none !important;
+                caret-color: transparent !important;
+            }
+            /* YouDemo V2: light-only tokens and components, in Matthew Akino-Wittering's design language. */
+
+            .yd2 {
+                --base: #f8f5ef;
+                --sand: #f7f0e3;
+                --card: #fdfbf7;
+                --ink: #17151f;
+                --muted: #46434f;
+                --rule: #e7e3dc;
+                --hairline: #d9d6e0;
+                --accent: #f07a2e;
+                --accent-tint: #fde3cf;
+                --danger: #b42318;
+                --danger-tint: #fbe4e1;
+                --success-tint: #d8ecd5;
+                --rec: #e5484d;
+                --scrim: rgba(23, 21, 31, 0.45);
+                --font-sans: Figtree, ui-sans-serif, system-ui, sans-serif;
+                --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+                --shadow-offset: 0 4px 0 #17151f;
+                --shadow-offset-sm: 0 3px 0 #17151f;
+                --shadow-offset-press: 0 2px 0 #17151f;
+                --shadow-panel: 8px 8px 0 #17151f;
+            }
+            .yd2,
+            .yd2 * {
+                box-sizing: border-box;
+            }
+            .yd2 {
+                font-family: var(--font-sans);
+                font-size: 16px;
+                line-height: 1.5;
+                color: var(--ink);
+                background: var(--base);
+                -webkit-font-smoothing: antialiased;
+                font-variant-numeric: tabular-nums;
+            }
+            .yd2 h1,
+            .yd2 h2,
+            .yd2 h3,
+            .yd2 p,
+            .yd2 ul {
+                margin: 0;
+            }
+            .yd2 ul {
+                padding: 0;
+                list-style: none;
+            }
+            .i {
+                display: block;
+                flex-shrink: 0;
+            }
+
+            /* type */
+            .t-display {
+                font-size: 40px;
+                line-height: 1.15;
+                font-weight: 800;
+                letter-spacing: -0.03em;
+                text-wrap: balance;
+            }
+            .t-screen {
+                font-size: 28px;
+                line-height: 1.2;
+                font-weight: 800;
+                letter-spacing: -0.02em;
+                text-wrap: balance;
+            }
+            .t-card {
+                font-size: 22px;
+                line-height: 1.3;
+                font-weight: 800;
+                letter-spacing: -0.02em;
+            }
+            .t-row {
+                font-size: 19px;
+                line-height: 1.5;
+                font-weight: 700;
+                letter-spacing: -0.01em;
+            }
+            .t-lead {
+                font-size: 18.5px;
+                line-height: 1.5;
+                color: var(--muted);
+            }
+            .t-body {
+                font-size: 16px;
+                line-height: 1.5;
+                color: var(--muted);
+            }
+            .t-small {
+                font-size: 14px;
+                line-height: 1.5;
+                color: var(--muted);
+            }
+            .t-meta {
+                font-size: 12.5px;
+                line-height: 1.5;
+                font-weight: 700;
+                letter-spacing: 0.06em;
+                text-transform: uppercase;
+                color: var(--muted);
+            }
+            .t-ink {
+                color: var(--ink);
+            }
+            .t-danger {
+                color: var(--danger);
+            }
+
+            /* bands and rules */
+            .band {
+                background: var(--base);
+            }
+            .band--sand {
+                background: var(--sand);
+            }
+            .rule-b {
+                border-bottom: 1.5px solid var(--ink);
+            }
+            .rule-t {
+                border-top: 1.5px solid var(--ink);
+            }
+
+            /* header */
+            .hdr {
+                height: 64px;
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                padding: 0 24px;
+                background: var(--base);
+                border-bottom: 1.5px solid var(--ink);
+            }
+            .brand {
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                font-size: 19px;
+                font-weight: 800;
+                letter-spacing: -0.02em;
+                color: var(--ink);
+                text-decoration: none;
+            }
+
+            /* buttons */
+            .b {
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                gap: 8px;
+                min-height: 44px;
+                padding: 0 18px;
+                border: 1.5px solid var(--ink);
+                border-radius: 10px;
+                background: var(--card);
+                color: var(--ink);
+                font: 600 15px/1.5 var(--font-sans);
+                white-space: nowrap;
+                cursor: pointer;
+                box-shadow: var(--shadow-offset);
+                transition:
+                    transform 0.12s,
+                    box-shadow 0.12s;
+                text-decoration: none;
+                margin-bottom: 4px;
+            }
+            .b:hover {
+                transform: translateY(2px);
+                box-shadow: var(--shadow-offset-press);
+            }
+            .b:focus-visible {
+                outline: 2px solid var(--ink);
+                outline-offset: 2px;
+            }
+            .b--primary {
+                background: var(--accent);
+            }
+            .b--danger {
+                background: var(--danger);
+                color: var(--card);
+            }
+            .b--danger-ghost {
+                color: var(--danger);
+            }
+            .b--icon {
+                width: 44px;
+                padding: 0;
+            }
+            .b--wide {
+                width: 100%;
+            }
+            .b--lg {
+                min-height: 52px;
+                padding: 0 24px;
+                font-size: 16px;
+                font-weight: 700;
+            }
+            .b[disabled],
+            .b.is-disabled {
+                background: var(--base);
+                border-style: dashed;
+                border-color: var(--muted);
+                color: var(--muted);
+                box-shadow: none;
+                cursor: not-allowed;
+                transform: none;
+            }
+            .b[aria-pressed='true'].is-ink {
+                background: var(--ink);
+                color: var(--card);
+            }
+            .b.is-off {
+                background: var(--danger-tint);
+                color: var(--danger);
+            }
+            .b.is-on {
+                background: var(--success-tint);
+            }
+            .link {
+                display: inline-flex;
+                align-items: center;
+                gap: 6px;
+                min-height: 44px;
+                color: var(--ink);
+                font-weight: 600;
+                font-size: 15px;
+                text-decoration: underline;
+                text-decoration-color: var(--accent);
+                text-decoration-thickness: 2.5px;
+                text-underline-offset: 4px;
+                background: none;
+                border: 0;
+                padding: 0;
+                cursor: pointer;
+                font-family: var(--font-sans);
+            }
+            .link:hover {
+                text-decoration-thickness: 4px;
+            }
+            .split {
+                display: inline-flex;
+                align-items: stretch;
+                border-radius: 10px;
+                box-shadow: var(--shadow-offset);
+                margin-bottom: 4px;
+            }
+            .split > .b {
+                box-shadow: none;
+                margin: 0;
+            }
+            .split > .b:first-child {
+                border-top-right-radius: 0;
+                border-bottom-right-radius: 0;
+            }
+            .split > .b:last-child {
+                border-left-width: 0;
+                border-top-left-radius: 0;
+                border-bottom-left-radius: 0;
+                padding: 0 10px;
+            }
+            .split.is-disabled {
+                box-shadow: none;
+            }
+            .row {
+                display: flex;
+                align-items: center;
+                gap: 14px;
+            }
+            .row--wrap {
+                flex-wrap: wrap;
+            }
+            .spacer {
+                flex: 1;
+            }
+
+            /* surfaces */
+            .card {
+                background: var(--card);
+                border: 1.5px solid var(--ink);
+                border-radius: 16px;
+            }
+            .card--panel {
+                border-radius: 20px;
+            }
+            .card--lift {
+                box-shadow: var(--shadow-panel);
+            }
+            .pill {
+                display: inline-flex;
+                align-items: center;
+                gap: 6px;
+                height: 28px;
+                padding: 0 12px;
+                border: 1.5px solid var(--ink);
+                border-radius: 9999px;
+                font-size: 12px;
+                line-height: 1;
+                font-weight: 700;
+                letter-spacing: 0.06em;
+                text-transform: uppercase;
+                background: var(--card);
+                color: var(--ink);
+                white-space: nowrap;
+            }
+            .pill--sand {
+                background: var(--sand);
+            }
+            .pill--on {
+                background: var(--success-tint);
+            }
+            .pill--off {
+                background: var(--danger-tint);
+                color: var(--danger);
+                border-color: var(--danger);
+            }
+            .pill--rec {
+                background: var(--ink);
+                color: var(--card);
+                border-color: var(--ink);
+            }
+            .dot {
+                width: 9px;
+                height: 9px;
+                border-radius: 9999px;
+                background: var(--rec);
+            }
+
+            /* dock */
+            .dock {
+                display: inline-flex;
+                align-items: flex-start;
+                gap: 14px;
+                padding: 12px 14px 8px;
+                background: var(--card);
+                border: 1.5px solid var(--ink);
+                border-radius: 20px;
+            }
+
+            /* progress, skeleton */
+            .prog {
+                position: relative;
+                height: 12px;
+                border: 1.5px solid var(--ink);
+                border-radius: 9999px;
+                background: var(--card);
+                overflow: hidden;
+            }
+            .prog > span {
+                position: absolute;
+                inset: 0 auto 0 0;
+                background: var(--accent);
+                border-right: 1.5px solid var(--ink);
+            }
+            .sk {
+                background: var(--rule);
+                border-radius: 10px;
+                animation: yd2-pulse 1.4s ease-in-out infinite;
+            }
+            @keyframes yd2-pulse {
+                0%,
+                100% {
+                    opacity: 1;
+                }
+                50% {
+                    opacity: 0.55;
+                }
+            }
+            @media (prefers-reduced-motion: reduce) {
+                .sk {
+                    animation: none;
+                }
+                .b {
+                    transition: none;
+                }
+            }
+
+            /* video frame */
+            .frame {
+                border: 1.5px solid var(--ink);
+                border-radius: 10px;
+                overflow: hidden;
+                background: var(--card);
+            }
+
+            /* webcam bubble */
+            .bubble {
+                border-radius: 9999px;
+                overflow: hidden;
+                border: 2px solid var(--ink);
+                box-shadow: 4px 4px 0 var(--ink);
+                background: var(--card);
+            }
+            .slot {
+                border-radius: 9999px;
+                border: 2px dashed var(--ink);
+                background: rgba(253, 251, 247, 0.6);
+            }
+
+            /* timeline */
+            .tl {
+                display: flex;
+                gap: 3px;
+            }
+            .cell {
+                position: relative;
+                width: 80px;
+                height: 64px;
+                flex-shrink: 0;
+                border-radius: 8px;
+                border: 1.5px solid var(--ink);
+                overflow: hidden;
+                background: var(--card);
+            }
+            .cell.is-current {
+                outline: 3px solid var(--ink);
+                outline-offset: 1px;
+            }
+            .cell.is-cut {
+                border-color: var(--danger);
+            }
+            .cell.is-cut::after {
+                content: '';
+                position: absolute;
+                inset: 0;
+                background: var(--danger-tint);
+                opacity: 0.72;
+            }
+            .cell.is-sk {
+                border-color: var(--rule);
+                background: var(--rule);
+            }
+            .cutmark {
+                position: relative;
+                width: 3px;
+                flex-shrink: 0;
+                background: var(--danger);
+                border-radius: 2px;
+                margin: 0 4px;
+            }
+            .cutmark > .b {
+                position: absolute;
+                left: 50%;
+                top: -22px;
+                transform: translateX(-50%);
+                min-height: 30px;
+                height: 30px;
+                width: 30px;
+                padding: 0;
+                border-radius: 9999px;
+                box-shadow: var(--shadow-offset-press);
+            }
+            .ov {
+                position: relative;
+                height: 32px;
+                border: 1.5px solid var(--ink);
+                border-radius: 10px;
+                background: var(--card);
+                overflow: hidden;
+            }
+            .ov > .win {
+                position: absolute;
+                top: 0;
+                bottom: 0;
+                background: var(--accent-tint);
+                border-left: 2px solid var(--ink);
+                border-right: 2px solid var(--ink);
+            }
+            .ov > .cut {
+                position: absolute;
+                top: 0;
+                bottom: 0;
+                width: 4px !important;
+                margin-left: -2px;
+                background: var(--danger);
+            }
+            .ov > .head {
+                position: absolute;
+                top: -1px;
+                bottom: -1px;
+                width: 2px;
+                background: var(--ink);
+            }
+            .range {
+                -webkit-appearance: none;
+                appearance: none;
+                height: 12px;
+                border: 1.5px solid var(--ink);
+                border-radius: 9999px;
+                background:
+                    linear-gradient(var(--accent), var(--accent)) 0 / var(--p, 15%) 100% no-repeat,
+                    var(--card);
+            }
+            .range::-webkit-slider-thumb {
+                -webkit-appearance: none;
+                width: 22px;
+                height: 22px;
+                border-radius: 9999px;
+                background: var(--card);
+                border: 2px solid var(--ink);
+                box-shadow: 0 2px 0 var(--ink);
+            }
+
+            /* dialog */
+            .scrim {
+                position: absolute;
+                inset: 0;
+                background: var(--scrim);
+                display: grid;
+                place-items: center;
+            }
+            .dialog {
+                width: 480px;
+                max-width: calc(100% - 48px);
+                padding: 28px;
+                display: flex;
+                flex-direction: column;
+                gap: 18px;
+                background: var(--card);
+                border: 1.5px solid var(--ink);
+                border-radius: 20px;
+                box-shadow: var(--shadow-panel);
+            }
+            .dl {
+                display: grid;
+                grid-template-columns: auto 1fr;
+                gap: 6px 18px;
+                padding: 14px 16px;
+                background: var(--base);
+                border: 1.5px solid var(--ink);
+                border-radius: 14px;
+            }
+            .dl dt {
+                font-size: 12.5px;
+                font-weight: 700;
+                letter-spacing: 0.06em;
+                text-transform: uppercase;
+                color: var(--muted);
+            }
+            .dl dd {
+                margin: 0;
+                font-size: 15px;
+                font-weight: 600;
+                color: var(--ink);
+                overflow-wrap: anywhere;
+            }
+
+            /* notices */
+            .notice {
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                padding: 10px 12px 10px 16px;
+                border: 1.5px solid var(--ink);
+                border-radius: 14px;
+                background: var(--success-tint);
+            }
+            .notice--danger {
+                background: var(--danger-tint);
+            }
+
+            /* tooltip & menu */
+            .tip {
+                position: relative;
+                display: inline-flex;
+                padding: 6px 12px;
+                border-radius: 10px;
+                background: var(--ink);
+                color: var(--card);
+                font-size: 14px;
+                font-weight: 600;
+            }
+            .menu {
+                min-width: 220px;
+                padding: 6px;
+                background: var(--card);
+                border: 1.5px solid var(--ink);
+                border-radius: 14px;
+                box-shadow: var(--shadow-offset);
+            }
+            .menu li {
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                min-height: 44px;
+                padding: 0 12px;
+                border-radius: 10px;
+                font-size: 15px;
+            }
+            .menu li.is-sel {
+                background: var(--accent-tint);
+                font-weight: 600;
+            }
+
+            /* status list */
+            .status {
+                border: 1.5px solid var(--ink);
+                border-radius: 16px;
+                background: var(--card);
+                overflow: hidden;
+            }
+            .status li {
+                display: flex;
+                align-items: center;
+                gap: 14px;
+                padding: 14px 18px;
+            }
+            .status li + li {
+                border-top: 1px solid var(--hairline);
+            }
+        </style>
+    </head>
+    <body>
+        <div
+            data-compare="root"
+            class="yd2"
+            style="
+                width: 960px;
+                padding: 24px;
+                display: flex;
+                flex-wrap: wrap;
+                gap: 18px;
+                align-items: center;
+                background: var(--base);
+            "
+        >
+            <div style="display: flex; flex-direction: column; gap: 14px">
+                <div class="dock">
+                    <div class="split">
+                        <button class="b" aria-label="Mic">
+                            <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                width="20"
+                                height="20"
+                                class="i"
+                                aria-hidden="true"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                            >
+                                <path
+                                    d="M7 6.5C7 4.01472 9.01472 2 11.5 2C13.9853 2 16 4.01472 16 6.5V11.5C16 13.9853 13.9853 16 11.5 16C9.01472 16 7 13.9853 7 11.5V6.5Z"
+                                    stroke="currentColor"
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    stroke-width="1.5"
+                                ></path>
+                                <path
+                                    d="M11.5 19H11.0828C7.57267 19 4.57706 16.4623 4 13M11.5 19H11.9172C15.4273 19 18.4229 16.4623 19 13M11.5 19V22"
+                                    stroke="currentColor"
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    stroke-width="1.5"
+                                ></path></svg
+                            ><span>Mic</span></button
+                        ><button class="b" aria-label="Choose mic device">
+                            <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                width="18"
+                                height="18"
+                                class="i"
+                                aria-hidden="true"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                            >
+                                <path
+                                    d="M18 9.00005C18 9.00005 13.5811 15 12 15C10.4188 15 6 9 6 9"
+                                    stroke="currentColor"
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    stroke-width="1.5"
+                                ></path>
+                            </svg>
+                        </button>
+                    </div>
+                    <div class="split">
+                        <button class="b" aria-label="Camera">
+                            <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                width="20"
+                                height="20"
+                                class="i"
+                                aria-hidden="true"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                            >
+                                <path
+                                    d="M2 11C2 7.70017 2 6.05025 3.02513 5.02513C4.05025 4 5.70017 4 9 4H10C13.2998 4 14.9497 4 15.9749 5.02513C17 6.05025 17 7.70017 17 11V13C17 16.2998 17 17.9497 15.9749 18.9749C14.9497 20 13.2998 20 10 20H9C5.70017 20 4.05025 20 3.02513 18.9749C2 17.9497 2 16.2998 2 13V11Z"
+                                    stroke="currentColor"
+                                    stroke-width="1.5"
+                                ></path>
+                                <path
+                                    d="M17 8.90585L17.1259 8.80196C19.2417 7.05623 20.2996 6.18336 21.1498 6.60482C22 7.02628 22 8.42355 22 11.2181V12.7819C22 15.5765 22 16.9737 21.1498 17.3952C20.2996 17.8166 19.2417 16.9438 17.1259 15.198L17 15.0941"
+                                    stroke="currentColor"
+                                    stroke-linecap="round"
+                                    stroke-width="1.5"
+                                ></path>
+                                <circle
+                                    cx="11.5"
+                                    cy="9.5"
+                                    r="1.5"
+                                    stroke="currentColor"
+                                    stroke-width="1.5"
+                                ></circle></svg
+                            ><span>Camera</span></button
+                        ><button class="b" aria-label="Choose camera device">
+                            <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                width="18"
+                                height="18"
+                                class="i"
+                                aria-hidden="true"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                            >
+                                <path
+                                    d="M18 9.00005C18 9.00005 13.5811 15 12 15C10.4188 15 6 9 6 9"
+                                    stroke="currentColor"
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    stroke-width="1.5"
+                                ></path>
+                            </svg>
+                        </button>
+                    </div>
+                    <div class="split">
+                        <button class="b is-on" aria-pressed="true" aria-label="Background blur">
+                            <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                width="20"
+                                height="20"
+                                class="i"
+                                aria-hidden="true"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                            >
+                                <path
+                                    d="M12.5926 2.21C12.2371 1.93 11.7433 1.93 11.3877 2.21C9.51122 3.66 3.97049 8.39 4.00012 13.9C4.00012 18.36 7.58531 22 12.0001 22C16.4149 22 20 18.37 20 13.91C20.0099 8.48 14.4593 3.67 12.5926 2.21Z"
+                                    stroke="currentColor"
+                                    stroke-width="1.5"
+                                ></path>
+                                <path
+                                    d="M12 2V22"
+                                    stroke="currentColor"
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    stroke-width="1.5"
+                                ></path>
+                                <path
+                                    d="M12 19L20 15M12 14.1806L19 10.5M12 9.36145L16.5727 7"
+                                    stroke="currentColor"
+                                    stroke-linejoin="round"
+                                    stroke-width="1.5"
+                                ></path></svg
+                            ><span>Blur on</span></button
+                        ><button class="b is-on" aria-label="Choose blur on device">
+                            <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                width="18"
+                                height="18"
+                                class="i"
+                                aria-hidden="true"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                            >
+                                <path
+                                    d="M18 9.00005C18 9.00005 13.5811 15 12 15C10.4188 15 6 9 6 9"
+                                    stroke="currentColor"
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    stroke-width="1.5"
+                                ></path>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+                <div class="dock">
+                    <div class="split">
+                        <button class="b is-off" aria-pressed="false" aria-label="Muted">
+                            <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                width="20"
+                                height="20"
+                                class="i"
+                                aria-hidden="true"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                            >
+                                <path
+                                    d="M8.1572 4.1572C8.94761 2.86349 10.373 2 12 2C14.4853 2 16.5 4.01472 16.5 6.5V11.5C16.5 11.8111 16.4684 12.1149 16.4083 12.4083M7.5 7.5V11.5C7.5 13.9853 9.51472 16 12 16C13.1154 16 14.136 15.5942 14.9222 14.9222"
+                                    stroke="currentColor"
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    stroke-width="1.5"
+                                ></path>
+                                <path
+                                    d="M2 2L22 22"
+                                    stroke="currentColor"
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    stroke-width="1.5"
+                                ></path>
+                                <path
+                                    d="M12 19H11.5828C8.07267 19 5.07706 16.4623 4.5 13M12 19H12.4172C14.2325 19 15.9102 18.3213 17.1869 17.1869M12 19V22M19.5 13C19.3878 13.6733 19.1841 14.3116 18.903 14.903"
+                                    stroke="currentColor"
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    stroke-width="1.5"
+                                ></path></svg
+                            ><span>Muted</span></button
+                        ><button class="b is-off" aria-label="Choose muted device">
+                            <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                width="18"
+                                height="18"
+                                class="i"
+                                aria-hidden="true"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                            >
+                                <path
+                                    d="M18 9.00005C18 9.00005 13.5811 15 12 15C10.4188 15 6 9 6 9"
+                                    stroke="currentColor"
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    stroke-width="1.5"
+                                ></path>
+                            </svg>
+                        </button>
+                    </div>
+                    <div class="split">
+                        <button class="b is-off" aria-pressed="false" aria-label="Camera off">
+                            <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                width="20"
+                                height="20"
+                                class="i"
+                                aria-hidden="true"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                            >
+                                <path
+                                    d="M2.00189 1.99988L21.9772 21.9999"
+                                    stroke="currentColor"
+                                    stroke-linecap="round"
+                                    stroke-width="1.5"
+                                ></path>
+                                <path
+                                    d="M16.8516 16.8677C16.7224 17.8061 16.4665 18.4668 15.9595 18.9744C14.9356 19.9996 13.2877 19.9996 9.992 19.9996H8.99323C5.69749 19.9996 4.04961 19.9996 3.02575 18.9744C2.00189 17.9493 2.00189 16.2994 2.00189 12.9996V10.9996C2.00189 7.69971 2.00189 6.04979 3.02575 5.02466C3.36827 4.68172 3.78062 4.45351 4.30114 4.30164"
+                                    stroke="currentColor"
+                                    stroke-linecap="round"
+                                    stroke-width="1.5"
+                                ></path>
+                                <path
+                                    d="M8.23627 4.0004C8.47815 3.99988 8.72995 3.99988 8.99217 3.99988H9.99093C13.2867 3.99988 14.9346 3.99988 15.9584 5.02501C16.9822 6.05013 16.9822 7.70005 16.9822 10.9999V12.7573M16.9822 9.2313L19.3018 7.52901C20.7729 6.54061 21.4489 7.17184 21.6674 7.64835C22.1191 8.92801 21.9768 11.3935 21.9768 14.5416C21.8703 16.5549 21.5952 16.7718 21.3137 16.9938L21.3107 16.9961"
+                                    stroke="currentColor"
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    stroke-width="1.5"
+                                ></path></svg
+                            ><span>Camera off</span></button
+                        ><button class="b is-off" aria-label="Choose camera off device">
+                            <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                width="18"
+                                height="18"
+                                class="i"
+                                aria-hidden="true"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                            >
+                                <path
+                                    d="M18 9.00005C18 9.00005 13.5811 15 12 15C10.4188 15 6 9 6 9"
+                                    stroke="currentColor"
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    stroke-width="1.5"
+                                ></path>
+                            </svg>
+                        </button>
+                    </div>
+                    <div class="split">
+                        <button class="b" aria-label="Background blur">
+                            <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                width="20"
+                                height="20"
+                                class="i"
+                                aria-hidden="true"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                            >
+                                <path
+                                    d="M20 21.0001C19.713 17.269 16.7289 14.3151 12.995 14.0662L12 13.9999C11.6446 14.0096 11.3134 14.0225 11.0008 14.0378C7.3 14.2192 4.28417 17.3057 4 21.0001"
+                                    stroke="currentColor"
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    stroke-width="1.5"
+                                ></path>
+                                <circle
+                                    cx="12"
+                                    cy="6.99988"
+                                    r="4"
+                                    stroke="currentColor"
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    stroke-width="1.5"
+                                ></circle></svg
+                            ><span>Blur off</span></button
+                        ><button class="b" aria-label="Choose blur off device">
+                            <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                width="18"
+                                height="18"
+                                class="i"
+                                aria-hidden="true"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                            >
+                                <path
+                                    d="M18 9.00005C18 9.00005 13.5811 15 12 15C10.4188 15 6 9 6 9"
+                                    stroke="currentColor"
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    stroke-width="1.5"
+                                ></path>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+                <div class="dock">
+                    <div class="split is-disabled">
+                        <button class="b" disabled aria-label="Mic">
+                            <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                width="20"
+                                height="20"
+                                class="i"
+                                aria-hidden="true"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                            >
+                                <path
+                                    d="M7 6.5C7 4.01472 9.01472 2 11.5 2C13.9853 2 16 4.01472 16 6.5V11.5C16 13.9853 13.9853 16 11.5 16C9.01472 16 7 13.9853 7 11.5V6.5Z"
+                                    stroke="currentColor"
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    stroke-width="1.5"
+                                ></path>
+                                <path
+                                    d="M11.5 19H11.0828C7.57267 19 4.57706 16.4623 4 13M11.5 19H11.9172C15.4273 19 18.4229 16.4623 19 13M11.5 19V22"
+                                    stroke="currentColor"
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    stroke-width="1.5"
+                                ></path></svg
+                            ><span>Mic</span></button
+                        ><button class="b" disabled aria-label="Choose mic device">
+                            <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                width="18"
+                                height="18"
+                                class="i"
+                                aria-hidden="true"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                            >
+                                <path
+                                    d="M18 9.00005C18 9.00005 13.5811 15 12 15C10.4188 15 6 9 6 9"
+                                    stroke="currentColor"
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    stroke-width="1.5"
+                                ></path>
+                            </svg>
+                        </button>
+                    </div>
+                    <div class="split is-disabled">
+                        <button class="b" disabled aria-label="Camera">
+                            <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                width="20"
+                                height="20"
+                                class="i"
+                                aria-hidden="true"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                            >
+                                <path
+                                    d="M2 11C2 7.70017 2 6.05025 3.02513 5.02513C4.05025 4 5.70017 4 9 4H10C13.2998 4 14.9497 4 15.9749 5.02513C17 6.05025 17 7.70017 17 11V13C17 16.2998 17 17.9497 15.9749 18.9749C14.9497 20 13.2998 20 10 20H9C5.70017 20 4.05025 20 3.02513 18.9749C2 17.9497 2 16.2998 2 13V11Z"
+                                    stroke="currentColor"
+                                    stroke-width="1.5"
+                                ></path>
+                                <path
+                                    d="M17 8.90585L17.1259 8.80196C19.2417 7.05623 20.2996 6.18336 21.1498 6.60482C22 7.02628 22 8.42355 22 11.2181V12.7819C22 15.5765 22 16.9737 21.1498 17.3952C20.2996 17.8166 19.2417 16.9438 17.1259 15.198L17 15.0941"
+                                    stroke="currentColor"
+                                    stroke-linecap="round"
+                                    stroke-width="1.5"
+                                ></path>
+                                <circle
+                                    cx="11.5"
+                                    cy="9.5"
+                                    r="1.5"
+                                    stroke="currentColor"
+                                    stroke-width="1.5"
+                                ></circle></svg
+                            ><span>Camera</span></button
+                        ><button class="b" disabled aria-label="Choose camera device">
+                            <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                width="18"
+                                height="18"
+                                class="i"
+                                aria-hidden="true"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                            >
+                                <path
+                                    d="M18 9.00005C18 9.00005 13.5811 15 12 15C10.4188 15 6 9 6 9"
+                                    stroke="currentColor"
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    stroke-width="1.5"
+                                ></path>
+                            </svg>
+                        </button>
+                    </div>
+                    <div class="split is-disabled">
+                        <button class="b is-on" disabled aria-pressed="true" aria-label="Blur on">
+                            <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                width="20"
+                                height="20"
+                                class="i"
+                                aria-hidden="true"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                            >
+                                <path
+                                    d="M12.5926 2.21C12.2371 1.93 11.7433 1.93 11.3877 2.21C9.51122 3.66 3.97049 8.39 4.00012 13.9C4.00012 18.36 7.58531 22 12.0001 22C16.4149 22 20 18.37 20 13.91C20.0099 8.48 14.4593 3.67 12.5926 2.21Z"
+                                    stroke="currentColor"
+                                    stroke-width="1.5"
+                                ></path>
+                                <path
+                                    d="M12 2V22"
+                                    stroke="currentColor"
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    stroke-width="1.5"
+                                ></path>
+                                <path
+                                    d="M12 19L20 15M12 14.1806L19 10.5M12 9.36145L16.5727 7"
+                                    stroke="currentColor"
+                                    stroke-linejoin="round"
+                                    stroke-width="1.5"
+                                ></path></svg
+                            ><span>Blur on</span></button
+                        ><button class="b is-on" disabled aria-label="Choose blur on device">
+                            <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                width="18"
+                                height="18"
+                                class="i"
+                                aria-hidden="true"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                            >
+                                <path
+                                    d="M18 9.00005C18 9.00005 13.5811 15 12 15C10.4188 15 6 9 6 9"
+                                    stroke="currentColor"
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    stroke-width="1.5"
+                                ></path>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </body>
+</html>

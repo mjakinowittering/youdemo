@@ -1,9 +1,8 @@
 <script lang="ts">
-    import MonitorPlay from '@lucide/svelte/icons/monitor-play';
+    import { resolve } from '$app/paths';
     import { page } from '$app/state';
 
     import { Button } from '$lib/components/ui/button';
-    import * as Empty from '$lib/components/ui/empty/index.js';
 
     import { APP_NAME } from '$lib/titles.js';
 </script>
@@ -12,23 +11,12 @@
     <title>{page.status} | {APP_NAME}</title>
 </svelte:head>
 
-<div class="flex h-full items-center justify-center">
-    <Empty.Root>
-        <Empty.Media>
-            <MonitorPlay size={128} class="text-white" />
-        </Empty.Media>
-        <Empty.Header>
-            <Empty.Title class="text-white">{page.status}</Empty.Title>
-            <Empty.Description class="text-white/60">
-                {page.status === 404
-                    ? `Oops! Page not found. Sorry about that...`
-                    : (page.error?.message ?? 'Something went wrong')}
-            </Empty.Description>
-        </Empty.Header>
-        <Empty.Content>
-            <Button href="/" class="bg-indigo-500 text-white hover:bg-indigo-600"
-                >Back to YouDemo</Button
-            >
-        </Empty.Content>
-    </Empty.Root>
+<div class="flex h-full flex-col items-center justify-center gap-4 bg-yd-sand p-6 text-center">
+    <h1 class="text-screen text-balance text-yd-ink">{page.status}</h1>
+    <p class="text-lead text-yd-muted">
+        {page.status === 404
+            ? `Oops! Page not found. Sorry about that...`
+            : (page.error?.message ?? 'Something went wrong')}
+    </p>
+    <Button href={resolve('/')}>Back to YouDemo</Button>
 </div>

@@ -1,105 +1,139 @@
 <script lang="ts">
-    import CircleCheck from '@lucide/svelte/icons/circle-check';
-    import CircleX from '@lucide/svelte/icons/circle-x';
-    import TriangleAlert from '@lucide/svelte/icons/triangle-alert';
+    import {
+        ArrowRight01Icon,
+        Copy01Icon,
+        LaptopIcon,
+        Share08Icon,
+        SmartphoneIcon
+    } from '@hugeicons/core-free-icons';
     import { onMount } from 'svelte';
 
+    import { tooltipClass } from '$lib/components/styles.js';
     import { Button } from '$lib/components/ui/button/index.js';
-    import * as Card from '$lib/components/ui/card/index.js';
-    import * as Empty from '$lib/components/ui/empty/index.js';
+    import * as Tooltip from '$lib/components/ui/tooltip/index.js';
 
-    import { cn } from '$lib/utils.js';
+    import { canShare, copyLink, displayUrl, shareLink } from '$lib/share.js';
+
+    import Icon from './Icon.svelte';
+    import Pill from './Pill.svelte';
+    import StatusList from './StatusList.svelte';
 
     let {
         onpass,
         hasScreenCapture = !!navigator.mediaDevices?.getDisplayMedia,
         hasMediaRecorder = typeof MediaRecorder !== 'undefined',
         hasCameraAccess = !!navigator.mediaDevices?.getUserMedia,
-        hasAudioMixing = typeof AudioContext !== 'undefined' || 'webkitAudioContext' in window
+        hasAudioMixing = typeof AudioContext !== 'undefined' || 'webkitAudioContext' in window,
+        url = location.href,
+        shareable = canShare(navigator)
     }: {
         onpass: () => void;
         hasScreenCapture?: boolean;
         hasMediaRecorder?: boolean;
         hasCameraAccess?: boolean;
         hasAudioMixing?: boolean;
+        /** The link to send to a computer. */
+        url?: string;
+        /** The share sheet exists; "Send the link" hides without it. */
+        shareable?: boolean;
     } = $props();
 
-    const criticalPass = $derived(hasScreenCapture && hasMediaRecorder);
-    const allPass = $derived(criticalPass && hasCameraAccess && hasAudioMixing);
+    const blocking = $derived(!hasScreenCapture || !hasMediaRecorder);
+    const allPass = $derived(!blocking && hasCameraAccess && hasAudioMixing);
 
-    const checks = $derived<Array<{ label: string; ok: boolean; critical: boolean }>>([
-        { label: 'Screen capture', ok: hasScreenCapture, critical: true },
-        { label: 'Media recording', ok: hasMediaRecorder, critical: true },
-        { label: 'Camera access', ok: hasCameraAccess, critical: false },
-        { label: 'Audio mixing', ok: hasAudioMixing, critical: false }
-    ]);
+    let copied = $state(false);
+
+    async function copy() {
+        copied = await copyLink(navigator, url);
+        if (copied) setTimeout(() => (copied = false), 1500);
+    }
 
     onMount(() => {
         if (allPass) onpass();
     });
 </script>
 
-{#if !allPass}
-    <div class="flex h-full items-center justify-center p-6">
-        <Card.Root
-            class={cn(
-                'w-full max-w-md border-0 ring-2 ring-foreground/25 ring-offset-4 ring-offset-transparent'
-            )}
+{#if blocking}
+    <!-- Screen capture or recording is missing: in practice, a phone -->
+    <section
+        data-section="stage"
+        class="mx-auto flex w-full max-w-97.5 flex-1 flex-col gap-5.5 px-5 pt-8 pb-6"
+    >
+        <div class="flex items-center gap-2.5">
+            <Icon icon={SmartphoneIcon} size={32} />
+            <Icon icon={ArrowRight01Icon} size={20} />
+            <Icon icon={LaptopIcon} size={36} />
+        </div>
+        <h1 class="text-screen text-[30px] text-balance">YouDemo needs a computer</h1>
+        <p class="text-body text-yd-muted">
+            YouDemo records your screen, and phones and tablets don't let websites do that.
+        </p>
+        <p class="text-body text-yd-muted">Open it on a computer in Chrome, Edge or Arc.</p>
+        {#if shareable}
+            <Button
+                variant="primary"
+                size="lg"
+                class="w-full"
+                onclick={() => shareLink(navigator, url)}
+            >
+                <Icon icon={Share08Icon} />Send the link to my computer
+            </Button>
+        {/if}
+        <div
+            class="flex flex-col gap-2.5 rounded-card border-[1.5px] border-solid border-yd-ink bg-yd-card px-4 py-3.5"
         >
-            {#if !criticalPass}
-                <Empty.Root>
-                    <Empty.Media>
-                        <CircleX size={64} class="text-destructive" />
-                    </Empty.Media>
-                    <Empty.Header>
-                        <Empty.Title>Browser not supported</Empty.Title>
-                        <Empty.Description>
-                            Required screen capture APIs are missing. Please use Chrome, Edge, or
-                            Arc.
-                        </Empty.Description>
-                    </Empty.Header>
-                </Empty.Root>
-            {:else}
-                <Empty.Root>
-                    <Empty.Media>
-                        <TriangleAlert size={64} class="text-amber-500" />
-                    </Empty.Media>
-                    <Empty.Header>
-                        <Empty.Title>Limited support</Empty.Title>
-                        <Empty.Description>
-                            Update your browser for full features — camera and audio mixing are
-                            unavailable.
-                        </Empty.Description>
-                    </Empty.Header>
-                    <Empty.Content>
-                        <Button
-                            class="bg-indigo-500 text-white hover:bg-indigo-600"
-                            onclick={onpass}
-                            size="lg"
-                        >
-                            Continue anyway
-                        </Button>
-                    </Empty.Content>
-                </Empty.Root>
-            {/if}
-
-            <ul class="mx-6 divide-y rounded-lg border">
-                {#each checks as check (check.label)}
-                    <li class="flex items-center gap-3 px-4 py-3">
-                        {#if check.ok}
-                            <CircleCheck class="size-8 shrink-0 text-indigo-500" />
-                        {:else if check.critical}
-                            <CircleX class="size-8 shrink-0 text-destructive" />
-                        {:else}
-                            <TriangleAlert class="size-8 shrink-0 text-amber-500" />
-                        {/if}
-                        <span class="text-sm">{check.label}</span>
-                        {#if !check.critical}
-                            <span class="ml-auto text-xs text-muted-foreground">optional</span>
-                        {/if}
-                    </li>
-                {/each}
-            </ul>
-        </Card.Root>
-    </div>
+            <span class="text-meta text-yd-muted uppercase">Or copy the link</span>
+            <div class="flex items-center gap-2.5">
+                <span class="min-w-0 flex-1 text-button font-semibold wrap-anywhere select-all">
+                    {displayUrl(url)}
+                </span>
+                <Tooltip.Root open={copied}>
+                    <Tooltip.Trigger>
+                        {#snippet child({ props })}
+                            <Button
+                                {...props}
+                                variant="ghost"
+                                size="icon"
+                                aria-label="Copy link"
+                                onclick={copy}
+                            >
+                                <Icon icon={Copy01Icon} />
+                            </Button>
+                        {/snippet}
+                    </Tooltip.Trigger>
+                    <Tooltip.Content class={tooltipClass} arrowClasses="hidden"
+                        >Copied</Tooltip.Content
+                    >
+                </Tooltip.Root>
+            </div>
+        </div>
+        <p class="mt-auto text-small text-yd-muted">
+            Nothing is uploaded. YouDemo runs entirely in your browser.
+        </p>
+    </section>
+{:else if !allPass}
+    <!-- Camera or audio mixing is missing: say which, in words, and carry on -->
+    <section data-section="stage" class="flex min-h-0 flex-1 bg-yd-sand">
+        <div class="m-auto flex w-140 flex-col gap-5.5">
+            <Pill variant="sand" class="self-start">Browser check</Pill>
+            <h1 class="text-screen text-balance">Some features aren't available in this browser</h1>
+            <p class="text-lead text-yd-muted">
+                You can still record your screen, just without your camera or system audio. Updating
+                Chrome, Edge or Arc usually fixes this.
+            </p>
+            <StatusList
+                rows={[
+                    { name: 'Screen capture', available: hasScreenCapture },
+                    { name: 'Recording', available: hasMediaRecorder },
+                    { name: 'Camera', available: hasCameraAccess, optional: true },
+                    { name: 'System audio mixing', available: hasAudioMixing, optional: true }
+                ]}
+            />
+            <div class="flex items-center">
+                <Button variant="primary" onclick={onpass}>
+                    Continue without them<Icon icon={ArrowRight01Icon} size={18} />
+                </Button>
+            </div>
+        </div>
+    </section>
 {/if}

@@ -1,16 +1,12 @@
 <script lang="ts">
-    import ChevronDown from '@lucide/svelte/icons/chevron-down';
-    import Video from '@lucide/svelte/icons/video';
-    import VideoOff from '@lucide/svelte/icons/video-off';
+    import { Video01Icon, VideoOffIcon } from '@hugeicons/core-free-icons';
     import { onMount } from 'svelte';
 
-    import { buttonVariants } from '$lib/components/ui/button/button.svelte';
-    import { Button } from '$lib/components/ui/button/index.js';
-    import * as DropdownMenu from '$lib/components/ui/dropdown-menu/index.js';
-    import * as Tooltip from '$lib/components/ui/tooltip/index.js';
+    import MenuOptions from '$lib/components/MenuOptions.svelte';
 
     import { deviceStore } from '$lib/deviceStore.svelte.js';
-    import { cn } from '$lib/utils.js';
+
+    import DockControl from './DockControl.svelte';
 
     interface Props {
         camEnabled?: boolean;
@@ -35,58 +31,22 @@
     });
 </script>
 
-<Tooltip.Root>
-    <Tooltip.Trigger>
-        {#snippet child({ props })}
-            <div {...props} class="flex">
-                <Button
-                    variant={!camEnabled ? 'destructive' : 'outline'}
-                    size="lg"
-                    class="rounded-r-none border-r-0"
-                    {disabled}
-                    onclick={() => (camEnabled = !camEnabled)}
-                    aria-label={camEnabled ? 'Disable camera' : 'Enable camera'}
-                >
-                    {#if !camEnabled}
-                        <VideoOff class="size-4" />
-                    {:else}
-                        <Video class="size-4" />
-                    {/if}
-                </Button>
-                <DropdownMenu.Root>
-                    <DropdownMenu.Trigger
-                        class={cn(
-                            buttonVariants({
-                                variant: !camEnabled ? 'destructive' : 'outline',
-                                size: 'lg'
-                            }),
-                            'rounded-l-none px-2'
-                        )}
-                        {disabled}
-                        aria-label="Select camera"
-                    >
-                        <ChevronDown class="size-3" />
-                    </DropdownMenu.Trigger>
-                    <DropdownMenu.Content class="w-sm">
-                        <DropdownMenu.RadioGroup
-                            value={deviceStore.webcamDeviceId ?? undefined}
-                            onValueChange={(v) => (deviceStore.webcamDeviceId = v)}
-                        >
-                            {#each camDevices as d (d.deviceId)}
-                                <DropdownMenu.RadioItem value={d.deviceId}>
-                                    {d.label || 'Camera'}
-                                </DropdownMenu.RadioItem>
-                            {/each}
-                        </DropdownMenu.RadioGroup>
-                        {#if camDevices.length === 0}
-                            <DropdownMenu.Item>No cameras found</DropdownMenu.Item>
-                        {/if}
-                    </DropdownMenu.Content>
-                </DropdownMenu.Root>
-            </div>
-        {/snippet}
-    </Tooltip.Trigger>
-    <Tooltip.Content>
-        <p>{camLabel}</p>
-    </Tooltip.Content>
-</Tooltip.Root>
+<DockControl
+    icon={camEnabled ? Video01Icon : VideoOffIcon}
+    label={camEnabled ? 'Camera' : 'Camera off'}
+    tone={camEnabled ? 'plain' : 'off'}
+    action={camEnabled ? 'Disable camera' : 'Enable camera'}
+    menuLabel="Select camera"
+    tooltip={camLabel}
+    {disabled}
+    ontoggle={() => (camEnabled = !camEnabled)}
+>
+    {#snippet menu()}
+        <MenuOptions
+            options={camDevices.map((d) => ({ value: d.deviceId, label: d.label || 'Camera' }))}
+            value={deviceStore.webcamDeviceId ?? undefined}
+            onselect={(id) => (deviceStore.webcamDeviceId = id)}
+            empty="No cameras found"
+        />
+    {/snippet}
+</DockControl>

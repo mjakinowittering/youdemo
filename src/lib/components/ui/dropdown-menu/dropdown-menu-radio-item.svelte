@@ -1,6 +1,8 @@
 <script lang="ts">
-    import CheckIcon from '@lucide/svelte/icons/check';
+    import { Tick02Icon } from '@hugeicons/core-free-icons';
     import { DropdownMenu as DropdownMenuPrimitive } from 'bits-ui';
+
+    import Icon from '$lib/components/Icon.svelte';
 
     import { cn, type WithoutChild } from '$lib/utils.js';
 
@@ -27,7 +29,7 @@
             data-slot="dropdown-menu-radio-item-indicator"
         >
             {#if checked}
-                <CheckIcon />
+                <Icon icon={Tick02Icon} />
             {/if}
         </span>
         {@render childrenProp?.({ checked })}

@@ -1,183 +1,122 @@
 <script lang="ts">
-    import Clapperboard from '@lucide/svelte/icons/clapperboard';
-    import { untrack } from 'svelte';
+    import {
+        ComputerScreenShareIcon,
+        Download04Icon,
+        ScissorIcon
+    } from '@hugeicons/core-free-icons';
 
-    import { buttonVariants } from '$lib/components/ui/button/button.svelte';
-    import * as Card from '$lib/components/ui/card/index.js';
-    import * as Empty from '$lib/components/ui/empty/index.js';
+    import Icon from '$lib/components/Icon.svelte';
+    import Pill from '$lib/components/Pill.svelte';
+    import { Button } from '$lib/components/ui/button/index.js';
 
     import type { BlurIntensity } from '$lib/blurProcessor.js';
     import type { BubblePosition } from '$lib/bubbleGeometry.js';
-    import { deviceStore } from '$lib/deviceStore.svelte.js';
-    import { DISPLAY_MEDIA_OPTIONS } from '$lib/recorder.js';
-    import { cn, srcObject } from '$lib/utils.js';
 
-    import ControlBar from './ControlBar.svelte';
+    import DockBand from './DockBand.svelte';
+    import SharePlaceholder from './SharePlaceholder.svelte';
     import WebcamBubble from './WebcamBubble.svelte';
 
     interface Props {
-        onstart: () => void;
-        screenStream?: MediaStream | null;
-        webcamStream?: MediaStream | null;
+        /** Opens the browser's picker; the countdown follows. */
+        onchoose: () => void;
+        /** No take has ever started here: the welcome folds into the left column. */
+        firstVisit?: boolean;
+        /** Shown under the button when the picker failed for a reason other than cancel. */
+        pickError?: string;
+        /** The camera as previewed: blurred when blur is on. */
+        cameraStream?: MediaStream | null;
+        blurLoading?: boolean;
         micMuted?: boolean;
         camEnabled?: boolean;
         blurOn?: boolean;
         blurIntensity?: BlurIntensity;
         bubblePosition?: BubblePosition;
-        processedStream?: MediaStream | null;
-        blurLoading?: boolean;
     }
 
     let {
-        onstart,
-        screenStream = $bindable(null),
-        webcamStream = $bindable(null),
+        onchoose,
+        firstVisit = false,
+        pickError = '',
+        cameraStream = null,
+        blurLoading = false,
         micMuted = $bindable(false),
         camEnabled = $bindable(true),
         blurOn = $bindable(false),
         blurIntensity = $bindable<BlurIntensity>('default'),
-        bubblePosition = $bindable<BubblePosition>('tr'),
-        processedStream = null,
-        blurLoading = false
+        bubblePosition = $bindable<BubblePosition>('tr')
     }: Props = $props();
 
-    let pickError = $state('');
-    let picking = $state(false);
-    let screenAspect = $state(0);
-
-    async function pickScreen() {
-        try {
-            pickError = '';
-            picking = true;
-            const stream = await navigator.mediaDevices.getDisplayMedia(DISPLAY_MEDIA_OPTIONS);
-            screenStream = stream;
-            // Recording auto-starts the moment a screen is picked — no separate
-            // "Start Recording" step. Applies to any surface (tab, window, screen).
-            onstart();
-        } catch (err) {
-            if (err instanceof Error && err.name !== 'NotAllowedError') {
-                pickError = 'Could not capture screen. Please try again.';
-            }
-        } finally {
-            picking = false;
-        }
-    }
-
-    // Handle "Stop sharing" from browser share bar during Setup
-    $effect(() => {
-        const stream = screenStream;
-        if (!stream) return;
-        const track = stream.getVideoTracks()[0];
-        if (!track) return;
-        const handleEnded = () => {
-            stream.getTracks().forEach((t) => t.stop());
-            screenStream = null;
-            screenAspect = 0;
-        };
-        track.addEventListener('ended', handleEnded);
-        return () => track.removeEventListener('ended', handleEnded);
-    });
-
-    // Reactively manage webcam preview stream
-    $effect(() => {
-        const enabled = camEnabled;
-        const deviceId = deviceStore.webcamDeviceId;
-
-        if (!enabled) {
-            untrack(() => {
-                webcamStream?.getTracks().forEach((t) => t.stop());
-                webcamStream = null;
-            });
-            return;
-        }
-
-        let cancelled = false;
-        navigator.mediaDevices
-            .getUserMedia({ video: deviceId ? { deviceId: { ideal: deviceId } } : true })
-            .then((s) => {
-                if (cancelled) {
-                    s.getTracks().forEach((t) => t.stop());
-                    return;
-                }
-                untrack(() => {
-                    webcamStream?.getTracks().forEach((t) => t.stop());
-                    webcamStream = s;
-                });
-            })
-            .catch(() => {});
-
-        return () => {
-            cancelled = true;
-        };
-    });
+    const features = [
+        {
+            icon: ComputerScreenShareIcon,
+            text: 'Share a tab, window or screen, with your camera in a bubble'
+        },
+        { icon: ScissorIcon, text: 'Trim the slow bits on a timeline' },
+        { icon: Download04Icon, text: 'Export a .webm file to your downloads' }
+    ];
 </script>
 
-<div class="flex h-full flex-col">
-    <div class="relative flex flex-1 items-center justify-center overflow-hidden bg-black/20">
-        {#if screenStream}
-            <video
-                {@attach srcObject(screenStream)}
-                autoplay
-                muted
-                playsinline
-                onloadedmetadata={(e) => {
-                    const v = e.currentTarget;
-                    if (v.videoHeight) screenAspect = v.videoWidth / v.videoHeight;
-                }}
-                class="size-full object-contain"
-            ></video>
-        {:else}
-            <Card.Root
-                role="button"
-                tabindex={0}
-                onclick={pickScreen}
-                onkeydown={(e) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                        e.preventDefault();
-                        pickScreen();
-                    }
-                }}
-                class={cn(
-                    'max-w-xl flex-1 cursor-pointer items-center justify-center border-0 ring-2 ring-foreground/25 ring-offset-4 ring-offset-transparent transition-colors hover:ring-indigo-500 focus-visible:ring-indigo-500 focus-visible:outline-none'
-                )}
-            >
-                <Empty.Root>
-                    <Empty.Media>
-                        <Clapperboard size={128} class="text-muted-foreground" />
-                    </Empty.Media>
-                    <Empty.Header>
-                        <Empty.Title>No screen selected</Empty.Title>
-                        <Empty.Description
-                            >Choose a screen and recording starts straight away</Empty.Description
-                        >
-                    </Empty.Header>
-                    <Empty.Content>
-                        <div
-                            class={cn(
-                                buttonVariants({ size: 'lg' }),
-                                'pointer-events-none bg-indigo-500 text-white'
-                            )}
-                        >
-                            {picking ? 'Requesting…' : 'Start Recording'}
-                        </div>
-                        {#if pickError}
-                            <p class="text-sm text-destructive">{pickError}</p>
-                        {/if}
-                    </Empty.Content>
-                </Empty.Root>
-            </Card.Root>
-        {/if}
-
-        {#if camEnabled}
-            <WebcamBubble
-                bind:position={bubblePosition}
-                stream={webcamStream}
-                {processedStream}
-                loading={blurLoading}
-                {screenAspect}
-            />
-        {/if}
+{#snippet choose()}
+    <div class="flex items-center" class:mt-2={firstVisit}>
+        <Button variant="primary" size="lg" onclick={onchoose}>
+            <Icon icon={ComputerScreenShareIcon} />Choose what to share
+        </Button>
     </div>
+    {#if pickError}
+        <p class="text-small text-yd-danger" role="alert">{pickError}</p>
+    {/if}
+{/snippet}
 
-    <ControlBar bind:micMuted bind:camEnabled bind:blurOn bind:blurIntensity disabled={false} />
+<div class="flex min-h-0 flex-1 flex-col">
+    <section data-section="stage" class="relative flex min-h-0 flex-1 bg-yd-sand">
+        {#if firstVisit}
+            <div class="flex w-115 shrink-0 flex-col gap-5.5 px-10 pt-10 pb-8">
+                <Pill class="self-start">First time here</Pill>
+                <h1 class="text-display text-balance">Record your screen, trim it, export it</h1>
+                <p class="text-lead text-yd-muted">
+                    Everything happens in this tab. Nothing is uploaded, and there's no account to
+                    make.
+                </p>
+                <ul class="flex flex-col gap-3">
+                    {#each features as { icon, text } (text)}
+                        <li class="flex items-start gap-3">
+                            <Icon {icon} size={22} />
+                            <span class="text-body text-yd-ink">{text}</span>
+                        </li>
+                    {/each}
+                </ul>
+                {@render choose()}
+            </div>
+        {:else}
+            <div class="flex w-115 shrink-0 flex-col justify-center gap-4.5 p-10">
+                <h1 class="text-display text-balance">Ready when you are</h1>
+                <p class="text-lead text-yd-muted">
+                    Check your mic, camera and blur below, then choose what to share.
+                </p>
+                {@render choose()}
+                <p class="text-small text-yd-muted">
+                    Recording starts three seconds after you choose.
+                </p>
+            </div>
+        {/if}
+
+        <!-- Where the share will show; the camera bubble can be moved around it -->
+        <div
+            class="relative my-8 mr-8 grid min-w-0 flex-1 place-items-center self-stretch rounded-card border-[1.5px] border-dashed border-yd-ink"
+        >
+            <SharePlaceholder />
+            {#if camEnabled}
+                <WebcamBubble
+                    bind:position={bubblePosition}
+                    stream={cameraStream}
+                    loading={blurLoading}
+                    size={224}
+                    inset={18}
+                    hint
+                />
+            {/if}
+        </div>
+    </section>
+
+    <DockBand bind:micMuted bind:camEnabled bind:blurOn bind:blurIntensity />
 </div>

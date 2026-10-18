@@ -7,8 +7,7 @@ const config: StorybookConfig = {
         '@chromatic-com/storybook',
         '@storybook/addon-vitest',
         '@storybook/addon-a11y',
-        '@storybook/addon-docs',
-        '@storybook/addon-themes'
+        '@storybook/addon-docs'
     ],
     framework: '@storybook/sveltekit'
 };

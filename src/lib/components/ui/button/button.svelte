@@ -1,37 +1,35 @@
 <script lang="ts" module>
     import type { HTMLAnchorAttributes, HTMLButtonAttributes } from 'svelte/elements';
-    import { tv, type VariantProps } from 'tailwind-variants';
+    import type { VariantProps } from 'tailwind-variants';
 
-    import { cn, type WithElementRef } from '$lib/utils.js';
+    import { cn, tv, type WithElementRef } from '$lib/utils.js';
 
+    // YouDemo V2 buttons (docs/design/specs/foundations.md "Controls"): 1.5px ink
+    // outline, a hard 0 4px 0 ink shadow and a 4px bottom margin that reserves it;
+    // hover and press move 2px down onto 0 2px 0. Disabled is dashed, never faded.
+    // Buttons use proportional figures, as the design's do (its `font` shorthand,
+    // or the browser's own button font for links, resets them); a link's line
+    // height is the browser's `normal`, not 1.5.
     export const buttonVariants = tv({
-        base: "focus-visible:border-ring focus-visible:ring-ring/50 aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive dark:aria-invalid:border-destructive/50 rounded-md border border-transparent bg-clip-padding text-sm font-medium focus-visible:ring-3 active:not-aria-[haspopup]:translate-y-px aria-invalid:ring-3 [&_svg:not([class*='size-'])]:size-4 group/button inline-flex shrink-0 items-center justify-center whitespace-nowrap transition-all outline-none select-none disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0",
+        base: 'mb-1 inline-flex min-h-11 shrink-0 cursor-pointer items-center justify-center gap-2 rounded-control border-[1.5px] border-solid border-yd-ink px-[18px] text-button font-semibold whitespace-nowrap normal-nums shadow-offset transition-[translate,box-shadow] duration-[120ms] outline-none select-none not-disabled:not-aria-disabled:hover:translate-y-0.5 not-disabled:not-aria-disabled:hover:shadow-offset-press focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-yd-ink disabled:cursor-not-allowed disabled:border-dashed disabled:border-yd-muted disabled:bg-yd-base disabled:text-yd-muted disabled:shadow-none aria-disabled:cursor-not-allowed aria-disabled:border-dashed aria-disabled:border-yd-muted aria-disabled:bg-yd-base aria-disabled:text-yd-muted aria-disabled:shadow-none motion-reduce:transition-none',
         variants: {
             variant: {
-                default: 'bg-primary text-primary-foreground hover:bg-primary/80',
-                outline:
-                    'border-border bg-background hover:bg-muted hover:text-foreground dark:bg-input/30 dark:border-input dark:hover:bg-input/50 aria-expanded:bg-muted aria-expanded:text-foreground shadow-xs',
-                secondary:
-                    'bg-secondary text-secondary-foreground hover:bg-secondary/80 aria-expanded:bg-secondary aria-expanded:text-secondary-foreground',
-                ghost: 'hover:bg-muted hover:text-foreground dark:hover:bg-muted/50 aria-expanded:bg-muted aria-expanded:text-foreground',
-                destructive:
-                    'bg-destructive/10 hover:bg-destructive/20 focus-visible:ring-destructive/20 dark:focus-visible:ring-destructive/40 dark:bg-destructive/20 text-destructive focus-visible:border-destructive/40 dark:hover:bg-destructive/30',
-                success:
-                    'bg-success/10 hover:bg-success/20 focus-visible:ring-success/20 dark:focus-visible:ring-success/40 dark:bg-success/20 text-success focus-visible:border-success/40 dark:hover:bg-success/30',
-                link: 'text-primary underline-offset-4 hover:underline'
+                primary: 'bg-yd-accent text-yd-ink',
+                ghost: 'bg-yd-card text-yd-ink',
+                danger: 'bg-yd-danger text-yd-card',
+                'danger-ghost': 'bg-yd-card text-yd-danger',
+                link: 'mb-0 gap-1.5 leading-[normal] rounded-none border-0 bg-transparent px-0 text-yd-ink underline decoration-yd-accent decoration-[2.5px] underline-offset-4 shadow-none not-disabled:not-aria-disabled:hover:translate-y-0 not-disabled:not-aria-disabled:hover:shadow-none not-disabled:not-aria-disabled:hover:decoration-4 disabled:bg-transparent disabled:text-yd-ink aria-disabled:bg-transparent aria-disabled:text-yd-ink',
+                // shadcn's own names, used by the generated primitives
+                // (alert-dialog action and cancel)
+                default: 'bg-yd-accent text-yd-ink',
+                outline: 'bg-yd-card text-yd-ink'
             },
             size: {
-                default:
-                    'h-9 gap-1.5 px-2.5 in-data-[slot=button-group]:rounded-md has-data-[icon=inline-end]:pr-2 has-data-[icon=inline-start]:pl-2',
-                xs: "h-6 gap-1 rounded-[min(var(--radius-md),8px)] px-2 text-xs in-data-[slot=button-group]:rounded-md has-data-[icon=inline-end]:pr-1.5 has-data-[icon=inline-start]:pl-1.5 [&_svg:not([class*='size-'])]:size-3",
-                sm: 'h-8 gap-1 rounded-[min(var(--radius-md),10px)] px-2.5 in-data-[slot=button-group]:rounded-md has-data-[icon=inline-end]:pr-1.5 has-data-[icon=inline-start]:pl-1.5',
-                lg: 'h-10 gap-1.5 px-2.5 has-data-[icon=inline-end]:pr-2 has-data-[icon=inline-start]:pl-2',
-                icon: 'size-9',
-                'icon-xs':
-                    "size-6 rounded-[min(var(--radius-md),8px)] in-data-[slot=button-group]:rounded-md [&_svg:not([class*='size-'])]:size-3",
-                'icon-sm':
-                    'size-8 rounded-[min(var(--radius-md),10px)] in-data-[slot=button-group]:rounded-md',
-                'icon-lg': 'size-10'
+                default: '',
+                lg: 'min-h-13 px-6 text-body font-bold',
+                icon: 'w-11 px-0',
+                // The round restore button on a cut marker
+                'icon-sm': 'size-[30px] min-h-[30px] rounded-full px-0 shadow-offset-press'
             }
         },
         defaultVariants: {

@@ -54,6 +54,9 @@ thing to check for a "works in dev" asset bug.
 
 - `robots.txt` — allows everything
 - `youdemo.png` — the 2400×1260 social preview image
+- `favicon.ico`, `favicon-32.png`, `apple-touch-icon.png`, `icon-192.png`,
+  `icon-512.png` — from `docs/design/brand/`, which says where each goes; the
+  SVG tab icon is `src/lib/assets/favicon.svg`, with `icon.svg` beside it
 - `mediapipe/models/selfie_segmenter.tflite` — committed (244KB)
 
 MediaPipe **WASM** is not committed; it is vendored at build time by `postbuild`
@@ -81,10 +84,11 @@ apt stalls on optional CJK fonts).
 
 ## meta / OpenGraph (`src/app.html`)
 
-`<html lang="en" class="dark">` — dark is the default theme, applied before any JS
-runs so there's no flash. `+layout.svelte` then reconciles it with `ydTheme`.
+`<html lang="en">` — light is the only theme for now (dark mode is later work).
 
-The head carries a `description` plus a full social-preview set:
+The head carries the `favicon.ico` and `apple-touch-icon` links (through
+`%sveltekit.assets%`; the SVG icon's link is in `+layout.svelte`), a
+`description` plus a full social-preview set:
 
 - `og:title`, `og:description`, `og:type`, `og:url`
 - `og:image` (absolute URL to `youdemo.png`), `og:image:width` (2400),
@@ -95,8 +99,8 @@ The head carries a `description` plus a full social-preview set:
 The image URLs are **absolute** — required by crawlers, and the reason they're not
 built from `base`. If the site ever moves, update all of them together with
 `og:url`. The description text is duplicated across `description`,
-`og:description`, `twitter:description` and the WelcomeModal body copy; keep them
-in sync.
+`og:description`, `twitter:description` and, near enough, Setup's first-visit
+lead; keep them in sync.
 
 `<title>YouDemo</title>` in `app.html` is only the pre-hydration default —
 `+page.svelte` owns the live title. See `app-shell`.
