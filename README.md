@@ -137,7 +137,7 @@ Manager
 
 ### Prerequisites
 
-- Node.js 18+
+- Node.js 22+
 - npm
 
 ### Setup
@@ -165,6 +165,12 @@ npm run preview
 
 # Run tests
 npm run test
+
+# Run the Playwright end-to-end tests
+npm run test:e2e
+
+# Browse the component and screen stories
+npm run storybook
 
 # Compare every visual story with the approved design boards
 npm run compare
@@ -207,5 +213,10 @@ the domain root.
   WASM transcoder)
 - [MediaPipe Tasks Vision](https://ai.google.dev/edge/mediapipe/solutions/vision/image_segmenter)
   — on-device selfie segmentation for background blur
-- [@lucide/svelte](https://lucide.dev/) — icons
+- [Hugeicons](https://hugeicons.com/) — icons, through `Icon.svelte`; the one
+  exception is the export spinner, from [Lucide](https://lucide.dev/)
+- [Figtree](https://fontsource.org/fonts/figtree) — the typeface
+- [Storybook](https://storybook.js.org/), [Vitest](https://vitest.dev/) and
+  [Playwright](https://playwright.dev/) — stories compared pixel-for-pixel with
+  the design boards, unit and component tests, and end-to-end export checks
 - Deployed to [GitHub Pages](https://pages.github.com/)
