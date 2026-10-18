@@ -68,8 +68,9 @@ screens land; leave them unless nothing imports them.
 
 ## Parts
 
-**AppHeader**: 64px band, "YouDemo" at 19/800 in ink, no icon, no toggle. Board:
-`app-header`.
+**AppHeader**: 64px band, the 32px app icon (`brand/favicon.svg`, the 16-unit
+drawing at 2x, `aria-hidden`), a 12px gap, then "YouDemo" at 19/800 in ink. No
+toggle. Board: `app-header`.
 
 **Breadcrumb**: link, "/", current step, spacer, New recording. Board:
 `breadcrumb`.

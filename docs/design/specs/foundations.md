@@ -38,19 +38,19 @@ Figtree (`@fontsource-variable/figtree`) for everything, with tabular figures
 (`font-variant-numeric: tabular-nums`) on the root so every number lines up. A
 system monospace only inside Technical details.
 
-| Style          | Size / line height | Weight | Tracking | Use                                                   |
-| -------------- | ------------------ | ------ | -------- | ----------------------------------------------------- |
-| `display`      | 40 / 1.15          | 800    | −0.03em  | Setup's one big heading                               |
-| `screen-title` | 28 / 1.2           | 800    | −0.02em  | Every other screen heading (30px on the phone screen) |
-| `dialog-title` | 22 / 1.3           | 800    | −0.02em  | Dialog titles, in-stage card titles                   |
-| `row`          | 19 / 1.5           | 700    | −0.01em  | Status headings in cards, list rows                   |
-| `lead`         | 18.5 / 1.5         | 400    | 0        | Paragraph under a screen title, `muted`               |
-| `body`         | 16 / 1.5           | 400    | 0        | Everything else, `muted`                              |
-| `button`       | 15 / 1.5           | 600    | 0        | Buttons and links. Large buttons 16 / 700             |
-| `small`        | 14 / 1.5           | 400    | 0        | Hints, captions, timecodes                            |
-| `meta`         | 12.5 / 1.5         | 700    | 0.06em   | Eyebrows and dialog labels, uppercase, `muted`        |
-| `pill-label`   | 12 / 1             | 700    | 0.06em   | Pills, uppercase                                      |
-| Wordmark       | 19                 | 800    | −0.02em  | "YouDemo" in the header, `ink`, no icon               |
+| Style          | Size / line height | Weight | Tracking | Use                                                              |
+| -------------- | ------------------ | ------ | -------- | ---------------------------------------------------------------- |
+| `display`      | 40 / 1.15          | 800    | −0.03em  | Setup's one big heading                                          |
+| `screen-title` | 28 / 1.2           | 800    | −0.02em  | Every other screen heading (30px on the phone screen)            |
+| `dialog-title` | 22 / 1.3           | 800    | −0.02em  | Dialog titles, in-stage card titles                              |
+| `row`          | 19 / 1.5           | 700    | −0.01em  | Status headings in cards, list rows                              |
+| `lead`         | 18.5 / 1.5         | 400    | 0        | Paragraph under a screen title, `muted`                          |
+| `body`         | 16 / 1.5           | 400    | 0        | Everything else, `muted`                                         |
+| `button`       | 15 / 1.5           | 600    | 0        | Buttons and links. Large buttons 16 / 700                        |
+| `small`        | 14 / 1.5           | 400    | 0        | Hints, captions, timecodes                                       |
+| `meta`         | 12.5 / 1.5         | 700    | 0.06em   | Eyebrows and dialog labels, uppercase, `muted`                   |
+| `pill-label`   | 12 / 1             | 700    | 0.06em   | Pills, uppercase                                                 |
+| Wordmark       | 19                 | 800    | −0.02em  | "YouDemo" in the header, `ink`, after the 32px app icon (gap 12) |
 
 ## Shape and depth
 

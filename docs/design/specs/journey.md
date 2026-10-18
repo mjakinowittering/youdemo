@@ -22,7 +22,8 @@ V2: check → setup → countdown → recording → review → editor
 
 ## 1. Header
 
-- "YouDemo" as plain `ink` text, no icon. No theme toggle.
+- The app icon at 32px (the favicon's tile, from `../brand/favicon.svg`), then
+  "YouDemo" in `ink`. No theme toggle.
 - `app.html` no longer sets `class="dark"`; `ydTheme` is ignored for now.
 - The favicon, app icons and Open Graph image are replaced; see
   `../brand/README.md`.
@@ -124,10 +125,9 @@ with the take listed.
 
 **Opening.** One take: straight to `ready`. Several: `joining` first. The Editor
 mounts at once with skeleton controls (`screens/editor-joining`) and a card in
-the stage, "Joining N takes" with a progress bar and percentage, and a line for
-the step it is on: "Reading your takes…", "Re-encoding to match your takes…"
-(only when the takes differ), then "The timeline fills in once they're joined."
-The breadcrumb and footer are disabled. Then `ready`.
+the stage, "Joining N takes" with a progress bar and percentage, and "The
+timeline fills in once they're joined." The breadcrumb and footer are disabled.
+Then `ready`.
 
 **Breadcrumb row.** "Back to review" (link) returns to Review with cuts kept; "/
 Edit" marks the step; **New recording** on the right (hidden while trimming)
@@ -181,14 +181,10 @@ Neither acts directly:
   Discard deletes takes, cuts and the crash store, then Setup.
 
 **Exporting.** `screens/editor-exporting`: the stage shows a card with
-"Exporting", progress and a line for the step it is on: "Reading your
-recording…", "Re-encoding to match your takes…" (only when needed), "Applying
-your cut. Editing unlocks when the file is saved.", then "Saving…". The bar only
-moves forward and shows 100% only once the file exists; the tab title shows the
-same number. Every control is disabled (dashed). With no cuts there is nothing
-to do: the file downloads straight away, with no Exporting card. When done, the
-file downloads automatically (`youdemo-YYYY-MM-DD-HHMMSS.webm`, as now) and the
-Editor returns to `ready` with the **Exported** notice above the video
+"Exporting", progress and "Applying your cut. Editing unlocks when the file is
+saved." Every control is disabled (dashed). When done, the file downloads
+automatically (`youdemo-YYYY-MM-DD-HHMMSS.webm`, as now) and the Editor returns
+to `ready` with the **Exported** notice above the video
 (`screens/editor-exported`), 24px above the frame. **It has no timeout.** It
 stays until it stops being true: it closes when you dismiss it (×) or when you
 change the edit (a cut, Undo, Redo or restoring a cut), because the downloaded
@@ -222,11 +218,8 @@ Remove `Processing.svelte`, `Done.svelte` and the stitching screen in
 
 Keep one owner (`titles.ts`). Replace the stitching, processing and done titles
 with: joining "Joining takes… 64% | YouDemo", exporting "Exporting… 64% |
-YouDemo", exported "Exported | YouDemo". The countdown leads with the number, so
-it survives a truncated tab and shows from the shared tab: "3 | YouDemo", "2 |
-YouDemo", "1 | YouDemo", then a brief "0 | YouDemo" until recording starts. It
-follows the time elapsed, not a count of ticks, so it stays right while YouDemo
-is a background tab. Recording, review and editing titles stay as they are.
+YouDemo", exported "Exported | YouDemo". Countdown, recording, review and
+editing titles stay as they are.
 
 ## Out of scope
 
