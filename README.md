@@ -84,6 +84,16 @@ Things that would make YouDemo even better — contributions welcome.
       level, rendering only the ticks in view as the frames already are
       (`entriesInView` in `editorMath.ts`). Unit-test the tick maths in
       `tests/editorMath.spec.ts`
+- [ ] **Investigate MP4 export** — export is WebM only: `videoStitcher.ts`
+      copies packets into a `WebMOutputFormat` file, and `exportFilename()` in
+      `utils.ts` ends in `.webm`. Mediabunny can also write MP4 and transcode
+      (its `Conversion`), so offering MP4 may be possible. Find out whether VP9
+      and Opus (what `recorder.ts` records) can be copied into an MP4 without
+      re-encoding, or whether the browser's WebCodecs must re-encode to H.264
+      and AAC, what that costs in time and quality on long takes, and where
+      support falls short across browsers. Decide whether it belongs beside the
+      lossless WebM or replaces it, and keep packet copying the default. Out of
+      scope: building it, and any ffmpeg/WASM transcoding
 
 #### Fun
 
