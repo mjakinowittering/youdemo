@@ -124,6 +124,11 @@ export class App {
      */
     async cut(from: number, to: number): Promise<void> {
         const before = await this.cells.count();
+        // Like the editor, a cut leaving only a sliver at the end takes it too
+        // (a take runs a little over its length, which can add a last frame).
+        // Only the first, latest cut can reach the end.
+        const toEnd = this.deleted.length === 0 && before - (to + 1) <= 1;
+        const removed = toEnd ? before - from : to - from + 1;
         if (this.deleted.some((d) => d.startTime < from * SAMPLE_INTERVAL)) {
             throw new Error('cut later ranges first');
         }
@@ -131,11 +136,11 @@ export class App {
         await this.cells.nth(from).click();
         await this.cells.nth(to).click();
         await this.button(/^Remove /).click();
-        await expect(this.cells).toHaveCount(before - (to - from + 1));
+        await expect(this.cells).toHaveCount(before - removed);
         await this.button('Done trimming').click();
         this.deleted.push({
             startTime: from * SAMPLE_INTERVAL,
-            endTime: (to + 1) * SAMPLE_INTERVAL
+            endTime: (toEnd ? before : to + 1) * SAMPLE_INTERVAL
         });
     }
 
