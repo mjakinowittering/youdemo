@@ -26,6 +26,7 @@ import {
     selectionToRange,
     stripLayout,
     undo,
+    videoFit,
     ZOOM_LEVELS,
     zoomLabel
 } from '$lib/editorMath.js';
@@ -331,5 +332,23 @@ describe('overviewGeometry', () => {
             windowStart: 0,
             windowWidth: 100
         });
+    });
+});
+
+describe('videoFit', () => {
+    it('covers when the shapes are within 1%', () => {
+        // A 1366×768 tab encoded at even sizes, in a box a pixel off
+        expect(videoFit(1366, 768, 527, 297)).toBe('cover');
+        expect(videoFit(1920, 1080, 1920, 1080)).toBe('cover');
+    });
+
+    it('letterboxes when they are further off', () => {
+        expect(videoFit(1920, 1080, 400, 300)).toBe('contain');
+        expect(videoFit(1000, 1000, 1000, 980)).toBe('contain');
+    });
+
+    it('letterboxes until both sizes are known', () => {
+        expect(videoFit(0, 0, 533, 300)).toBe('contain');
+        expect(videoFit(1920, 1080, 0, 0)).toBe('contain');
     });
 });
