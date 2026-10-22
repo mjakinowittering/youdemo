@@ -356,3 +356,19 @@ export function overviewGeometry(
         playhead: pct(computeEffectiveCurrentTime(currentTime, cuts))
     };
 }
+
+/**
+ * How the video fills its frame: `cover` when its shape is within 1% of the
+ * box's (hiding the 1–2px the encoder's even sizes and the layout's rounding
+ * leave), `contain` with a letterbox when it's further off.
+ */
+export function videoFit(
+    videoWidth: number,
+    videoHeight: number,
+    boxWidth: number,
+    boxHeight: number
+): 'cover' | 'contain' {
+    if (!videoWidth || !videoHeight || !boxWidth || !boxHeight) return 'contain';
+    const mismatch = videoWidth / videoHeight / (boxWidth / boxHeight);
+    return Math.abs(mismatch - 1) < 0.01 ? 'cover' : 'contain';
+}

@@ -113,7 +113,13 @@ focused on open. Board: `alert-dialog`.
 "Optional", status pill. Board: `status-list`.
 
 **Timeline**: overview bar, frames (current, marked, skeleton), cut marker with
-round restore button, labels. Board: `timeline`.
+round restore button, labels. Board: `timeline`. The current frame has a 3px
+`accent` ring with a 2px gap (`outline-offset: 2px`), so it never reads as a
+thicker ink frame. The strip must leave room for the ring: 6px of padding below
+the cells (and the existing 30px above for the cut marker); never clip the ring
+with the scroll container's edge. Give the current frame `z-index: 1` so a later
+neighbour never paints over the ring, and put dialog scrims on a higher layer
+(`z-index: 10`) so the ring stays behind the dimming.
 
 **EditorToolbar**: a 14px-gap row: Trim toggle, Undo + Redo (an 8px group), then
 either zoom (label, out, in, as one 8px group pushed right) or, while trimming,
