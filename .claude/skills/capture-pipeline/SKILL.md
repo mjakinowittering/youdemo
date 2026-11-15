@@ -6,8 +6,9 @@ description: recorder.ts internals — canvas compositing of screen + webcam bub
 # Recording pipeline (`src/lib/recorder.ts`)
 
 A module-level singleton: `start(options)` builds the whole graph, `stop()`
-returns the finished `Blob`. Screen video and webcam video are drawn onto one
-canvas 30×/sec; the canvas stream plus a mixed audio track feed a `MediaRecorder`.
+returns the finished `Blob`. Each screen frame is drawn onto one canvas as it
+arrives, with the webcam bubble over it; the canvas stream plus a mixed audio
+track feed a `MediaRecorder`.
 
 `+page.svelte` calls it — see `app-shell` for lifecycle and ownership.
 
@@ -15,13 +16,40 @@ canvas 30×/sec; the canvas stream plus a mixed audio track feed a `MediaRecorde
 
 Each of these looks arbitrary and is not. Do not "clean them up".
 
-**`setInterval`, never `requestAnimationFrame`.** Chrome throttles rAF to ~1fps in
-background tabs, which would stall the recording whenever the user switches away.
+**One composite per screen frame, as it arrives.** A
+`MediaStreamTrackProcessor` on the share's video track hands over each
+`VideoFrame`; `drawScreenFrames()` keeps it as `_lastScreen` (closing the one
+before), and `drawFrame()` draws it, then the bubble, then `requestFrame()`.
+It replaced a plain 30 fps `setInterval`: a timer of our own sampled the
+screen's ~30 fps with a second, unsynchronised 30 fps clock, so some screen
+frames were encoded twice and others never, which played back as judder
+(`e2e/cadence.spec.ts` counts both).
 
 ```ts
-_intervalId = setInterval(drawFrame, 1000 / 30);
+_screenReader = new Processor({ track: screenTrack }).readable.getReader();
+void drawScreenFrames(_screenReader);
+_intervalId = setInterval(drawWhenScreenIsQuiet, FRAME_MS);
 _recorder.start(500);
 ```
+
+- **The timer is a stand-in, not the clock.** `drawWhenScreenIsQuiet()` draws
+  only once the screen has sent nothing for `SCREEN_QUIET_MS` (a frame and a
+  half): a still screen sends no frames, and the bubble has to keep moving. It
+  then ticks at 30 fps until a screen frame arrives.
+- **The timer redraws `_lastScreen`, never the `<video>`.** The element runs
+  behind the processor, so drawing it would put an older picture after a newer
+  one. `_screenVideo` is kept for `measureMargins()` and its `resize` listener,
+  and is drawn only before the first frame arrives.
+- **Fallback.** The processor is Chromium-only and not in TypeScript's DOM
+  typings (`trackProcessorConstructor()` narrows it from `unknown`). Without
+  it the timer draws the `<video>` every tick, as before.
+- **`stop()` goes through `stopDrawing()`**: clear the timer, `cancel()` the
+  reader, close `_lastScreen`. A reader that is no longer `_screenReader`
+  closes the frame it is holding and exits. An unclosed `VideoFrame` stalls the
+  capturer.
+- **`setInterval`, never `requestAnimationFrame`**, for that timer. Chrome
+  throttles rAF to ~1fps in background tabs, which would stall the recording
+  whenever the user switches away. The processor isn't throttled either.
 
 **`captureStream(0)` + `requestFrame()`** — manual frame control. Never
 `captureStream(30)`; the track must be driven explicitly at the end of every
@@ -130,7 +158,9 @@ keeps it as `previewStream` for the Recording screen; it ends with the recorder.
 `DISPLAY_MEDIA_OPTIONS` is the one screen-picker request (`chooseShare()` in
 `+page.svelte`, from Setup and Review):
 `selfBrowserSurface: 'exclude'` keeps the YouDemo tab out of the picker so the
-preview isn't recorded inside itself. A whole-screen share with YouDemo visible
+preview isn't recorded inside itself, and `frameRate: { max: 30 }` keeps a
+faster share from doubling the composites and the encoding now that every
+screen frame is drawn. A whole-screen share with YouDemo visible
 still mirrors — accepted.
 
 ## Stream ownership & teardown

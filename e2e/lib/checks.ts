@@ -1,4 +1,8 @@
-import { effectiveToRawTime, resolveSeekTarget } from '../../src/lib/editorMath';
+import {
+    computeEffectiveDuration,
+    effectiveToRawTime,
+    resolveSeekTarget
+} from '../../src/lib/editorMath';
 import { maxKeyframeLag as keyframeLag } from '../../src/lib/remuxPlan';
 import type { DeletedRange } from '../../src/lib/types';
 
@@ -90,6 +94,8 @@ export function checkContent(
     const source = joinedFrames(takes);
     const joinedDuration = takes.reduce((sum, t) => sum + takeLength(t), 0);
     const first = file.frames[0]?.ts ?? 0;
+    const kept = computeEffectiveDuration(joinedDuration, deleted);
+    const endCut = deleted.find((d) => d.endTime >= joinedDuration);
     let unmatched = 0;
     let maxError = 0;
     let deletedShown = 0;
@@ -112,8 +118,13 @@ export function checkContent(
         // effectiveToRawTime maps a kept-range boundary onto the start of the
         // deleted span before it; the editor snaps past it the same way. A frame
         // at a seam can sit either side of it, so allow one frame either way.
+        // After a cut that runs to the end nothing follows: a frame past the
+        // kept length (cuts start on a keyframe, a little early) should still
+        // show the moment that cut starts.
         const expected = (t: number) =>
-            resolveSeekTarget(effectiveToRawTime(t, deleted, joinedDuration), deleted);
+            endCut && t >= kept
+                ? endCut.startTime
+                : resolveSeekTarget(effectiveToRawTime(t, deleted, joinedDuration), deleted);
         const error = Math.min(
             ...[-1, 0, 1].map((n) => Math.abs(best.joined - expected(f.ts - first + n / 30)))
         );

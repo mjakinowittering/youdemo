@@ -147,6 +147,17 @@ export function selectionToRange(
     return { startTime, endTime };
 }
 
+/**
+ * Whether a cut whose last selected frame is `lastCell` runs to the end of the
+ * recording: it takes the last frame, or leaves only that one after it. A take
+ * runs a little over its length, which adds a last frame for the overrun; left
+ * on its own it would be a stray flash after the cut. Counted in frames, as the
+ * strip shows them, so the same selection always does the same thing.
+ */
+export function cutReachesEnd(lastCell: number, cellCount: number): boolean {
+    return cellCount - (lastCell + 1) <= 1;
+}
+
 // ── zoom ─────────────────────────────────────────────────────────────────────
 
 /** Seconds a frame of the strip stands for, most detailed first. */

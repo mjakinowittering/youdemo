@@ -33,7 +33,12 @@ const AUDIO_BITS_PER_SECOND = 128_000;
  * TypeScript's DOM typings; Chromium supports it.
  */
 export const DISPLAY_MEDIA_OPTIONS: DisplayMediaStreamOptions & { selfBrowserSurface: 'exclude' } =
-    { video: true, audio: true, selfBrowserSurface: 'exclude' };
+    {
+        // The recording is 30 fps; a faster share would only double the encoding
+        video: { frameRate: { max: FRAME_RATE } },
+        audio: true,
+        selfBrowserSurface: 'exclude'
+    };
 // A keyframe on every editor cell, so export can cut by copying packets: a
 // copied stretch must start on a keyframe. Chrome's default is a single
 // keyframe at the start. Chrome keys the first frame at least this long after
@@ -42,6 +47,22 @@ export const DISPLAY_MEDIA_OPTIONS: DisplayMediaStreamOptions & { selfBrowserSur
 // 7-frame groups. A duration, not a count: when the machine falls behind and
 // frames come late, a count would stretch the groups past a cell.
 const KEYFRAME_AFTER_MS = (SAMPLE_INTERVAL - 0.5 / FRAME_RATE) * 1000;
+const FRAME_MS = 1000 / FRAME_RATE;
+// The timer takes over drawing once the screen has sent nothing for this long
+const SCREEN_QUIET_MS = 1.5 * FRAME_MS;
+
+// Hands over a track's frames one by one, as they arrive. Chromium only, and
+// not in TypeScript's DOM typings.
+interface TrackProcessor {
+    readable: ReadableStream<VideoFrame>;
+}
+type TrackProcessorConstructor = new (init: { track: MediaStreamTrack }) => TrackProcessor;
+
+function trackProcessorConstructor(): TrackProcessorConstructor | null {
+    const found: unknown = (globalThis as unknown as Record<string, unknown>)
+        .MediaStreamTrackProcessor;
+    return typeof found === 'function' ? (found as TrackProcessorConstructor) : null;
+}
 
 // ─── singleton state ──────────────────────────────────────────────────────────
 
@@ -50,6 +71,11 @@ let _ctx: CanvasRenderingContext2D | null = null;
 let _screenVideo: HTMLVideoElement | null = null;
 let _webcamVideo: HTMLVideoElement | null = null;
 let _intervalId: ReturnType<typeof setInterval> | null = null;
+// The screen's frames as they arrive, where the browser can hand them over
+let _screenReader: ReadableStreamDefaultReader<VideoFrame> | null = null;
+// The newest screen frame, kept to redraw while the screen is still
+let _lastScreen: VideoFrame | null = null;
+let _lastScreenAt = 0;
 let _recorder: MediaRecorder | null = null;
 let _chunks: BlobPart[] = [];
 let _audioCtx: AudioContext | null = null;
@@ -114,13 +140,21 @@ function videoReady(video: HTMLVideoElement): Promise<void> {
     });
 }
 
+// Composites one frame: the newest screen frame, then the bubble. The <video>
+// stands in only until the first screen frame arrives, or where the browser
+// can't hand frames over: it runs behind them, so drawing it later would put an
+// older picture after a newer one.
 function drawFrame(): void {
     if (!_ctx || !_canvas || !_screenVideo) return;
     const w = _canvas.width;
     const h = _canvas.height;
+    const { top, right, bottom, left } = _margins;
 
-    if (_screenVideo.readyState >= 2) {
-        const { top, right, bottom, left } = _margins;
+    if (_lastScreen) {
+        const sw = _lastScreen.displayWidth - left - right;
+        const sh = _lastScreen.displayHeight - top - bottom;
+        _ctx.drawImage(_lastScreen, left, top, sw, sh, 0, 0, w, h);
+    } else if (_screenVideo.readyState >= 2) {
         const sw = _screenVideo.videoWidth - left - right;
         const sh = _screenVideo.videoHeight - top - bottom;
         _ctx.drawImage(_screenVideo, left, top, sw, sh, 0, 0, w, h);
@@ -162,6 +196,46 @@ function drawFrame(): void {
     }
 
     _canvasCaptureTrack?.requestFrame();
+}
+
+// Draws each screen frame as it arrives, so the take shows every one once. A
+// timer of its own would sample the screen's 30 fps with another 30 fps clock,
+// repeating some frames and missing others.
+async function drawScreenFrames(reader: ReadableStreamDefaultReader<VideoFrame>): Promise<void> {
+    try {
+        for (;;) {
+            const { done, value } = await reader.read();
+            if (done) return;
+            // Stopped, or a later take's reader has taken over
+            if (_screenReader !== reader) {
+                value.close();
+                return;
+            }
+            _lastScreen?.close();
+            _lastScreen = value;
+            _lastScreenAt = performance.now();
+            drawFrame();
+        }
+    } catch {
+        // The share ended; the timer keeps drawing the last frame until stop()
+    }
+}
+
+// The timer draws only when the screen doesn't: while it is still (so the
+// bubble keeps moving), or where the browser can't hand its frames over.
+function drawWhenScreenIsQuiet(): void {
+    if (!_screenReader || performance.now() - _lastScreenAt > SCREEN_QUIET_MS) drawFrame();
+}
+
+function stopDrawing(): void {
+    if (_intervalId !== null) {
+        clearInterval(_intervalId);
+        _intervalId = null;
+    }
+    _screenReader?.cancel().catch(() => {});
+    _screenReader = null;
+    _lastScreen?.close();
+    _lastScreen = null;
 }
 
 function cleanup(): void {
@@ -322,7 +396,14 @@ export async function start(options: RecorderOptions): Promise<MediaStream> {
         if (e.data.size > 0) _chunks.push(e.data);
     };
 
-    _intervalId = setInterval(drawFrame, 1000 / FRAME_RATE);
+    const Processor = trackProcessorConstructor();
+    const screenTrack = screenStream.getVideoTracks()[0];
+    if (Processor && screenTrack) {
+        _screenReader = new Processor({ track: screenTrack }).readable.getReader();
+        _lastScreenAt = performance.now();
+        void drawScreenFrames(_screenReader);
+    }
+    _intervalId = setInterval(drawWhenScreenIsQuiet, FRAME_MS);
     _recorder.start(500);
     _recordingStartTime = Date.now();
     return new MediaStream([_canvasCaptureTrack]);
@@ -336,10 +417,7 @@ export function stop(): Promise<Take> {
             resolve({ blob: new Blob([], { type: 'video/webm' }), duration: 0 });
             return;
         }
-        if (_intervalId !== null) {
-            clearInterval(_intervalId);
-            _intervalId = null;
-        }
+        stopDrawing();
         if (_userStream) {
             _userStream.getTracks().forEach((t) => t.stop());
             _userStream = null;

@@ -1,6 +1,6 @@
 import { readFile } from 'node:fs/promises';
 
-import { SAMPLE_INTERVAL } from '../../src/lib/editorMath';
+import { cutReachesEnd, SAMPLE_INTERVAL } from '../../src/lib/editorMath';
 import type { DeletedRange } from '../../src/lib/types';
 import { test as base, expect, type Browser, type Page, type TestInfo } from '@playwright/test';
 
@@ -124,10 +124,10 @@ export class App {
      */
     async cut(from: number, to: number): Promise<void> {
         const before = await this.cells.count();
-        // Like the editor, a cut leaving only a sliver at the end takes it too
+        // Like the editor, a cut leaving only one frame at the end takes it too
         // (a take runs a little over its length, which can add a last frame).
         // Only the first, latest cut can reach the end.
-        const toEnd = this.deleted.length === 0 && before - (to + 1) <= 1;
+        const toEnd = this.deleted.length === 0 && cutReachesEnd(to, before);
         const removed = toEnd ? before - from : to - from + 1;
         if (this.deleted.some((d) => d.startTime < from * SAMPLE_INTERVAL)) {
             throw new Error('cut later ranges first');
@@ -140,7 +140,8 @@ export class App {
         await this.button('Done trimming').click();
         this.deleted.push({
             startTime: from * SAMPLE_INTERVAL,
-            endTime: (toEnd ? before : to + 1) * SAMPLE_INTERVAL
+            // To the end of the recording, wherever past the last cell that is
+            endTime: toEnd ? Infinity : (to + 1) * SAMPLE_INTERVAL
         });
     }
 

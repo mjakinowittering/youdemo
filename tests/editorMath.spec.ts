@@ -12,6 +12,7 @@ import {
     computeVisibleCells,
     currentCuts,
     CUT_STRIDE,
+    cutReachesEnd,
     effectiveToRawTime,
     emptyHistory,
     entriesInView,
@@ -153,6 +154,23 @@ describe('computeDeletedCells / computeVisibleCells', () => {
     it('has no deleted cells when there are no ranges', () => {
         expect(computeDeletedCells(5, [])).toEqual(new Set());
         expect(computeVisibleCells(3, new Set())).toEqual([0, 1, 2]);
+    });
+});
+
+describe('cutReachesEnd', () => {
+    it('reaches the end when the selection takes the last frame', () => {
+        expect(cutReachesEnd(20, 21)).toBe(true);
+    });
+
+    it('takes a single frame left after the selection, however long it runs', () => {
+        // 4.15 s and 4.25 s both show 21 frames; a cut up to frame 19 treats them alike
+        expect(cutReachesEnd(19, computeCellCount(4.15))).toBe(true);
+        expect(cutReachesEnd(19, computeCellCount(4.25))).toBe(true);
+    });
+
+    it('leaves two or more frames after the selection alone', () => {
+        expect(cutReachesEnd(19, 22)).toBe(false);
+        expect(cutReachesEnd(0, 21)).toBe(false);
     });
 });
 
