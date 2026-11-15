@@ -208,16 +208,17 @@
 
     // Thumbnails: the frames in view first, then outwards, flushed in batches so
     // a long recording stays responsive. Keyed by 0.2 s cell, shared by every zoom.
+    // Only while paused: the seeking and encoding would compete with playback.
     $effect(() => {
         if (!videoUrl) return;
         const video = document.createElement('video');
         video.src = videoUrl;
         video.muted = true;
-        const canvas = document.createElement('canvas');
-        canvas.width = CELL_WIDTH;
-        canvas.height = CELL_HEIGHT;
+        const canvas = new OffscreenCanvas(CELL_WIDTH, CELL_HEIGHT);
         const ctx = canvas.getContext('2d');
         let cancelled = false;
+        // The thumbnails' object URLs, revoked with the video they came from
+        const urls: string[] = [];
 
         (async () => {
             await new Promise<void>((resolve) => {
@@ -234,15 +235,23 @@
             };
             while (!cancelled) {
                 const centre = offset - PAD + viewWidth / 2;
-                const next = layout.entries
-                    .filter(
-                        (e): e is Extract<StripEntry, { kind: 'frame' }> =>
-                            e.kind === 'frame' && !thumbnails.has(e.base) && !(e.base in batch)
-                    )
-                    .sort((a, b) => Math.abs(a.x - centre) - Math.abs(b.x - centre))[0];
+                let next: Extract<StripEntry, { kind: 'frame' }> | undefined;
+                if (paused) {
+                    let nearest = Infinity;
+                    for (const e of layout.entries) {
+                        if (e.kind !== 'frame' || thumbnails.has(e.base) || e.base in batch)
+                            continue;
+                        const distance = Math.abs(e.x - centre);
+                        if (distance < nearest) {
+                            nearest = distance;
+                            next = e;
+                        }
+                    }
+                }
                 if (!next) {
                     flush();
-                    // Nothing left in this layout: wait for a zoom, pan or cut
+                    // Playing, or nothing left in this layout: wait for a pause,
+                    // zoom, pan or cut
                     await new Promise((resolve) => setTimeout(resolve, 250));
                     continue;
                 }
@@ -250,7 +259,12 @@
                 await new Promise<void>((resolve) => (video.onseeked = () => resolve()));
                 if (cancelled) return;
                 ctx?.drawImage(video, 0, 0, CELL_WIDTH, CELL_HEIGHT);
-                batch[next.base] = canvas.toDataURL('image/jpeg', 0.6);
+                // Encoded off the main thread, unlike toDataURL
+                const blob = await canvas.convertToBlob({ type: 'image/jpeg', quality: 0.6 });
+                if (cancelled) return;
+                const url = URL.createObjectURL(blob);
+                urls.push(url);
+                batch[next.base] = url;
                 if (Object.keys(batch).length >= 8 || performance.now() - flushed > 150) flush();
             }
         })();
@@ -258,6 +272,8 @@
         return () => {
             cancelled = true;
             video.src = '';
+            thumbnails.clear();
+            for (const url of urls) URL.revokeObjectURL(url);
         };
     });
 
