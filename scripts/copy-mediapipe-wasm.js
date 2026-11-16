@@ -10,6 +10,9 @@ const copies = [
         files: [
             'vision_wasm_internal.js',
             'vision_wasm_internal.wasm',
+            // The module build, which the blur Worker loads
+            'vision_wasm_module_internal.js',
+            'vision_wasm_module_internal.wasm',
             'vision_wasm_nosimd_internal.js',
             'vision_wasm_nosimd_internal.wasm'
         ]

@@ -1,4 +1,6 @@
-import { expect, test } from './fixtures/app';
+import type { TestInfo } from '@playwright/test';
+
+import { expect, test, type App } from './fixtures/app';
 import { CODE_MS } from './fixtures/fakeDisplay';
 import { Inspector } from './lib/inspect';
 
@@ -18,7 +20,8 @@ const THROTTLE = Number(process.env.THROTTLE ?? 0);
 // Judder check: the fake screen stamps every frame with its capture time, so
 // consecutive frames of the take say whether the recorder showed each screen
 // frame once and in order.
-test('a take shows each screen frame once, in order', async ({ app, page }, testInfo) => {
+async function recordAndCount(app: App, testInfo: TestInfo) {
+    const { page } = app;
     if (THROTTLE) {
         const cdp = await page.context().newCDPSession(page);
         await cdp.send('Emulation.setCPUThrottlingRate', { rate: THROTTLE });
@@ -41,22 +44,39 @@ test('a take shows each screen frame once, in order', async ({ app, page }, test
         else if (gapMs < 0) outOfOrder++;
         else if (gapMs > SKIP_MS) skipped++;
     }
+    const total = take.frames.length;
     testInfo.annotations.push({
         type: 'cadence',
         description: JSON.stringify({
-            frames: take.frames.length,
-            fps: Math.round((take.frames.length / SECONDS) * 10) / 10,
+            frames: total,
+            fps: Math.round((total / SECONDS) * 10) / 10,
             repeated,
             filled,
             outOfOrder,
             skipped
         })
     });
+    expect(frames.length).toBeGreaterThan(total * 0.98);
+    return { total, repeated, outOfOrder, skipped };
+}
 
-    expect(frames.length).toBeGreaterThan(take.frames.length * 0.98);
+test('a take shows each screen frame once, in order', async ({ app }, testInfo) => {
+    const take = await recordAndCount(app, testInfo);
     // An unthrottled run keeps the screen's frame rate
-    if (!THROTTLE) expect(take.frames.length).toBeGreaterThan(SECONDS * 27);
-    expect(repeated).toBe(0);
-    expect(outOfOrder).toBe(0);
-    expect(skipped).toBeLessThanOrEqual(MAX_SKIPS);
+    if (!THROTTLE) expect(take.total).toBeGreaterThan(SECONDS * 27);
+    expect(take.repeated).toBe(0);
+    expect(take.outOfOrder).toBe(0);
+    expect(take.skipped).toBeLessThanOrEqual(MAX_SKIPS);
+});
+
+// Blur runs in a Worker of its own, so it costs the screen no frames. Without a
+// GPU (CI, headless) segmenting is slow, which may only slow the bubble.
+test('background blur leaves the screen its cadence', async ({ app }, testInfo) => {
+    const { page } = app;
+    await page.getByRole('button', { name: 'Enable background blur' }).click();
+    await expect(page.getByRole('button', { name: 'Disable background blur' })).toBeVisible();
+    const take = await recordAndCount(app, testInfo);
+    if (!THROTTLE) expect(take.total).toBeGreaterThan(SECONDS * 24);
+    expect(take.repeated).toBe(0);
+    expect(take.outOfOrder).toBe(0);
 });

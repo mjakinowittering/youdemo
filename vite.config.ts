@@ -45,6 +45,8 @@ function vendoredWasmDevPlugin() {
 }
 export default defineConfig({
     plugins: [tailwindcss(), sveltekit(), vendoredWasmDevPlugin()],
+    // The compositor and blur Workers are module workers, in dev and in the build
+    worker: { format: 'es' },
     test: {
         expect: {
             requireAssertions: true

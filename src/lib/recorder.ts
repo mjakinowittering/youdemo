@@ -1,7 +1,10 @@
 import fixWebmDuration from 'fix-webm-duration';
 
-import { BUBBLE_FRAC, bubbleCoords, type BubblePosition } from '$lib/bubbleGeometry.js';
+import type { BubblePosition } from '$lib/bubbleGeometry.js';
+import { createBubble, drawComposite, type Bubble } from '$lib/composite.js';
+import type { CompositorMessage } from '$lib/compositor.worker.js';
 import { FRAME_RATE, SAMPLE_INTERVAL } from '$lib/editorMath.js';
+import { canProcessInWorker, frameTrack, trackFrames } from '$lib/trackFrames.js';
 import type { Take } from '$lib/types.js';
 import { blackMargins, NO_MARGINS, type Margins } from '$lib/windowCrop.js';
 
@@ -51,31 +54,22 @@ const FRAME_MS = 1000 / FRAME_RATE;
 // The timer takes over drawing once the screen has sent nothing for this long
 const SCREEN_QUIET_MS = 1.5 * FRAME_MS;
 
-// Hands over a track's frames one by one, as they arrive. Chromium only, and
-// not in TypeScript's DOM typings.
-interface TrackProcessor {
-    readable: ReadableStream<VideoFrame>;
-}
-type TrackProcessorConstructor = new (init: { track: MediaStreamTrack }) => TrackProcessor;
-
-function trackProcessorConstructor(): TrackProcessorConstructor | null {
-    const found: unknown = (globalThis as unknown as Record<string, unknown>)
-        .MediaStreamTrackProcessor;
-    return typeof found === 'function' ? (found as TrackProcessorConstructor) : null;
-}
-
 // ─── singleton state ──────────────────────────────────────────────────────────
 
+// Compositing runs in a Worker, which reads the screen's and the webcam's frames
+// as they arrive and writes the recording's frames to `_outputTrack`
+let _worker: Worker | null = null;
+let _outputTrack: MediaStreamTrack | null = null;
+// Clones of the tracks the Worker reads, so stopping them ends only its reading
+let _workerTracks: MediaStreamTrack[] = [];
+// Where the browser can't do that, a timer draws the <video>s on this canvas
 let _canvas: HTMLCanvasElement | null = null;
 let _ctx: CanvasRenderingContext2D | null = null;
+let _canvasCaptureTrack: CanvasCaptureMediaStreamTrack | null = null;
+let _bubble: Bubble | null = null;
+let _intervalId: ReturnType<typeof setInterval> | null = null;
 let _screenVideo: HTMLVideoElement | null = null;
 let _webcamVideo: HTMLVideoElement | null = null;
-let _intervalId: ReturnType<typeof setInterval> | null = null;
-// The screen's frames as they arrive, where the browser can hand them over
-let _screenReader: ReadableStreamDefaultReader<VideoFrame> | null = null;
-// The newest screen frame, kept to redraw while the screen is still
-let _lastScreen: VideoFrame | null = null;
-let _lastScreenAt = 0;
 let _recorder: MediaRecorder | null = null;
 let _chunks: BlobPart[] = [];
 let _audioCtx: AudioContext | null = null;
@@ -85,13 +79,6 @@ let _camEnabled = false;
 let _bubblePos: BubblePosition = 'tr';
 let _recordingStartTime = 0;
 let _userStream: MediaStream | null = null;
-let _canvasCaptureTrack: CanvasCaptureMediaStreamTrack | null = null;
-// Offscreen canvas the webcam bubble is masked on before being blitted to the
-// main canvas — avoids the partial-coverage seam that `clip()` leaves at the
-// circle edge (visible as straight "borders" once the canvas is resolution-capped).
-let _bubbleCanvas: HTMLCanvasElement | null = null;
-let _bubbleCtx: CanvasRenderingContext2D | null = null;
-let _bubbleMask: CanvasGradient | null = null;
 // A window share's shadow margin, left out of every frame (windowCrop.ts)
 let _isWindowShare = false;
 let _margins: Margins = NO_MARGINS;
@@ -131,6 +118,20 @@ function measureMargins(): void {
     if (!ctx) return;
     ctx.drawImage(_screenVideo, 0, 0);
     _margins = blackMargins(ctx.getImageData(0, 0, w, h).data, w, h);
+    tellWorker({ type: 'margins', margins: _margins });
+}
+
+function tellWorker(message: CompositorMessage, transfer: Transferable[] = []): void {
+    _worker?.postMessage(message, transfer);
+}
+
+// The frames of a clone of `track`, for the Worker to read; null where unsupported
+function startWorkerTrack(track: MediaStreamTrack): ReadableStream<VideoFrame> | null {
+    const clone = track.clone();
+    const frames = trackFrames(clone);
+    if (frames) _workerTracks.push(clone);
+    else clone.stop();
+    return frames;
 }
 
 function videoReady(video: HTMLVideoElement): Promise<void> {
@@ -140,91 +141,24 @@ function videoReady(video: HTMLVideoElement): Promise<void> {
     });
 }
 
-// Composites one frame: the newest screen frame, then the bubble. The <video>
-// stands in only until the first screen frame arrives, or where the browser
-// can't hand frames over: it runs behind them, so drawing it later would put an
-// older picture after a newer one.
+// The fallback's frame, drawn from the <video>s on a timer
 function drawFrame(): void {
     if (!_ctx || !_canvas || !_screenVideo) return;
-    const w = _canvas.width;
-    const h = _canvas.height;
-    const { top, right, bottom, left } = _margins;
-
-    if (_lastScreen) {
-        const sw = _lastScreen.displayWidth - left - right;
-        const sh = _lastScreen.displayHeight - top - bottom;
-        _ctx.drawImage(_lastScreen, left, top, sw, sh, 0, 0, w, h);
-    } else if (_screenVideo.readyState >= 2) {
-        const sw = _screenVideo.videoWidth - left - right;
-        const sh = _screenVideo.videoHeight - top - bottom;
-        _ctx.drawImage(_screenVideo, left, top, sw, sh, 0, 0, w, h);
-    }
-
-    if (
-        _camEnabled &&
-        _webcamVideo &&
-        _webcamVideo.readyState >= 2 &&
-        _bubbleCanvas &&
-        _bubbleCtx &&
-        _bubbleMask
-    ) {
-        const d = _bubbleCanvas.width;
-        const { x, y } = bubbleCoords(_bubblePos, { x: 0, y: 0, w, h });
-        const ix = Math.round(x);
-        const iy = Math.round(y);
-
-        // Centre-crop the webcam frame to a square — matches the preview's object-cover.
-        const vw = _webcamVideo.videoWidth || d;
-        const vh = _webcamVideo.videoHeight || d;
-        const side = Math.min(vw, vh);
-        const sx = (vw - side) / 2;
-        const sy = (vh - side) / 2;
-
-        // Mask the bubble on its own canvas: draw the square, then keep only the
-        // feathered circle via destination-in. The result has a soft alpha edge,
-        // so blitting it onto the main canvas blends cleanly — no clip() seam.
-        const bc = _bubbleCtx;
-        bc.globalCompositeOperation = 'source-over';
-        bc.clearRect(0, 0, d, d);
-        bc.drawImage(_webcamVideo, sx, sy, side, side, 0, 0, d, d);
-        bc.globalCompositeOperation = 'destination-in';
-        bc.fillStyle = _bubbleMask;
-        bc.fillRect(0, 0, d, d);
-        bc.globalCompositeOperation = 'source-over';
-
-        _ctx.drawImage(_bubbleCanvas, ix, iy);
-    }
-
+    const picture = (video: HTMLVideoElement | null) =>
+        video && video.readyState >= 2
+            ? { source: video, width: video.videoWidth, height: video.videoHeight }
+            : null;
+    drawComposite(
+        _ctx,
+        _canvas.width,
+        _canvas.height,
+        picture(_screenVideo),
+        _margins,
+        _camEnabled ? picture(_webcamVideo) : null,
+        _bubble,
+        _bubblePos
+    );
     _canvasCaptureTrack?.requestFrame();
-}
-
-// Draws each screen frame as it arrives, so the take shows every one once. A
-// timer of its own would sample the screen's 30 fps with another 30 fps clock,
-// repeating some frames and missing others.
-async function drawScreenFrames(reader: ReadableStreamDefaultReader<VideoFrame>): Promise<void> {
-    try {
-        for (;;) {
-            const { done, value } = await reader.read();
-            if (done) return;
-            // Stopped, or a later take's reader has taken over
-            if (_screenReader !== reader) {
-                value.close();
-                return;
-            }
-            _lastScreen?.close();
-            _lastScreen = value;
-            _lastScreenAt = performance.now();
-            drawFrame();
-        }
-    } catch {
-        // The share ended; the timer keeps drawing the last frame until stop()
-    }
-}
-
-// The timer draws only when the screen doesn't: while it is still (so the
-// bubble keeps moving), or where the browser can't hand its frames over.
-function drawWhenScreenIsQuiet(): void {
-    if (!_screenReader || performance.now() - _lastScreenAt > SCREEN_QUIET_MS) drawFrame();
 }
 
 function stopDrawing(): void {
@@ -232,10 +166,10 @@ function stopDrawing(): void {
         clearInterval(_intervalId);
         _intervalId = null;
     }
-    _screenReader?.cancel().catch(() => {});
-    _screenReader = null;
-    _lastScreen?.close();
-    _lastScreen = null;
+    _worker?.terminate();
+    _worker = null;
+    _workerTracks.forEach((t) => t.stop());
+    _workerTracks = [];
 }
 
 function cleanup(): void {
@@ -263,9 +197,9 @@ function cleanup(): void {
     _canvas = null;
     _ctx = null;
     _canvasCaptureTrack = null;
-    _bubbleCanvas = null;
-    _bubbleCtx = null;
-    _bubbleMask = null;
+    _bubble = null;
+    _outputTrack?.stop();
+    _outputTrack = null;
     _isWindowShare = false;
     _margins = NO_MARGINS;
 }
@@ -288,13 +222,6 @@ export async function start(options: RecorderOptions): Promise<MediaStream> {
     _screenVideo.srcObject = screenStream;
     _screenVideo.muted = true;
     await _screenVideo.play();
-
-    // Canvas — dimensions set after the screen video is ready (below).
-    // alpha: false → opaque output, so the recorded WebM has no alpha plane.
-    // VP9-with-alpha crashes ffmpeg.wasm during the multi-segment re-encode, and
-    // the composite is always fully opaque anyway (the screen fills every frame).
-    _canvas = document.createElement('canvas');
-    _ctx = _canvas.getContext('2d', { alpha: false })!;
 
     // Audio graph: system audio (from the screen stream) + mic, mixed into one track
     _audioCtx = new AudioContext();
@@ -320,7 +247,9 @@ export async function start(options: RecorderOptions): Promise<MediaStream> {
     // Webcam video — reuse the stream already acquired upstream. Never open a
     // second camera capture (wasteful, and some webcams reject a concurrent open).
     const webcamVideoStream = options.processedWebcamStream ?? webcamStream;
-    if (camEnabled && webcamVideoStream) {
+    const webcamTrack = camEnabled ? (webcamVideoStream?.getVideoTracks()[0] ?? null) : null;
+    const inWorker = canProcessInWorker();
+    if (webcamTrack && webcamVideoStream && !inWorker) {
         _webcamVideo = document.createElement('video');
         _webcamVideo.srcObject = webcamVideoStream;
         _webcamVideo.muted = true;
@@ -360,29 +289,58 @@ export async function start(options: RecorderOptions): Promise<MediaStream> {
         (_screenVideo.videoWidth || 1920) - left - right,
         (_screenVideo.videoHeight || 1080) - top - bottom
     );
-    _canvas.width = width;
-    _canvas.height = height;
 
-    // Pre-build the bubble's offscreen canvas + feathered circular mask once the
-    // frame height (and therefore bubble diameter) is known.
-    if (camEnabled && _webcamVideo) {
-        const d = Math.max(2, Math.round(height * BUBBLE_FRAC));
-        _bubbleCanvas = document.createElement('canvas');
-        _bubbleCanvas.width = d;
-        _bubbleCanvas.height = d;
-        _bubbleCtx = _bubbleCanvas.getContext('2d')!;
-        const r = d / 2;
-        const feather = Math.max(1, r * 0.03);
-        _bubbleMask = _bubbleCtx.createRadialGradient(r, r, 0, r, r, r);
-        _bubbleMask.addColorStop(0, 'rgba(0,0,0,1)');
-        _bubbleMask.addColorStop(Math.max(0, (r - feather) / r), 'rgba(0,0,0,1)');
-        _bubbleMask.addColorStop(1, 'rgba(0,0,0,0)');
+    const screenTrack = screenStream.getVideoTracks()[0];
+    const output = inWorker ? frameTrack() : null;
+    const screenFrames = output && screenTrack ? startWorkerTrack(screenTrack) : null;
+    let videoTrack: MediaStreamTrack;
+    if (output && screenFrames) {
+        // The Worker draws every screen frame as it arrives. A timer of our own
+        // would sample the screen's 30 fps with a second 30 fps clock, repeating
+        // some frames and missing others.
+        const webcamFrames = webcamTrack ? startWorkerTrack(webcamTrack) : null;
+        // What the screen shows now, in case it stays still and sends nothing
+        const firstScreen = new VideoFrame(_screenVideo);
+        _worker = new Worker(new URL('./compositor.worker.ts', import.meta.url), {
+            type: 'module'
+        });
+        _worker.onerror = (e) => console.error('The recording stopped drawing:', e.message);
+        tellWorker(
+            {
+                type: 'start',
+                screen: screenFrames,
+                webcam: webcamFrames,
+                firstScreen,
+                output: output.writable,
+                width,
+                height,
+                margins: _margins,
+                camEnabled,
+                bubblePosition,
+                frameMs: FRAME_MS,
+                quietMs: SCREEN_QUIET_MS
+            },
+            [screenFrames, ...(webcamFrames ? [webcamFrames] : []), firstScreen, output.writable]
+        );
+        _outputTrack = videoTrack = output.track;
+    } else {
+        // alpha: false → opaque output, so the recorded WebM has no alpha plane,
+        // which breaks tooling downstream; the screen fills every frame anyway.
+        _canvas = document.createElement('canvas');
+        _canvas.width = width;
+        _canvas.height = height;
+        _ctx = _canvas.getContext('2d', { alpha: false })!;
+        if (_webcamVideo) _bubble = createBubble(document.createElement('canvas'), height);
+        // 0 = manual frame control: drawFrame() asks for each frame
+        _canvasCaptureTrack = _canvas
+            .captureStream(0)
+            .getVideoTracks()[0] as CanvasCaptureMediaStreamTrack;
+        videoTrack = _canvasCaptureTrack;
+        _intervalId = setInterval(drawFrame, FRAME_MS);
     }
 
-    // Canvas stream + mixed audio → MediaRecorder
-    const canvasStream = _canvas.captureStream(0); // 0 = manual frame control
-    _canvasCaptureTrack = canvasStream.getVideoTracks()[0] as CanvasCaptureMediaStreamTrack;
-    _destination.stream.getAudioTracks().forEach((t) => canvasStream.addTrack(t));
+    // The composited video + mixed audio → MediaRecorder
+    const recorded = new MediaStream([videoTrack, ..._destination.stream.getAudioTracks()]);
 
     // Not yet in TypeScript's DOM typings; Chromium supports it.
     const mediaOptions: MediaRecorderOptions & { videoKeyFrameIntervalDuration: number } = {
@@ -391,22 +349,14 @@ export async function start(options: RecorderOptions): Promise<MediaStream> {
         audioBitsPerSecond: AUDIO_BITS_PER_SECOND,
         videoKeyFrameIntervalDuration: KEYFRAME_AFTER_MS
     };
-    _recorder = new MediaRecorder(canvasStream, mediaOptions);
+    _recorder = new MediaRecorder(recorded, mediaOptions);
     _recorder.ondataavailable = (e) => {
         if (e.data.size > 0) _chunks.push(e.data);
     };
 
-    const Processor = trackProcessorConstructor();
-    const screenTrack = screenStream.getVideoTracks()[0];
-    if (Processor && screenTrack) {
-        _screenReader = new Processor({ track: screenTrack }).readable.getReader();
-        _lastScreenAt = performance.now();
-        void drawScreenFrames(_screenReader);
-    }
-    _intervalId = setInterval(drawWhenScreenIsQuiet, FRAME_MS);
     _recorder.start(500);
     _recordingStartTime = Date.now();
-    return new MediaStream([_canvasCaptureTrack]);
+    return new MediaStream([videoTrack]);
 }
 
 /** Stops recording and resolves with the take: its WebM and duration. */
@@ -448,8 +398,10 @@ export function setMicMuted(muted: boolean): void {
 
 export function setCamEnabled(enabled: boolean): void {
     _camEnabled = enabled;
+    tellWorker({ type: 'camEnabled', camEnabled: enabled });
 }
 
 export function setBubblePosition(pos: BubblePosition): void {
     _bubblePos = pos;
+    tellWorker({ type: 'bubblePosition', bubblePosition: pos });
 }
