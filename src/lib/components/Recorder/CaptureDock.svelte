@@ -29,5 +29,6 @@
 >
     <MicControl bind:micMuted disabled={locked} />
     <CamControl bind:camEnabled disabled={locked} />
-    <BlurControl bind:blurOn bind:intensity={blurIntensity} disabled={locked} />
+    <!-- Nothing to blur with the camera off: disabled, but blurOn and intensity are kept -->
+    <BlurControl bind:blurOn bind:intensity={blurIntensity} disabled={locked || !camEnabled} />
 </div>

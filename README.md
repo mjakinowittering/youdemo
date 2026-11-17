@@ -65,16 +65,6 @@ Things that would make YouDemo even better — contributions welcome.
       stop a six-minute take several times, logging Stop → Review and keeping a
       trace when it is slow, then find which step stalls. Out of scope: the
       export, which takes about half a second for the same take
-- [ ] **Disable the blur button while the camera is off** — `CaptureDock.svelte`
-      passes `disabled={locked}` to `BlurControl`, so with the camera switched
-      off the Blur toggle and its intensity menu stay live, though there is
-      nothing to blur: the blur effect in `+page.svelte` already skips building
-      a processor without a `webcamStream`. Disable it when `!camEnabled` as
-      well, keeping `blurOn` and the intensity as they were so blur comes back
-      as it was with the camera. The `capture-dock` board draws it: Camera off
-      with Blur off, and with Blur on, each disabled (dashed, `muted`, over its
-      usual tint), Mic and Camera still live, and no note. Re-export the board
-      from the design system before the compare
 
 ### Features
 
