@@ -203,6 +203,7 @@
             <div class="flex flex-col gap-3.5">
                 <CaptureDock micMuted={false} camEnabled blurOn />
                 <CaptureDock micMuted camEnabled={false} blurOn={false} />
+                <CaptureDock micMuted={false} camEnabled={false} blurOn />
                 <CaptureDock micMuted={false} camEnabled blurOn locked />
             </div>
         </Sheet>
