@@ -70,9 +70,11 @@ Things that would make YouDemo even better — contributions welcome.
       off the Blur toggle and its intensity menu stay live, though there is
       nothing to blur: the blur effect in `+page.svelte` already skips building
       a processor without a `webcamStream`. Disable it when `!camEnabled` as
-      well, keeping `blurOn` as it was so blur comes back with the camera. Check
-      the design boards for how a dock control reads when disabled for this
-      reason rather than locked
+      well, keeping `blurOn` and the intensity as they were so blur comes back
+      as it was with the camera. The `capture-dock` board draws it: Camera off
+      with Blur off, and with Blur on, each disabled (dashed, `muted`, over its
+      usual tint), Mic and Camera still live, and no note. Re-export the board
+      from the design system before the compare
 
 ### Features
 
