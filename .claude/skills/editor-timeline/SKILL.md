@@ -32,6 +32,7 @@ of it in a component.
 | `effectiveToRawTime`                     | kept → raw (a time on a cut's start maps past it) |
 | `resolveSeekTarget`                      | snap out of a cut to its end                      |
 | `selectionToRange`                       | selected cells at an interval → `DeletedRange`   |
+| `cutReachesEnd`                          | a cut leaving at most one frame after it runs to the end |
 | `CutHistory`, `emptyHistory`, `currentCuts`, `addCut`, `restoreCut`, `undo`, `redo`, `canUndo`, `canRedo` | the undoable cuts; `addCut` merges overlaps |
 | `ZOOM_LEVELS` (0.2, 1, 5), `zoomLabel`   | seconds a frame                                   |
 | `stripLayout`                            | frames and cut markers with x positions           |

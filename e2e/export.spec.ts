@@ -128,9 +128,9 @@ function exportScenario(title: string, scenario: Scenario): void {
         });
 
         test('is smooth: adds no stalls or frozen frames', () => {
-            // Measured against the takes: the recorder's own timer can miss a
-            // frame under load, and that is recording, not export. A cut may
-            // add up to one frame at its seam.
+            // Measured against the takes: the recorder can miss a frame under
+            // load, and that is recording, not export. A cut may add up to one
+            // frame at its seam.
             const allowance = 1 / 30 + 0.005;
             const takeGap = Math.max(...takes.map(maxFrameGap));
             const takeFreeze = Math.max(...takes.map(longestFreeze));

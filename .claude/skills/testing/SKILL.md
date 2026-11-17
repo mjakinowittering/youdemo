@@ -98,7 +98,7 @@ browser project.
 
 ## E2E (Playwright)
 
-`npm run test:e2e` — `@playwright/test` specs in `e2e/`, one per area (first
+`npm run test:e2e` — `@playwright/test` specs in `e2e/`, one per area (cadence, first
 visit, setup, capture, editor, export, lifecycle). They drive the **production
 build under `/youdemo/`**, served like Pages by `npm run preview`
 (`scripts/serve-build.js`).

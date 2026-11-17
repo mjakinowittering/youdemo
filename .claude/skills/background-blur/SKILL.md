@@ -37,8 +37,9 @@ person); the **last** index is always the foreground.
 
 ## Per-frame loop
 
-Same shape as `recorder.ts` (see `capture-pipeline`): `setInterval` at 30fps,
-`captureStream(0)` + `requestFrame()` per tick.
+A timer of its own: `setInterval` at 30fps (never rAF, see `capture-pipeline`),
+`captureStream(0)` + `requestFrame()` per tick. Unlike `recorder.ts` it isn't
+driven by the camera's frames, so the bubble is sampled by two clocks.
 
 1. Draw the whole frame blurred (`ctx.filter = blur(<radius>px)`) as background.
 2. Write the confidence values into the alpha channel of a reused `ImageData`.

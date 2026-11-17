@@ -146,9 +146,11 @@ Full transition table, camera lifecycle and reset contract: **`app-shell`**.
 
 **Capture & export**
 
-- **`setInterval`, not rAF**, and `captureStream(0)` + `requestFrame()`, in the
-  recorder's capture loop. **Opaque canvases** (`{ alpha: false }`) wherever
-  frames are drawn for encoding. Why: **`capture-pipeline`**.
+- **One composite per screen frame as it arrives**, never on a timer of our own;
+  **`setInterval`, not rAF**, for the timer that stands in while the screen is
+  still; and `captureStream(0)` + `requestFrame()`. **Opaque canvases**
+  (`{ alpha: false }`) wherever frames are drawn for encoding. Why:
+  **`capture-pipeline`**.
 - **Export copies packets — never a real-time replay, and never reintroduce
   ffmpeg/WASM transcoding** without reading the history in **`video-export`**.
 

@@ -7,9 +7,11 @@
         canUndo,
         CELL_HEIGHT,
         CELL_WIDTH,
+        computeCellCount,
         computeEffectiveCurrentTime,
         computeEffectiveDuration,
         currentCuts,
+        cutReachesEnd,
         effectiveToRawTime,
         entriesInView,
         exportedFileShown,
@@ -188,10 +190,10 @@
 
     function remove() {
         if (selected.size === 0) return;
-        // A cut taking the last frame runs to the end: that frame's cell can stop
-        // short of it, or run past it
+        // A cut reaching the last frame runs to the end: that frame's cell can
+        // stop short of it, or run past it
         const range = selectionToRange(selected, interval);
-        const toEnd = range.endTime > duration - interval;
+        const toEnd = cutReachesEnd(Math.max(...selected), computeCellCount(duration, interval));
         history = addCut(history, { ...range, endTime: toEnd ? duration : range.endTime });
         clearSelection();
         seekTo(currentTime);

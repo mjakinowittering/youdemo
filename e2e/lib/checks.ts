@@ -1,4 +1,8 @@
-import { effectiveToRawTime, resolveSeekTarget } from '../../src/lib/editorMath';
+import {
+    computeEffectiveDuration,
+    effectiveToRawTime,
+    resolveSeekTarget
+} from '../../src/lib/editorMath';
 import { maxKeyframeLag as keyframeLag } from '../../src/lib/remuxPlan';
 import type { DeletedRange } from '../../src/lib/types';
 
@@ -90,6 +94,8 @@ export function checkContent(
     const source = joinedFrames(takes);
     const joinedDuration = takes.reduce((sum, t) => sum + takeLength(t), 0);
     const first = file.frames[0]?.ts ?? 0;
+    const kept = computeEffectiveDuration(joinedDuration, deleted);
+    const endCut = deleted.find((d) => d.endTime >= joinedDuration);
     let unmatched = 0;
     let maxError = 0;
     let deletedShown = 0;
@@ -112,10 +118,22 @@ export function checkContent(
         // effectiveToRawTime maps a kept-range boundary onto the start of the
         // deleted span before it; the editor snaps past it the same way. A frame
         // at a seam can sit either side of it, so allow one frame either way.
+        // After a cut that runs to the end nothing follows: a frame past the
+        // kept length should still show the moment that cut starts.
         const expected = (t: number) =>
-            resolveSeekTarget(effectiveToRawTime(t, deleted, joinedDuration), deleted);
+            endCut && t >= kept
+                ? endCut.startTime
+                : resolveSeekTarget(effectiveToRawTime(t, deleted, joinedDuration), deleted);
+        // Each kept stretch starts on the keyframe nearest its cut, so the
+        // stretches before a seam can run a few frames past where the edit puts
+        // it. Looking further than one frame for the seam counts as error, so
+        // the total stays under the same bound as everywhere else.
         const error = Math.min(
-            ...[-1, 0, 1].map((n) => Math.abs(best.joined - expected(f.ts - first + n / 30)))
+            ...[-4, -3, -2, -1, 0, 1, 2, 3, 4].map(
+                (n) =>
+                    Math.abs(best.joined - expected(f.ts - first + n / 30)) +
+                    Math.max(0, Math.abs(n) - 1) / 30
+            )
         );
         maxError = Math.max(maxError, error);
         if (
