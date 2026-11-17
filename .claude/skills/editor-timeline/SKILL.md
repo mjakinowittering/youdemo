@@ -76,10 +76,15 @@ the playhead.
 ## Thumbnails
 
 Generated in the container: a detached `<video>` seeks to each frame's 0.2 s
-cell (`base`) and draws it at cell size into a JPEG data URL. The frames
-nearest the middle of the view go first, then outwards; results are flushed
-into the `SvelteMap` in batches (8, or every 150ms). Every zoom level shares
-them.
+cell (`base`) and draws it at cell size onto an `OffscreenCanvas`, whose
+`convertToBlob()` encodes the JPEG off the main thread (`toDataURL` blocked it
+for every cell); the frame shows it through an object URL, revoked when the
+video changes. The frames nearest the middle of the view go first, then
+outwards; results are flushed into the `SvelteMap` in batches (8, or every
+150ms). Every zoom level shares them.
+
+**Only while paused.** Generation stops while the video plays and picks up on
+pause: the second `<video>`'s seeking competes with playback.
 
 ## No shortcuts
 
