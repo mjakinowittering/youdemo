@@ -84,7 +84,9 @@ each call site.
 **CaptureDock**: three split buttons (toggle + device chevron) in a card dock
 (radius 20, padding 12 14 8, gap 14). Mic/Muted, Camera/Camera off, Blur
 off/Blur on. Off states use `danger-tint` with `danger` text; Blur on uses
-`success-tint`; every state has a word. Locked: all dashed, plus the note.
+`success-tint`; every state has a word. Camera off: Blur (toggle and chevron) is
+disabled, dashed and `muted`, but keeps its state and tint, so it returns as it
+was when the camera comes back; no note. Locked: all dashed, plus the note.
 Board: `capture-dock`. The chevrons open DropdownMenu.
 
 **Pill**: 28 tall, ink outline, uppercase 12/700. Plain, sand, on

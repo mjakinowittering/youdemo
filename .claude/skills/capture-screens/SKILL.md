@@ -63,8 +63,11 @@ Recording; live on Setup and Review.
 | Blur    | "Blur off" `UserIcon` · "Blur on" `BlurIcon`, on; the chevron sets intensity   |
 
 Mic and Cam enumerate their devices in `onMount` and read/write `deviceStore`;
-tooltips name the device. Blur stays usable while the camera is off, as the
-board draws it. `aria-label`s name the action ("Mute microphone",
+tooltips name the device. While the camera is off, Blur (toggle and chevron)
+is disabled but keeps its state, `blurOn` and intensity alike, so it comes back
+as it was with the camera; it reads as any disabled button (dashed, `muted`)
+over its usual tint, with no note. Board: `capture-dock`, its camera-off rows.
+`aria-label`s name the action ("Mute microphone",
 "Enable background blur"); the E2E specs use them.
 
 # The webcam bubble
