@@ -78,6 +78,34 @@ this section first and raise it explicitly.
 It runs on the main thread. A Web Worker would only matter if the export
 progress bar stutters on a long recording — measure first.
 
+## MP4 — what we found (November 2026)
+
+Export is WebM only today. A spike (Mediabunny 1.60, 1280×720 fake-screen
+takes of 30 s and six minutes) measured the two ways to an MP4:
+
+- **Copy VP9 + Opus into `Mp4OutputFormat`** — Mediabunny accepts both codecs.
+  Lossless and fast (six minutes: 0.7 s Chromium, 1.9 s Firefox); plays and
+  seeks in both; `ffprobe` clean, `moov` first with `fastStart: 'in-memory'`.
+  But the players people want MP4 for (QuickTime, iPhone, Keynote, Mac
+  PowerPoint) are unlikely to play VP9 or Opus in MP4, so it buys little over
+  the WebM.
+- **Re-encode to H.264 + AAC** — the `reencode()` pattern with
+  `VideoSampleSource({ codec: 'avc' })`; not `Conversion` (it drops frames,
+  above). Six minutes took 11 s in Chromium and 48 s in Firefox, at about three
+  quarters of the WebM's size; SSIM against the original 0.993. The fake screen
+  has no text, so text sharpness on a real recording is still unmeasured, and
+  real screens will encode slower than the near-static fake one.
+- **AAC encoding is missing on Linux** — `canEncodeAudio('aac')` is false in
+  Chromium, Google Chrome 157 and Firefox there; H.264 encoding works in all
+  three. Chrome on macOS and Windows uses the platform's AAC encoder. WebKit
+  couldn't be run (Playwright's build needs Ubuntu libraries).
+
+**Decision:** MP4 is H.264 + AAC only, offered where the browser can encode
+both (`canEncodeVideo('avc')` and `canEncodeAudio('aac')`), and then it is the
+default; everywhere else export stays the lossless WebM. No H.264 + Opus MP4,
+and no WASM AAC encoder. The work is the "Choose the export format" item in
+README.
+
 ## Progress
 
 Every step reports, not just the copy: the scan of every packet's timing
