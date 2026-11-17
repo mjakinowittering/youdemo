@@ -4,6 +4,9 @@ import {
     type ImageSegmenterResult
 } from '@mediapipe/tasks-vision';
 
+import type { BlurMessage, BlurReply } from './blur.worker.js';
+import { canProcessInWorker, frameTrack, trackFrames } from './trackFrames.js';
+
 export type BlurIntensity = 'light' | 'default' | 'heavy';
 
 interface BlurConfig {
@@ -22,10 +25,84 @@ export interface BlurProcessor {
     destroy(): void;
 }
 
+/**
+ * Blurs the background of `rawStream`'s video. In a Worker where the browser
+ * can hand it the camera's frames; on the main thread otherwise, or if the
+ * Worker can't start.
+ */
 export async function createBlurProcessor(
     rawStream: MediaStream,
     intensity: BlurIntensity,
     basePath: string = ''
+): Promise<BlurProcessor> {
+    if (canProcessInWorker()) {
+        try {
+            return await createWorkerBlur(rawStream, intensity, basePath);
+        } catch (e) {
+            console.error('Background blur is running on the main thread:', e);
+        }
+    }
+    return createMainThreadBlur(rawStream, intensity, basePath);
+}
+
+// Every camera frame goes to the Worker as it arrives, and comes back blurred
+// on a track of its own: no timer, and nothing on the main thread per frame.
+async function createWorkerBlur(
+    rawStream: MediaStream,
+    intensity: BlurIntensity,
+    basePath: string
+): Promise<BlurProcessor> {
+    const camera = rawStream.getVideoTracks()[0];
+    const output = frameTrack();
+    // A clone, so stopping it ends only the Worker's reading
+    const source = camera?.clone();
+    const frames = source ? trackFrames(source) : null;
+    if (!source || !frames || !output) {
+        source?.stop();
+        output?.track.stop();
+        throw new Error('The camera frames could not be read');
+    }
+    const worker = new Worker(new URL('./blur.worker.ts', import.meta.url), { type: 'module' });
+    const tell = (message: BlurMessage, transfer: Transferable[] = []) =>
+        worker.postMessage(message, transfer);
+    const destroy = () => {
+        worker.terminate();
+        source.stop();
+        output.track.stop();
+    };
+    try {
+        await new Promise<void>((resolve, reject) => {
+            worker.onmessage = ({ data }: MessageEvent<BlurReply>) =>
+                data.type === 'ready' ? resolve() : reject(new Error(data.reason));
+            worker.onerror = (e) => reject(new Error(e.message));
+            tell(
+                {
+                    type: 'start',
+                    frames,
+                    output: output.writable,
+                    assets: location.origin + basePath,
+                    blurRadius: BLUR_CONFIG[intensity].blurRadius
+                },
+                [frames, output.writable]
+            );
+        });
+    } catch (e) {
+        destroy();
+        throw e;
+    }
+    return {
+        outputStream: new MediaStream([output.track]),
+        setIntensity(newIntensity: BlurIntensity) {
+            tell({ type: 'blurRadius', blurRadius: BLUR_CONFIG[newIntensity].blurRadius });
+        },
+        destroy
+    };
+}
+
+async function createMainThreadBlur(
+    rawStream: MediaStream,
+    intensity: BlurIntensity,
+    basePath: string
 ): Promise<BlurProcessor> {
     const vision = await FilesetResolver.forVisionTasks(`${basePath}/mediapipe/wasm`);
 
