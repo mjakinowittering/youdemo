@@ -34,6 +34,17 @@ test('mic, camera and blur toggles survive a reload', async ({ app }) => {
     ).toEqual(['true', 'false', 'true']);
 });
 
+test('blur is disabled with the camera off and comes back as it was', async ({ app }) => {
+    const { page } = app;
+    await page.getByRole('button', { name: 'Enable background blur' }).click();
+    await page.getByRole('button', { name: 'Disable camera' }).click();
+    const blur = page.getByRole('button', { name: 'Disable background blur' });
+    await expect(blur).toBeDisabled();
+    await expect(page.getByRole('button', { name: 'Select blur intensity' })).toBeDisabled();
+    await page.getByRole('button', { name: 'Enable camera' }).click();
+    await expect(blur).toBeEnabled();
+});
+
 test('the device menus list the fake camera and microphone', async ({ app }) => {
     const { page } = app;
     await page.getByRole('button', { name: 'Select camera' }).click();

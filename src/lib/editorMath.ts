@@ -147,6 +147,17 @@ export function selectionToRange(
     return { startTime, endTime };
 }
 
+/**
+ * Whether a cut whose last selected frame is `lastCell` runs to the end of the
+ * recording: it takes the last frame, or leaves only that one after it. A take
+ * runs a little over its length, which adds a last frame for the overrun; left
+ * on its own it would be a stray flash after the cut. Counted in frames, as the
+ * strip shows them, so the same selection always does the same thing.
+ */
+export function cutReachesEnd(lastCell: number, cellCount: number): boolean {
+    return cellCount - (lastCell + 1) <= 1;
+}
+
 // ── zoom ─────────────────────────────────────────────────────────────────────
 
 /** Seconds a frame of the strip stands for, most detailed first. */
@@ -355,4 +366,20 @@ export function overviewGeometry(
         cuts: cuts.map((c) => pct(computeEffectiveCurrentTime(c.startTime, cuts))),
         playhead: pct(computeEffectiveCurrentTime(currentTime, cuts))
     };
+}
+
+/**
+ * How the video fills its frame: `cover` when its shape is within 1% of the
+ * box's (hiding the 1–2px the encoder's even sizes and the layout's rounding
+ * leave), `contain` with a letterbox when it's further off.
+ */
+export function videoFit(
+    videoWidth: number,
+    videoHeight: number,
+    boxWidth: number,
+    boxHeight: number
+): 'cover' | 'contain' {
+    if (!videoWidth || !videoHeight || !boxWidth || !boxHeight) return 'contain';
+    const mismatch = videoWidth / videoHeight / (boxWidth / boxHeight);
+    return Math.abs(mismatch - 1) < 0.01 ? 'cover' : 'contain';
 }

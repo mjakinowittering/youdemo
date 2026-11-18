@@ -39,13 +39,13 @@
 <AlertDialog.Root bind:open>
     <AlertDialog.Portal disabled>
         <AlertDialog.Overlay
-            class="absolute z-50 bg-yd-scrim supports-backdrop-filter:backdrop-blur-none"
+            class="absolute z-10 bg-yd-scrim supports-backdrop-filter:backdrop-blur-none"
         />
         <!-- Centred by a full-screen grid, as drawn: a dialog taller than its frame
              starts at the top rather than off it -->
         <AlertDialogPrimitive.Content>
             {#snippet child({ props })}
-                <div class="absolute inset-0 z-50 grid place-items-center">
+                <div class="absolute inset-0 z-10 grid place-items-center">
                     <div
                         {...props}
                         data-section="dialog"

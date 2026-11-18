@@ -10,7 +10,7 @@ and returns a `BlurProcessor`:
 
 ```ts
 interface BlurProcessor {
-    outputStream: MediaStream;               // canvas capture stream
+    outputStream: MediaStream;               // the blurred video track
     setIntensity(intensity: BlurIntensity): void;
     destroy(): void;
 }
@@ -22,12 +22,31 @@ The same `outputStream` is consumed by `WebcamBubble` (preview) and `recorder.ts
 `BlurIntensity` (`'light' | 'default' | 'heavy'`) is exported from this module,
 not from `types.ts`.
 
+## In a Worker
+
+`createWorkerBlur()` clones the camera track, reads it with
+`MediaStreamTrackProcessor`, and transfers the frames to `blur.worker.ts` with
+the `writable` of a `MediaStreamTrackGenerator`, whose track is `outputStream`
+(helpers: `trackFrames.ts`). It resolves when the Worker posts `ready`.
+
+It replaced a main-thread loop on a 30 fps timer of its own. That loop read
+the mask back from the GPU and wrote ~307k pixels in JavaScript for every
+frame, on the thread the recorder then composited on, and its timer sampled
+the camera with a second clock.
+
+`createMainThreadBlur()` is that old loop, kept as the fallback: where the
+browser can't hand frames to a Worker (`canProcessInWorker()`), or the Worker
+posts `failed` (no WebGL 2 in a Worker, the segmenter won't start).
+
 ## Segmentation
 
 MediaPipe `ImageSegmenter` with the selfie-segmentation model, `runningMode:
-'VIDEO'`, `outputConfidenceMasks: true`. Created with `delegate: 'GPU'` and a
-try/catch fallback to `'CPU'` — GPU is markedly faster both to initialise and per
-frame.
+'VIDEO'`, `outputConfidenceMasks: true`, `delegate: 'GPU'`. The fallback tries
+`'GPU'` then `'CPU'`.
+
+In the Worker the runtime is the **module build**
+(`FilesetResolver.forVisionTasks(path, true)` → `vision_wasm_module_internal`):
+a module Worker has no `importScripts`.
 
 Use the **callback form** of `segmentForVideo` — the synchronous form may not fire
 the graph in VIDEO mode.
@@ -35,24 +54,29 @@ the graph in VIDEO mode.
 The binary segmenter returns one mask (person confidence) or two (background +
 person); the **last** index is always the foreground.
 
-## Per-frame loop
+## Per frame, in the Worker
 
-Same shape as `recorder.ts` (see `capture-pipeline`): `setInterval` at 30fps,
-`captureStream(0)` + `requestFrame()` per tick.
+One camera frame at a time, as it arrives; while one is segmented the track
+keeps only its newest frame, so slow passes drop frames instead of stacking up.
 
-1. Draw the whole frame blurred (`ctx.filter = blur(<radius>px)`) as background.
-2. Write the confidence values into the alpha channel of a reused `ImageData`.
-3. Draw the sharp frame into a temp canvas, clip it to the mask via
+1. `segmentForVideo(frame, …, callback)`; the mask only lives inside the
+   callback.
+2. `maskPainter()` draws the mask texture (`getAsWebGLTexture()`) as alpha on
+   the segmenter's own canvas. The canvas's WebGL 2 context is created by us
+   first, with alpha, and MediaPipe is given the canvas, so both use one
+   context; the painter puts back every piece of GL state it touches. The mask
+   comes bottom row first, so the shader flips it.
+3. Draw the whole frame blurred (`ctx.filter = blur(<radius>px)`) as background.
+4. Draw the sharp frame on a second canvas and clip it to the mask canvas via
    `destination-in`.
-4. Blit the sharp person over the blurred background, then `requestFrame()`.
+5. Blit the sharp person over the background and write a `VideoFrame` of it,
+   with the camera frame's timestamp.
 
-Two performance rules, both load-bearing:
+The canvases are created once and resized only when the frame size changes.
 
-- **Busy guard** — `drawFrame` returns early while a previous segmentation is
-  still in flight. Without it slow passes stack up and saturate the CPU/GPU.
-- **Pre-allocated buffers** — the two `OffscreenCanvas` instances and the
-  `ImageData` are created once outside the loop. A fresh `ImageData` per frame is
-  ~1.2MB at 640×480, i.e. ~36MB/s of garbage.
+The fallback's loop keeps its two rules: the **busy guard** (`drawFrame`
+returns early while a segmentation is in flight) and **pre-allocated buffers**
+(a fresh `ImageData` per frame is ~1.2MB at 640×480).
 
 ## Intensity
 
@@ -109,9 +133,10 @@ The WASM files are **not committed**. Two separate mechanisms serve them:
 
 - **Dev** — `vendoredWasmDevPlugin` in `vite.config.ts` mounts middleware on
   `/mediapipe/wasm` reading straight out of `node_modules`.
-- **Build** — the `postbuild` script `scripts/copy-mediapipe-wasm.js` copies four
-  files (`vision_wasm_internal.{js,wasm}`, `vision_wasm_nosimd_internal.{js,wasm}`)
-  into `build/mediapipe/wasm/`.
+- **Build** — the `postbuild` script `scripts/copy-mediapipe-wasm.js` copies six
+  files (`vision_wasm_internal`, `vision_wasm_module_internal` for the Worker and
+  `vision_wasm_nosimd_internal`, each `.js` and `.wasm`) into
+  `build/mediapipe/wasm/`.
 
 If blur 404s, check which of those two paths is involved before touching the
 processor. Adding a new vendored asset means updating **both**.

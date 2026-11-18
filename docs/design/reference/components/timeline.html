@@ -439,8 +439,9 @@
                 background: var(--card);
             }
             .cell.is-current {
-                outline: 3px solid var(--ink);
-                outline-offset: 1px;
+                outline: 3px solid var(--accent);
+                outline-offset: 2px;
+                z-index: 1;
             }
             .cell.is-cut {
                 border-color: var(--danger);
@@ -531,6 +532,7 @@
             .scrim {
                 position: absolute;
                 inset: 0;
+                z-index: 10;
                 background: var(--scrim);
                 display: grid;
                 place-items: center;

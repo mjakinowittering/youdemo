@@ -3,7 +3,7 @@
 
     import Icon from '$lib/components/Icon.svelte';
 
-    import { resolveSeekTarget } from '$lib/editorMath.js';
+    import { resolveSeekTarget, videoFit } from '$lib/editorMath.js';
     import type { DeletedRange } from '$lib/types.js';
 
     interface Props {
@@ -30,6 +30,9 @@
     let videoEl = $state<HTMLVideoElement | undefined>(undefined);
     let showPlayIcon = $state(false);
     let showPauseIcon = $state(false);
+    let boxWidth = $state(0);
+    let boxHeight = $state(0);
+    const fit = $derived(videoFit(videoWidth, videoHeight, boxWidth, boxHeight));
 
     function handleVideoClick() {
         if (!videoEl) return;
@@ -82,9 +85,12 @@
     });
 </script>
 
-<!-- Fills its VideoFrame; a click (or Enter/Space) plays or pauses -->
+<!-- Fills its VideoFrame; a click (or Enter/Space) plays or pauses. Covers the
+     box when the shapes all but match, else letterboxes in ink -->
 <div
-    class="absolute inset-0 cursor-pointer"
+    class={['absolute inset-0 cursor-pointer', fit === 'contain' && 'bg-yd-ink']}
+    bind:clientWidth={boxWidth}
+    bind:clientHeight={boxHeight}
     onclick={handleVideoClick}
     role="button"
     tabindex="0"
@@ -105,7 +111,7 @@
         bind:duration
         bind:videoWidth
         bind:videoHeight
-        class="size-full object-contain"
+        class={['size-full', fit === 'cover' ? 'object-cover' : 'object-contain']}
     ></video>
     {#if showPlayIcon || showPauseIcon}
         <div class="pointer-events-none absolute inset-0 flex items-center justify-center">

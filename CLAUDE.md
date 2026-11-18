@@ -72,10 +72,14 @@ src/
     layout.css              # Tailwind v4 design tokens (yd-*) + animations
   app.html                  # meta/OG/Twitter tags
   lib/
-    recorder.ts             # Canvas compositor, MediaRecorder, audio mixer
+    recorder.ts             # Starts the compositor Worker; MediaRecorder, audio mixer
+    compositor.worker.ts    # Draws each screen frame + bubble, off the main thread
+    composite.ts            # One frame's drawing, shared by the Worker and the fallback
+    trackFrames.ts          # A track's frames in and out of a Worker (Chromium APIs, narrowed)
     videoStitcher.ts        # Lossless export: stitchSegments + renderEditedVideo
     remuxPlan.ts            # Pure packet planning for joins and cuts (unit-tested)
-    blurProcessor.ts        # MediaPipe selfie-segmentation background blur
+    blurProcessor.ts        # Background blur: starts blur.worker.ts, or runs on the main thread
+    blur.worker.ts          # MediaPipe selfie segmentation and the blur, per camera frame
     crashStore.ts           # OPFS crash recovery, one file per take
     deviceStore.svelte.ts   # Rune store: selected mic/cam ids, persisted
     editorMath.ts           # Pure timeline maths: cuts, undo, zoom, strip layout (unit-tested)
@@ -146,8 +150,9 @@ Full transition table, camera lifecycle and reset contract: **`app-shell`**.
 
 **Capture & export**
 
-- **`setInterval`, not rAF**, and `captureStream(0)` + `requestFrame()`, in the
-  recorder's capture loop. **Opaque canvases** (`{ alpha: false }`) wherever
+- **One composite per screen frame as it arrives, in a Worker**, never on a
+  timer of our own; **`setInterval`, not rAF**, for the timer that stands in
+  while the screen is still. **Opaque canvases** (`{ alpha: false }`) wherever
   frames are drawn for encoding. Why: **`capture-pipeline`**.
 - **Export copies packets — never a real-time replay, and never reintroduce
   ffmpeg/WASM transcoding** without reading the history in **`video-export`**.

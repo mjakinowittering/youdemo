@@ -6,8 +6,10 @@ description: recorder.ts internals — canvas compositing of screen + webcam bub
 # Recording pipeline (`src/lib/recorder.ts`)
 
 A module-level singleton: `start(options)` builds the whole graph, `stop()`
-returns the finished `Blob`. Screen video and webcam video are drawn onto one
-canvas 30×/sec; the canvas stream plus a mixed audio track feed a `MediaRecorder`.
+returns the finished `Blob`. A Worker (`compositor.worker.ts`) draws each screen
+frame as it arrives, with the webcam bubble over it, and writes the result to a
+track; that track plus a mixed audio track feed a `MediaRecorder` on the main
+thread.
 
 `+page.svelte` calls it — see `app-shell` for lifecycle and ownership.
 
@@ -15,19 +17,56 @@ canvas 30×/sec; the canvas stream plus a mixed audio track feed a `MediaRecorde
 
 Each of these looks arbitrary and is not. Do not "clean them up".
 
-**`setInterval`, never `requestAnimationFrame`.** Chrome throttles rAF to ~1fps in
-background tabs, which would stall the recording whenever the user switches away.
+**One composite per screen frame, as it arrives, in a Worker.** `start()`
+reads the share's and the webcam's video tracks with `MediaStreamTrackProcessor`
+and transfers both streams of `VideoFrame`s to `compositor.worker.ts`, with the
+`writable` of a `MediaStreamTrackGenerator`. The Worker keeps the newest frame
+of each (closing the one before), draws on an `OffscreenCanvas` for every
+screen frame, and writes a `VideoFrame` of it to the generator's track, which
+`MediaRecorder` encodes. The helpers are in `trackFrames.ts`.
 
 ```ts
-_intervalId = setInterval(drawFrame, 1000 / 30);
-_recorder.start(500);
+_worker = new Worker(new URL('./compositor.worker.ts', import.meta.url), { type: 'module' });
+tellWorker({ type: 'start', screen, webcam, firstScreen, output, … }, [screen, …]);
+_recorder = new MediaRecorder(new MediaStream([output.track, ...audio]), mediaOptions);
 ```
 
-**`captureStream(0)` + `requestFrame()`** — manual frame control. Never
-`captureStream(30)`; the track must be driven explicitly at the end of every
-`drawFrame()`.
+Why, in the order it happened:
 
-**Opaque canvas — `getContext('2d', { alpha: false })`.** With an alpha channel
+- **Per screen frame, not a 30 fps timer.** A timer of our own sampled the
+  screen's ~30 fps with a second, unsynchronised 30 fps clock, so some screen
+  frames were encoded twice and others never, which played back as judder
+  (`e2e/cadence.spec.ts` counts both).
+- **In a Worker, not on the main thread.** Compositing shared the main thread
+  with the page and with background blur; with blur on, a take lost a third of
+  its screen frames. The Worker only waits on frames.
+
+What that leaves to get right:
+
+- **The timer is a stand-in, not the clock.** The Worker's `setInterval`
+  draws only once the screen has sent nothing for `SCREEN_QUIET_MS` (a frame
+  and a half): a still screen sends no frames, and the bubble has to keep
+  moving. It then ticks at 30 fps until a screen frame arrives. Never
+  `requestAnimationFrame`, which Chrome throttles to ~1fps in background tabs.
+- **It redraws the last `VideoFrame`, never a `<video>`.** The element runs
+  behind the processor, so drawing it would put an older picture after a newer
+  one. `firstScreen`, a frame of `_screenVideo` taken at start, is shown only
+  until the screen's first frame arrives. `_screenVideo` is otherwise kept for
+  `measureMargins()` and its `resize` listener, whose result is posted to the
+  Worker.
+- **The Worker reads clones of the tracks.** `stop()` goes through
+  `stopDrawing()`: terminate the Worker and stop the clones, which ends its
+  reading without touching the share or the camera. The generator's track is
+  stopped in `cleanup()`, after `MediaRecorder` has finished.
+- **`MediaRecorder` and everything after it are unchanged**: its options,
+  `KEYFRAME_AFTER_MS`, the WebM, `fixWebmDuration`, crash recovery and export.
+- **Fallback.** Processor and generator are Chromium-only
+  (`canProcessInWorker()`). Without them a 30 fps `setInterval` draws the
+  `<video>`s on a main-thread canvas with `captureStream(0)` +
+  `requestFrame()` — manual frame control, never `captureStream(30)`.
+
+**Opaque canvas — `getContext('2d', { alpha: false })`**, and
+`alpha: 'discard'` on the `VideoFrame`s made from it. With an alpha channel
 Chrome encodes VP9 with an alpha plane (`alpha_mode: 1`), which breaks downstream
 tooling. The composite is fully opaque anyway — the screen fills every frame.
 
@@ -103,6 +142,9 @@ the dock is locked mid-recording — see `capture-screens`.)
 
 ## Webcam bubble compositing
 
+Drawn by `drawComposite()` in `composite.ts`, which the Worker and the fallback
+share.
+
 **Offscreen feathered mask, not `clip()`.** The webcam frame is drawn onto a small
 offscreen canvas, masked to a circle by filling with a radial-gradient under
 `destination-in` (opaque to `(r - feather)/r`, transparent at the edge, feather =
@@ -123,14 +165,16 @@ as the frame; the preview passes its letterboxed rect. Covered by
 
 ## Live preview and the picker
 
-`start()` resolves with a **video-only** `MediaStream` holding the canvas capture
+`start()` resolves with a **video-only** `MediaStream` holding the encoded video
 track itself — not a clone, and no audio, so the preview can't echo. `+page.svelte`
 keeps it as `previewStream` for the Recording screen; it ends with the recorder.
 
 `DISPLAY_MEDIA_OPTIONS` is the one screen-picker request (`chooseShare()` in
 `+page.svelte`, from Setup and Review):
 `selfBrowserSurface: 'exclude'` keeps the YouDemo tab out of the picker so the
-preview isn't recorded inside itself. A whole-screen share with YouDemo visible
+preview isn't recorded inside itself, and `frameRate: { max: 30 }` keeps a
+faster share from doubling the composites and the encoding now that every
+screen frame is drawn. A whole-screen share with YouDemo visible
 still mirrors — accepted.
 
 ## Stream ownership & teardown

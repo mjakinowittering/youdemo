@@ -12,6 +12,7 @@ import {
     computeVisibleCells,
     currentCuts,
     CUT_STRIDE,
+    cutReachesEnd,
     effectiveToRawTime,
     emptyHistory,
     entriesInView,
@@ -26,6 +27,7 @@ import {
     selectionToRange,
     stripLayout,
     undo,
+    videoFit,
     ZOOM_LEVELS,
     zoomLabel
 } from '$lib/editorMath.js';
@@ -152,6 +154,23 @@ describe('computeDeletedCells / computeVisibleCells', () => {
     it('has no deleted cells when there are no ranges', () => {
         expect(computeDeletedCells(5, [])).toEqual(new Set());
         expect(computeVisibleCells(3, new Set())).toEqual([0, 1, 2]);
+    });
+});
+
+describe('cutReachesEnd', () => {
+    it('reaches the end when the selection takes the last frame', () => {
+        expect(cutReachesEnd(20, 21)).toBe(true);
+    });
+
+    it('takes a single frame left after the selection, however long it runs', () => {
+        // 4.15 s and 4.25 s both show 21 frames; a cut up to frame 19 treats them alike
+        expect(cutReachesEnd(19, computeCellCount(4.15))).toBe(true);
+        expect(cutReachesEnd(19, computeCellCount(4.25))).toBe(true);
+    });
+
+    it('leaves two or more frames after the selection alone', () => {
+        expect(cutReachesEnd(19, 22)).toBe(false);
+        expect(cutReachesEnd(0, 21)).toBe(false);
     });
 });
 
@@ -331,5 +350,23 @@ describe('overviewGeometry', () => {
             windowStart: 0,
             windowWidth: 100
         });
+    });
+});
+
+describe('videoFit', () => {
+    it('covers when the shapes are within 1%', () => {
+        // A 1366×768 tab encoded at even sizes, in a box a pixel off
+        expect(videoFit(1366, 768, 527, 297)).toBe('cover');
+        expect(videoFit(1920, 1080, 1920, 1080)).toBe('cover');
+    });
+
+    it('letterboxes when they are further off', () => {
+        expect(videoFit(1920, 1080, 400, 300)).toBe('contain');
+        expect(videoFit(1000, 1000, 1000, 980)).toBe('contain');
+    });
+
+    it('letterboxes until both sizes are known', () => {
+        expect(videoFit(0, 0, 533, 300)).toBe('contain');
+        expect(videoFit(1920, 1080, 0, 0)).toBe('contain');
     });
 });

@@ -76,7 +76,7 @@
                     item.thumb
                         ? 'border-yd-ink bg-yd-card'
                         : 'animate-skeleton border-yd-rule bg-yd-rule motion-reduce:animate-none',
-                    item.current && 'outline-3 outline-offset-1 outline-yd-ink',
+                    item.current && 'z-1 outline-3 outline-offset-2 outline-yd-accent',
                     item.marked && 'border-yd-danger'
                 )}
                 {disabled}

@@ -163,7 +163,7 @@
 
     <section
         data-section="stage"
-        class="relative flex min-h-0 flex-1 flex-col items-center justify-center gap-6 bg-yd-sand"
+        class="@container-size relative flex min-h-0 flex-1 flex-col items-center justify-center gap-6 bg-yd-sand"
     >
         {#if joining}
             <ProgressCard title={joiningTitle} {progress} note={progressNote} />
@@ -209,7 +209,7 @@
             </div>
             <div class="px-6"><SkeletonBlock class="h-8" /></div>
             <div class="overflow-hidden" bind:clientWidth={stripWidth}>
-                <div class="flex gap-0.75 pt-7.5 pl-6">
+                <div class="flex gap-0.75 pt-7.5 pb-1.5 pl-6">
                     {#each { length: skeletonCells } as _, i (i)}
                         <SkeletonBlock
                             class="h-16 w-20 rounded-frame border-[1.5px] border-solid border-yd-rule"
@@ -254,7 +254,7 @@
             </div>
             <div class="overflow-hidden" bind:clientWidth={stripWidth}>
                 <FrameStrip
-                    class="pt-7.5 pl-6"
+                    class="pt-7.5 pb-1.5 pl-6"
                     items={strip}
                     leading={stripLeading}
                     offset={stripOffset}
