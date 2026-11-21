@@ -194,7 +194,7 @@ npm run format
 
 The app is built as a fully static site using `@sveltejs/adapter-static`.
 
-Every push to `master` deploys to GitHub Pages through
+Every push to `main` deploys to GitHub Pages through
 `.github/workflows/build-and-deploy.yml`: it type-checks, tests, builds with
 `BASE_PATH` set to the Pages sub-path, and publishes `/build`. It can also be
 run by hand from the Actions tab. In the repo's Pages settings, set the source

@@ -65,7 +65,7 @@ and served by a dev-only Vite middleware. Both paths are described in
 
 ## Workflows
 
-`.github/workflows/build-and-deploy.yml` — on push to `master` (and
+`.github/workflows/build-and-deploy.yml` — on push to `main` (and
 `workflow_dispatch`). Configure Pages → install → `npm run check` → `npm test` →
 `npm run build` with `BASE_PATH` from `configure-pages` → upload → deploy.
 Concurrency group `pages` with `cancel-in-progress: false`.
