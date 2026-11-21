@@ -1,6 +1,6 @@
 ---
 name: branch-and-commit
-description: How work is branched, committed, pushed and turned into a PR in this repo — a branch cut off `develop` as the first step of an approved plan, a short imperative subject plus a bulleted commit body, and a PR offered into `develop` (never `master`) once a branch is pushed. Load before creating a branch, staging or writing a commit message, or pushing / running `gh pr create`.
+description: How work is branched, committed, pushed and turned into a PR in this repo — a branch cut off `develop` as the first step of an approved plan, a short imperative subject plus a bulleted commit body, and a PR offered into `develop` (never `main`) once a branch is pushed. Load before creating a branch, staging or writing a commit message, or pushing / running `gh pr create`.
 ---
 
 # Branch and commit
@@ -10,7 +10,7 @@ Reload this skill at each step rather than working from memory of an earlier loa
 ## Branch — before the first edit
 
 Cut it **right after a plan is approved**, before any file is touched — off an
-up-to-date `develop`, never `master` or whatever is checked out:
+up-to-date `develop`, never `main` or whatever is checked out:
 
 ```
 git switch develop && git pull --ff-only && git switch -c <prefix>/<description>
@@ -77,7 +77,7 @@ Push only when asked: `git push -u origin <branch>`. Then **offer** a PR into
 `develop` once — "Pushed `<branch>`. Open a PR into `develop`?" — and wait (skip the
 offer if the user already asked for the PR).
 
-GitHub's default branch is `master`, so **always pass `--base develop`**:
+GitHub's default branch is `main`, so **always pass `--base develop`**:
 
 ```
 gh pr create --base develop --head <branch> --title "<subject>" --body "<bullets>"
@@ -85,7 +85,7 @@ gh pr create --base develop --head <branch> --title "<subject>" --body "<bullets
 
 Use the commit subject as the title and its bullets as the body, ending with the
 `🤖 Generated with [Claude Code]` line. Print `#<n> → develop: <url>` afterwards so a
-wrong base shows at once; fix one with `gh pr edit <n> --base develop`. `master` is a
+wrong base shows at once; fix one with `gh pr edit <n> --base develop`. `main` is a
 valid base only when the user says so.
 
 Never merge, rebase, squash, amend or rewrite published history on the user's behalf.
