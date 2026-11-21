@@ -1,8 +1,8 @@
-# Lint, type-check and unit-test every pull request. Master ships through
+# Lint, type-check and unit-test every pull request. `main` ships through
 # build-and-deploy.yml, so it needs no CI trigger of its own here.
 #
 # PR-only (not `push`) is deliberate: this job is a *required* status check in
-# the master ruleset. If it also ran on `push`, a push to a branch with an open
+# the default-branch ruleset. If it also ran on `push`, a push to a branch with an open
 # PR would fire both `push` and `pull_request` on the same commit; the
 # concurrency cancel below would cancel one of them, and a cancelled run still
 # posts a `Lint · Check · Test` check onto that commit — which the ruleset reads
